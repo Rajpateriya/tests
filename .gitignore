@@ -1,47 +1,36 @@
-# Byte-compiled / optimized / DLL files
+# Dependencies
+node_modules/
+FE/node_modules/
+dist/
+FE/dist/
+dist-ssr/
+
+# Python & Virtual Environments
+.venv/
+BE/.venv/
+env/
+venv/
+.env
+BE/.env
+.env.local
+.env.*.local
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environments
-.env
-.venv
-env/
-venv/
-ENV/
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Testing & Coverage
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Logs
+# Logs & OS artifacts
 *.log
+npm-debug.log*
+yarn-debug.log*
+.DS_Store
+*/.DS_Store
+Thumbs.db
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
