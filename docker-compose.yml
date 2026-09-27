@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  backend:
+    build: .
+    container_name: mock_exam_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DB_NAME=mock_exam_db
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_ENABLED=true
+      - JWT_SECRET_KEY=change_this_to_a_very_secure_random_secret_in_production_environment
+      - BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:8000"]
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7.0
+    container_name: mock_exam_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: mock_exam_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo_data:
+  redis_data:

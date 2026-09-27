@@ -1,0 +1,753 @@
+{
+  "info": {
+    "_postman_id": "9b12a84c-7c01-4fa2-bf62-11c5cf14e591",
+    "name": "Mock Exam & Analytics Platform API",
+    "description": "Comprehensive Postman Collection for the Government Exam Mock Test & Analytics Platform (FastAPI + MongoDB). Includes Authentication, Test Discovery, Exam Room Execution (TCS iON flow), Results & Deep Insights, Question Bank Ingestion, and Admin Operations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "student_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "attempt_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "question_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"aspirant_rahul@example.com\",\n  \"password\": \"SecurePass@123\",\n  \"full_name\": \"Rahul Sharma\",\n  \"role\": \"student\",\n  \"target_exams\": [\"SSC CGL\", \"CHSL\"],\n  \"preferred_subjects\": [\"Quantitative Aptitude\", \"General Intelligence & Reasoning\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Registers a new student account."
+          }
+        },
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"platform_admin@example.com\",\n  \"password\": \"AdminSecret@123\",\n  \"full_name\": \"Admin User\",\n  \"role\": \"admin\",\n  \"target_exams\": [\"SSC CGL\", \"UPSC\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Registers an administrator account."
+          }
+        },
+        {
+          "name": "Login Student (Sets student_token & user_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.tokens) {",
+                  "        pm.collectionVariables.set(\"student_token\", json.data.tokens.access_token);",
+                  "        pm.collectionVariables.set(\"user_id\", json.data.user.id);",
+                  "        console.log(\"Saved student_token and user_id to collection variables\");",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@mockexam.com\",\n  \"password\": \"Student@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Logs in with pre-seeded student account and automatically populates {{student_token}} and {{user_id}} in Postman variables."
+          }
+        },
+        {
+          "name": "Login Admin (Sets admin_token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.tokens) {",
+                  "        pm.collectionVariables.set(\"admin_token\", json.data.tokens.access_token);",
+                  "        console.log(\"Saved admin_token to collection variables\");",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@mockexam.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Logs in with pre-seeded admin account and populates {{admin_token}}."
+          }
+        },
+        {
+          "name": "Get Current User Profile (/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Returns full profile details of currently authenticated user."
+          }
+        },
+        {
+          "name": "Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"<PASTE_REFRESH_TOKEN_HERE>\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "description": "Exchanges a valid refresh token for a newly signed JWT access token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users & Dashboard",
+      "item": [
+        {
+          "name": "Update User Profile & Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Rahul Sharma (Updated)\",\n  \"target_exams\": [\"SSC CGL\", \"SSC CHSL\", \"RRB NTPC\"],\n  \"preferred_subjects\": [\"Quantitative Aptitude\", \"General Awareness\"],\n  \"phone_number\": \"+919876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "profile"]
+            },
+            "description": "Updates target exam selections and user preferences."
+          }
+        },
+        {
+          "name": "Get User Lifetime Dashboard Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/{{user_id}}/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "{{user_id}}", "dashboard"]
+            },
+            "description": "Fetches student lifetime analytics: average accuracy, tests taken, percentile rank, subject performance, and recommended next tests."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Tests Discovery & Catalog",
+      "item": [
+        {
+          "name": "List All Available Mock Tests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.length > 0) {",
+                  "        pm.collectionVariables.set(\"test_id\", json.data[0].id);",
+                  "        console.log(\"Saved test_id:\", json.data[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tests"]
+            },
+            "description": "Lists all active mock tests. Automatically sets {{test_id}} in Postman variables."
+          }
+        },
+        {
+          "name": "Filter Tests by Type (FULL Mocks)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tests?test_type=FULL&target_exam=SSC CGL",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tests"],
+              "query": [
+                {
+                  "key": "test_type",
+                  "value": "FULL"
+                },
+                {
+                  "key": "target_exam",
+                  "value": "SSC CGL"
+                }
+              ]
+            },
+            "description": "Filters catalog to show only Full Length Mock Tests."
+          }
+        },
+        {
+          "name": "Filter Tests (Subject-wise & Topic Mini Mocks)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tests?test_type=TOPIC_MINI&subject=Quantitative Aptitude",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tests"],
+              "query": [
+                {
+                  "key": "test_type",
+                  "value": "TOPIC_MINI"
+                },
+                {
+                  "key": "subject",
+                  "value": "Quantitative Aptitude"
+                }
+              ]
+            },
+            "description": "Filters catalog to show topic-specific mini speed drills."
+          }
+        },
+        {
+          "name": "Get Test Metadata & Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tests/{{test_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tests", "{{test_id}}"]
+            },
+            "description": "Retrieves test duration, positive/negative marking rules, and total question count."
+          }
+        },
+        {
+          "name": "Start Test Attempt (The Exam Room Entry)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.attempt_id) {",
+                  "        pm.collectionVariables.set(\"attempt_id\", json.data.attempt_id);",
+                  "        console.log(\"Saved attempt_id:\", json.data.attempt_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tests/{{test_id}}/start",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tests", "{{test_id}}", "start"]
+            },
+            "description": "Initializes exam session, locks in server-side countdown timer, creates TCS iON question palette states, and caches session in Redis. Sets {{attempt_id}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Exam Room Execution (The Engine)",
+      "item": [
+        {
+          "name": "Get Active Attempt Questions & Palette State",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.questions && json.data.questions.length > 0) {",
+                  "        pm.collectionVariables.set(\"question_id\", json.data.questions[0].id);",
+                  "        console.log(\"Saved question_id:\", json.data.questions[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/attempts/{{attempt_id}}/questions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attempts", "{{attempt_id}}", "questions"]
+            },
+            "description": "Serves sanitized questions for the active test. Correct answers and solution explanations are securely masked. Also returns current palette states and remaining seconds."
+          }
+        },
+        {
+          "name": "Heartbeat Sync (Palette & Answer State Persistence)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_question_index\": 0,\n  \"palette_states\": {\n    \"{{question_id}}\": \"ANSWERED\"\n  },\n  \"answers\": {\n    \"{{question_id}}\": \"B\"\n  },\n  \"time_spent_per_question\": {\n    \"{{question_id}}\": 45\n  },\n  \"tab_switch_count\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/attempts/{{attempt_id}}/sync",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attempts", "{{attempt_id}}", "sync"]
+            },
+            "description": "Periodic sync called by UI (e.g. on Save & Next or every 5s). Persists answers and question palette states in Redis and MongoDB to guarantee zero data loss if disconnected."
+          }
+        },
+        {
+          "name": "Submit Test Attempt & Instant Evaluation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": {\n    \"{{question_id}}\": \"B\"\n  },\n  \"time_spent_per_question\": {\n    \"{{question_id}}\": 45\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/attempts/{{attempt_id}}/submit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "attempts", "{{attempt_id}}", "submit"]
+            },
+            "description": "Finalizes attempt, grades all responses, calculates positive & negative marks, marks attempt as COMPLETED, and clears Redis temporary cache."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Results & Deep Analytics",
+      "item": [
+        {
+          "name": "Get Score Card Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/results/{{attempt_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "results", "{{attempt_id}}"]
+            },
+            "description": "Returns overall score, correct, incorrect, unattempted breakdown, and overall accuracy."
+          }
+        },
+        {
+          "name": "Get Deep Analytics & Insights",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/results/{{attempt_id}}/insights",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "results", "{{attempt_id}}", "insights"]
+            },
+            "description": "Generates deep analytical insights: subject/topic accuracy, average time spent per question, peer percentile rank, strong/weak areas, and question-by-question review with solutions."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Question Bank & Data Pipeline Ingestion",
+      "item": [
+        {
+          "name": "List Questions in Bank (Filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/questions?subject=Quantitative Aptitude&topic=Profit & Loss",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "questions"],
+              "query": [
+                {
+                  "key": "subject",
+                  "value": "Quantitative Aptitude"
+                },
+                {
+                  "key": "topic",
+                  "value": "Profit & Loss"
+                }
+              ]
+            },
+            "description": "Browse questions by subject, topic, and difficulty."
+          }
+        },
+        {
+          "name": "Get Single Question by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{student_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/questions/{{question_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "questions", "{{question_id}}"]
+            },
+            "description": "Fetches a question along with its solution explanation."
+          }
+        },
+        {
+          "name": "Pipeline Ingestion Connector (Bulk Import)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"subject\": \"Quantitative Aptitude\",\n    \"topic\": \"Percentage\",\n    \"difficulty\": \"Medium\",\n    \"question_text\": \"If the price of sugar increases by 20%, by what percentage must a household reduce its consumption so that the expenditure remains the same?\",\n    \"options\": [\n      {\"id\": \"A\", \"text\": \"16.67%\"},\n      {\"id\": \"B\", \"text\": \"20%\"},\n      {\"id\": \"C\": \"25%\"},\n      {\"id\": \"D\": \"15%\"}\n    ],\n    \"correct_option\": \"A\",\n    \"solution_explanation\": \"Reduction = [r / (100 + r)] * 100 = [20 / 120] * 100 = 16.67%.\",\n    \"external_id\": \"pipe-q-101\"\n  },\n  {\n    \"subject\": \"General Intelligence & Reasoning\",\n    \"topic\": \"Analogies\",\n    \"difficulty\": \"Easy\",\n    \"question_text\": \"Select the related word pair: Paleontology : Fossils :: Phycology : ?\",\n    \"options\": [\n      {\"id\": \"A\", \"text\": \"Fungi\"},\n      {\"id\": \"B\", \"text\": \"Algae\"},\n      {\"id\": \"C\": \"Insects\"},\n      {\"id\": \"D\": \"Soil\"}\n    ],\n    \"correct_option\": \"B\",\n    \"solution_explanation\": \"Paleontology is the study of fossils; Phycology is the study of algae.\",\n    \"external_id\": \"pipe-q-102\"\n  }\n]"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/questions/import",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "questions", "import"]
+            },
+            "description": "Automated data pipeline connector endpoint. Allows the external question generation pipeline to bulk ingest question batches into MongoDB."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Admin Operations & Mock Generator",
+      "item": [
+        {
+          "name": "Manually Configure New Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Custom SSC CGL Speed Test\",\n  \"description\": \"Challenging 15-minute speed drill\",\n  \"test_type\": \"TOPIC_MINI\",\n  \"target_exam\": \"SSC CGL\",\n  \"subject\": \"Quantitative Aptitude\",\n  \"topic\": \"Geometry\",\n  \"duration_minutes\": 15,\n  \"positive_marks_per_q\": 2.0,\n  \"negative_marks_per_q\": 0.5,\n  \"question_ids\": [\"{{question_id}}\"],\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/tests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "tests"]
+            },
+            "description": "Admin endpoint to manually create a mock test with custom questions and marking scheme."
+          }
+        },
+        {
+          "name": "Auto-Generate Mock from Question Bank",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/tests/auto-generate?title=Auto Compiled Quants Mini Mock&test_type=TOPIC_MINI&target_exam=SSC CGL&subject=Quantitative Aptitude&num_questions=5&duration_minutes=15&positive_marks=2.0&negative_marks=0.5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "tests", "auto-generate"],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Auto Compiled Quants Mini Mock"
+                },
+                {
+                  "key": "test_type",
+                  "value": "TOPIC_MINI"
+                },
+                {
+                  "key": "target_exam",
+                  "value": "SSC CGL"
+                },
+                {
+                  "key": "subject",
+                  "value": "Quantitative Aptitude"
+                },
+                {
+                  "key": "num_questions",
+                  "value": "5"
+                },
+                {
+                  "key": "duration_minutes",
+                  "value": "15"
+                },
+                {
+                  "key": "positive_marks",
+                  "value": "2.0"
+                },
+                {
+                  "key": "negative_marks",
+                  "value": "0.5"
+                }
+              ]
+            },
+            "description": "Dynamic test compiler. Samples random questions from the database matching the criteria and generates a ready-to-attempt mock test."
+          }
+        },
+        {
+          "name": "Platform Overview Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "stats"]
+            },
+            "description": "Returns counts of users, questions in bank, tests configured, and attempts."
+          }
+        },
+        {
+          "name": "System Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "health"]
+            },
+            "description": "Monitors database and cache connection status."
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Root / Operational",
+      "item": [
+        {
+          "name": "Root Operational Ping",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Root endpoint verifying application status."
+          }
+        }
+      ]
+    }
+  ]
+}
