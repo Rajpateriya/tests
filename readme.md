@@ -1,4 +1,4 @@
-# GovExam Pro — Full Stack Mock Test & Analytics Platform
+# Mock Test Pro — Full Stack Mock Test & Analytics Platform
 
 Production-ready, highly scalable mock test platform and deep analytics engine for Government Job Aspirants (SSC CGL, CHSL, RRB NTPC, Banking, State PSC). Built with an authentic TCS iON Exam Engine simulation, instant evaluation, negative marking, AI diagnostic insights, and premium subscription passes.
 
@@ -42,3 +42,8 @@ npm run dev
 * **Premium Subscriptions & Razorpay:** Basic, Pro, and Max aspirant passes with simulated Razorpay checkout (UPI, Cards, NetBanking).
 * **Automated Mock Test Generator:** Admin tool to dynamically sample and compile tests from the question bank.
 * **Adaptive Dark/Light Themes:** System-wide theme toggle with persistent storage.
+
+SAMPLE : 
+
+<img width="1470" height="956" alt="image" src="https://github.com/user-attachments/assets/acbdc197-b3a7-4415-8648-a17dc41d9915" />
+
