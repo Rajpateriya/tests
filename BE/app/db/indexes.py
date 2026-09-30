@@ -22,6 +22,16 @@ async def init_db_indexes(db: AsyncIOMotorDatabase) -> None:
             IndexModel([("subject", ASCENDING), ("topic", ASCENDING)], name="idx_questions_subject_topic"),
             IndexModel([("difficulty", ASCENDING)], name="idx_questions_difficulty"),
             IndexModel([("external_id", ASCENDING)], sparse=True, name="idx_questions_external_id"),
+            IndexModel(
+                [("subject", ASCENDING), ("topic", ASCENDING), ("subtopic", ASCENDING), ("target_exam", ASCENDING)],
+                name="idx_questions_dedup_scope",
+            ),
+            IndexModel([("question_hash", ASCENDING)], sparse=True, name="idx_questions_hash"),
+            IndexModel(
+                [("subject", ASCENDING), ("sub_subject", ASCENDING), ("topic", ASCENDING),
+                 ("subtopic", ASCENDING), ("target_exam", ASCENDING), ("difficulty", ASCENDING)],
+                name="idx_questions_bank_scope",
+            ),
         ])
     except Exception as e:
         logger.warning(f"Could not create question indexes: {e}")
@@ -45,5 +55,49 @@ async def init_db_indexes(db: AsyncIOMotorDatabase) -> None:
         ])
     except Exception as e:
         logger.warning(f"Could not create attempt indexes: {e}")
+
+    # Theory chunks collection indexes (AI quiz generation RAG store)
+    try:
+        await db.theory_chunks.create_indexes([
+            IndexModel([("subject", ASCENDING)], name="idx_theory_chunks_subject"),
+            IndexModel([("subject", ASCENDING), ("topic", ASCENDING)], name="idx_theory_chunks_subject_topic"),
+            IndexModel([("subject", ASCENDING), ("text_hash", ASCENDING)], name="idx_theory_chunks_subject_hash"),
+            IndexModel(
+                [("subject", ASCENDING), ("sub_subject", ASCENDING), ("topic", ASCENDING)],
+                name="idx_theory_chunks_sub_subject_topic",
+            ),
+        ])
+    except Exception as e:
+        logger.warning(f"Could not create theory_chunks indexes: {e}")
+
+    # PYQ collection indexes (style/tone reference for quiz generation)
+    try:
+        await db.pyq_questions.create_indexes([
+            IndexModel([("subject", ASCENDING), ("target_exam", ASCENDING)], name="idx_pyq_subject_exam"),
+            IndexModel([("question_hash", ASCENDING)], unique=True, sparse=True, name="idx_pyq_question_hash"),
+            IndexModel(
+                [("subject", ASCENDING), ("target_exam", ASCENDING), ("sub_subject", ASCENDING), ("topic", ASCENDING)],
+                name="idx_pyq_scope",
+            ),
+        ])
+    except Exception as e:
+        logger.warning(f"Could not create pyq_questions indexes: {e}")
+
+    # Staging questions collection indexes (low-groundedness generated questions pending review)
+    try:
+        await db.staging_questions.create_indexes([
+            IndexModel([("status", ASCENDING)], name="idx_staging_questions_status"),
+            IndexModel(
+                [("subject", ASCENDING), ("topic", ASCENDING), ("subtopic", ASCENDING), ("target_exam", ASCENDING)],
+                name="idx_staging_questions_dedup_scope",
+            ),
+            IndexModel(
+                [("subject", ASCENDING), ("sub_subject", ASCENDING), ("topic", ASCENDING),
+                 ("subtopic", ASCENDING), ("target_exam", ASCENDING)],
+                name="idx_staging_questions_bank_scope",
+            ),
+        ])
+    except Exception as e:
+        logger.warning(f"Could not create staging_questions indexes: {e}")
 
     logger.info("MongoDB indexes successfully initialized.")

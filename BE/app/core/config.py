@@ -44,6 +44,29 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 120
 
+    # AI Quiz Generation Pipeline
+    GOOGLE_API_KEY: str = ""
+    # Both tiers point at flash-lite for now — the free-tier RPM quota for
+    # plain gemini-3.5-flash (5/min) gets exhausted almost immediately by a
+    # multi-subtopic blueprint run; flash-lite's quota is higher.
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    GEMINI_TAGGING_MODEL: str = "gemini-3.5-flash-lite"
+    EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
+    THEORY_TOP_K: int = 6
+    # Theory chunks are picked from this many most-relevant candidates,
+    # least-used first, so repeat runs see different facts.
+    THEORY_CANDIDATE_POOL: int = 15
+    PYQ_STYLE_SAMPLE_SIZE: int = 5
+    GROUNDEDNESS_THRESHOLD: float = 0.55
+    # Generated questions at or above this cosine similarity to an existing
+    # question (same subject/topic/subtopic/exam) are rejected as duplicates.
+    DUPLICATE_SIMILARITY_THRESHOLD: float = 0.90
+    GENERATION_TOPUP_ATTEMPTS: int = 2
+    # Questions requested per LLM call — asking for dozens at once is unreliable.
+    GENERATION_BATCH_SIZE: int = 10
+    # Client-side cap so long runs wait for quota instead of failing with 429s.
+    LLM_REQUESTS_PER_MINUTE: int = 10
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

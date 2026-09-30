@@ -17,6 +17,7 @@ class TestInDB(BaseModel):
     test_type: TestType = TestType.FULL
     target_exam: str = "SSC CGL"
     subject: Optional[str] = None
+    sub_subject: Optional[str] = None
     topic: Optional[str] = None
     duration_minutes: int
     total_marks: float

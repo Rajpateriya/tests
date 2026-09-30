@@ -10,6 +10,7 @@ class TestCreate(BaseModel):
     test_type: TestType = TestType.FULL
     target_exam: str = "SSC CGL"
     subject: Optional[str] = None
+    sub_subject: Optional[str] = None
     topic: Optional[str] = None
     duration_minutes: int = Field(gt=0, description="Test duration in minutes")
     positive_marks_per_q: float = Field(default=2.0, gt=0)
@@ -25,6 +26,7 @@ class TestSummaryOut(BaseModel):
     test_type: TestType
     target_exam: str
     subject: Optional[str] = None
+    sub_subject: Optional[str] = None
     topic: Optional[str] = None
     duration_minutes: int
     total_marks: float
