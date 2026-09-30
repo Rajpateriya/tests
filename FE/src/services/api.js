@@ -39,6 +39,45 @@ async function request(endpoint, options = {}) {
   }
 }
 
+// AI pipeline calls: no demo fallback (admins must see real errors), readable
+// 422 validation messages, and multipart uploads (the browser sets the
+// multipart boundary itself, so Content-Type must NOT be forced to JSON).
+async function pipelineRequest(endpoint, { method = 'GET', body, form } = {}) {
+  const token = localStorage.getItem('govexam_token');
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${endpoint}`, {
+      method,
+      headers,
+      body: form ?? (body !== undefined ? JSON.stringify(body) : undefined),
+    });
+  } catch {
+    throw new Error('Cannot reach the backend. Is it running on port 8000?');
+  }
+
+  let json = null;
+  try {
+    json = await res.json();
+  } catch {
+    // non-JSON error body
+  }
+  if (!res.ok || json?.success === false) {
+    let message = json?.error?.message;
+    if (!message && Array.isArray(json?.detail)) {
+      message = json.detail
+        .map((d) => `${(d.loc || []).filter((p) => p !== 'body').join(' → ')}: ${d.msg}`)
+        .join(' | ');
+    }
+    if (!message && typeof json?.detail === 'string') message = json.detail;
+    if (res.status === 401) message = message || 'Not signed in as admin (401).';
+    throw new Error(message || `${res.status} ${res.statusText}`);
+  }
+  return json?.data;
+}
+
 // Fallback Mock Datasets for offline/demo resilience
 export const DEMO_TESTS = [
   {
@@ -712,6 +751,51 @@ export const api = {
         body: JSON.stringify(payload),
       });
     },
+  },
+
+  // AI Question Pipeline (taxonomy -> upload -> generate -> blueprint -> assemble -> review)
+  generation: {
+    listTaxonomies: () => pipelineRequest('/generation/taxonomy'),
+    getTaxonomy: (subject) => pipelineRequest(`/generation/taxonomy/${encodeURIComponent(subject)}`),
+    setTaxonomy: (payload) => pipelineRequest('/generation/taxonomy', { method: 'PUT', body: payload }),
+
+    uploadTheory: ({ subject, subSubject, files }) => {
+      const form = new FormData();
+      form.append('subject', subject);
+      if (subSubject) form.append('sub_subject', subSubject);
+      files.forEach((f) => form.append('files', f));
+      return pipelineRequest('/generation/theory/upload', { method: 'POST', form });
+    },
+    uploadPyq: ({ subject, subSubject, targetExam, files }) => {
+      const form = new FormData();
+      form.append('subject', subject);
+      form.append('target_exam', targetExam);
+      if (subSubject) form.append('sub_subject', subSubject);
+      files.forEach((f) => form.append('files', f));
+      return pipelineRequest('/generation/pyq/upload', { method: 'POST', form });
+    },
+
+    generate: (payload) => pipelineRequest('/generation/quiz', { method: 'POST', body: payload }),
+    bank: (subject, targetExam) =>
+      pipelineRequest(
+        `/generation/bank/${encodeURIComponent(subject)}${targetExam ? `?target_exam=${encodeURIComponent(targetExam)}` : ''}`
+      ),
+
+    getBlueprint: (subject) => pipelineRequest(`/generation/blueprint/${encodeURIComponent(subject)}`),
+    starterBlueprint: (subject, defaultCount = 2) =>
+      pipelineRequest(
+        `/generation/blueprint/${encodeURIComponent(subject)}/generate-starter?default_count=${defaultCount}`,
+        { method: 'POST' }
+      ),
+    saveBlueprint: (payload) => pipelineRequest('/generation/blueprint', { method: 'PUT', body: payload }),
+    planBlueprint: (subject, payload) =>
+      pipelineRequest(`/generation/blueprint/${encodeURIComponent(subject)}/plan`, { method: 'POST', body: payload }),
+
+    assemble: (payload) => pipelineRequest('/generation/assemble', { method: 'POST', body: payload }),
+
+    listStaging: () => pipelineRequest('/generation/staging'),
+    approveStaging: (id) => pipelineRequest(`/generation/staging/${id}/approve`, { method: 'POST' }),
+    rejectStaging: (id) => pipelineRequest(`/generation/staging/${id}`, { method: 'DELETE' }),
   },
 
   // Questions Bank

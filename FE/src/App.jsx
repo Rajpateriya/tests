@@ -9,9 +9,10 @@ import { ResultScorecardPage } from './pages/ResultScorecardPage';
 import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { AdminStudioPage } from './pages/AdminStudioPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
+import { AiPipelinePage } from './pages/AiPipelinePage';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState('discovery'); // discovery | exam | results | dashboard | admin | subscription
+  const [currentView, setCurrentView] = useState('discovery'); // discovery | exam | results | dashboard | admin | pipeline | subscription
 
   const [activeAttempt, setActiveAttempt] = useState(null);
   const [lastCompletedAttemptId, setLastCompletedAttemptId] = useState(null);
@@ -95,6 +96,10 @@ function AppContent() {
             setCurrentView('discovery');
           }}
         />
+      )}
+
+      {currentView === 'pipeline' && (
+        <AiPipelinePage onGoToMocks={() => setCurrentView('discovery')} />
       )}
 
 

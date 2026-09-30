@@ -12,6 +12,7 @@ import {
   UserIcon,
   ZapIcon,
   CrownIcon,
+  CpuIcon,
 } from './Icons';
 
 
@@ -71,6 +72,14 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           >
             <ShieldIcon size={18} />
             <span>Admin Studio</span>
+          </button>
+
+          <button
+            className={`nav-link ${currentView === 'pipeline' ? 'active' : ''}`}
+            onClick={() => setCurrentView('pipeline')}
+          >
+            <CpuIcon size={18} />
+            <span>AI Pipeline</span>
           </button>
         </nav>
 
