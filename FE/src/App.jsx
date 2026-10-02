@@ -10,6 +10,7 @@ import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { AdminStudioPage } from './pages/AdminStudioPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AiPipelinePage } from './pages/AiPipelinePage';
+import { Footer } from './components/Footer';
 
 /**
  * AppContent — Architecturally Guided View Router & State Orchestrator
@@ -109,6 +110,7 @@ function AppContent() {
             onStartTest={handleStartTest}
             activeAttempt={activeAttempt}
             onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            onNavigate={setCurrentView}
           />
         )}
 
@@ -157,6 +159,11 @@ function AppContent() {
           <AiPipelinePage onGoToMocks={() => setCurrentView('discovery')} />
         )}
       </div>
+
+      {/* Institutional Global Footer (Rendered on all pages EXCEPT fullscreen exam room) */}
+      {currentView !== 'exam' && (
+        <Footer onNavigate={setCurrentView} />
+      )}
 
       {/* Authentication Modal (Sign In / Register / 1-Click Demo) */}
       <AuthModal

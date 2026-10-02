@@ -14,6 +14,7 @@ import {
   CrownIcon,
   CpuIcon,
   ChevronDownIcon,
+  MailIcon,
 } from './Icons';
 
 /**
@@ -47,6 +48,24 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
   const handleNavClick = (view) => {
     setCurrentView(view);
     setMobileMenuOpen(false);
+  };
+
+  const handleContactClick = () => {
+    setMobileMenuOpen(false);
+    if (currentView === 'discovery') {
+      const el = document.getElementById('contact-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      setCurrentView('discovery');
+      setTimeout(() => {
+        const el = document.getElementById('contact-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+    }
   };
 
   return (
@@ -97,6 +116,12 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             >
               Passes & Pricing
             </button>
+            <button
+              onClick={handleContactClick}
+              className="px-3 py-1.5 rounded-full text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60 transition-colors"
+            >
+              Contact
+            </button>
           </>
         )}
 
@@ -137,6 +162,14 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             >
               <CrownIcon size={14} className="text-amber-500" />
               <span>Passes</span>
+            </button>
+
+            <button
+              onClick={handleContactClick}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60 transition-all"
+            >
+              <MailIcon size={14} />
+              <span>Contact</span>
             </button>
           </>
         )}
@@ -392,7 +425,13 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               >
                 Passes & Pricing
               </button>
-              <div className="pt-2 border-t border-charcoal-200 flex gap-2">
+              <button
+                onClick={handleContactClick}
+                className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
+              >
+                Contact Support Desk
+              </button>
+              <div className="pt-2 border-t border-charcoal-200 dark:border-charcoal-800 flex gap-2">
                 <button
                   onClick={() => {
                     onOpenAuthModal();
@@ -423,6 +462,12 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                 className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
               >
                 Passes
+              </button>
+              <button
+                onClick={handleContactClick}
+                className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
+              >
+                Contact Support Desk
               </button>
             </>
           ) : (

@@ -131,13 +131,19 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
   ];
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans text-charcoal-900 dark:text-charcoal-100">
-      {/* 1. ACADEMIC HEADER & PROFILE OVERVIEW */}
-      <header className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-8 shadow-subtle flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="flex items-start sm:items-center gap-4">
-          {/* Avatar / Monogram */}
-          <div className="w-14 h-14 rounded-full bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 flex items-center justify-center text-charcoal-800 dark:text-charcoal-200 font-bold text-xl select-none shrink-0">
-            {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'A'}
+    <div className="relative overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-radial-glow">
+      {/* Moving Ambient Dashboard Glows */}
+      <div className="absolute -top-32 left-1/3 w-[500px] h-[350px] bg-institutional-500/10 dark:bg-institutional-500/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
+      <div className="absolute top-1/2 -right-24 w-[450px] h-[450px] bg-emerald-500/8 dark:bg-emerald-500/12 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
+      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-purple-500/8 dark:bg-purple-500/12 blur-[120px] rounded-full pointer-events-none animate-drift-slow" />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10">
+        {/* 1. ACADEMIC HEADER & PROFILE OVERVIEW */}
+        <header className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-8 shadow-subtle flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-start sm:items-center gap-4">
+            {/* Avatar / Monogram */}
+            <div className="w-14 h-14 rounded-full bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 flex items-center justify-center text-charcoal-800 dark:text-charcoal-200 font-bold text-xl select-none shrink-0">
+              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'A'}
           </div>
 
           <div>
@@ -540,5 +546,6 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
         </section>
       </div>
     </main>
+    </div>
   );
 };

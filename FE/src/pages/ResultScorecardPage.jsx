@@ -108,13 +108,19 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
   };
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans text-charcoal-900 dark:text-charcoal-100">
-      {isCelebratory && <Confetti duration={3000} />}
+    <div className="relative overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-radial-glow">
+      {/* Moving Ambient Scorecard Glows */}
+      <div className="absolute -top-32 left-1/3 w-[500px] h-[350px] bg-emerald-500/10 dark:bg-emerald-500/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
+      <div className="absolute top-1/2 -right-24 w-[450px] h-[450px] bg-institutional-500/10 dark:bg-institutional-500/15 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
+      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-amber-500/8 dark:bg-amber-500/12 blur-[120px] rounded-full pointer-events-none animate-drift-slow" />
 
-      {/* ========================================================================= */}
-      {/* 1. HERO SECTION: Official Evaluation Scorecard                            */}
-      {/* ========================================================================= */}
-      <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-8 shadow-subtle space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10">
+        {isCelebratory && <Confetti duration={3000} />}
+
+        {/* ========================================================================= */}
+        {/* 1. HERO SECTION: Official Evaluation Scorecard                            */}
+        {/* ========================================================================= */}
+        <section className="bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-8 shadow-subtle space-y-6">
         {/* Top Header Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-charcoal-150 dark:border-charcoal-800">
           <div>
@@ -573,5 +579,6 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
         </div>
       </section>
     </main>
+    </div>
   );
 };

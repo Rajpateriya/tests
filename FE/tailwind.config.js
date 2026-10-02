@@ -78,6 +78,10 @@ export default {
         'blob': 'blob 10s infinite',
         'blob-delayed': 'blob 10s infinite 2s',
         'glow-pulse': 'glowPulse 4s ease-in-out infinite',
+        'spin-slow': 'spin 20s linear infinite',
+        'drift-slow': 'driftSlow 14s ease-in-out infinite',
+        'pulse-ring': 'pulseRing 3s cubic-bezier(0.215, 0.61, 0.355, 1) infinite',
+        'radar-sweep': 'radarSweep 6s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -113,6 +117,20 @@ export default {
         glowPulse: {
           '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
           '50%': { opacity: '0.8', transform: 'scale(1.05)' },
+        },
+        driftSlow: {
+          '0%, 100%': { transform: 'translate(0px, 0px) rotate(0deg)' },
+          '33%': { transform: 'translate(25px, -20px) rotate(2deg)' },
+          '66%': { transform: 'translate(-20px, 15px) rotate(-2deg)' },
+        },
+        pulseRing: {
+          '0%': { transform: 'scale(0.95)', opacity: '0.8' },
+          '50%': { transform: 'scale(1.25)', opacity: '0.2' },
+          '100%': { transform: 'scale(1.4)', opacity: '0' },
+        },
+        radarSweep: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
         },
       },
 

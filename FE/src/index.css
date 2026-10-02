@@ -15,6 +15,93 @@
     linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }
 
+/* 1. Academic Architectural Blueprint Grid */
+.bg-blueprint-pattern {
+  background-size: 28px 28px;
+  background-image: 
+    linear-gradient(to right, rgba(37, 99, 235, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(37, 99, 235, 0.08) 1px, transparent 1px);
+}
+.dark .bg-blueprint-pattern, html.dark .bg-blueprint-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(59, 130, 246, 0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.10) 1px, transparent 1px);
+}
+
+/* 2. Technical Lab / TCS iON Exam Terminal Raster */
+.bg-terminal-pattern {
+  background-size: 100% 4px;
+  background-image: linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+}
+.dark .bg-terminal-pattern, html.dark .bg-terminal-pattern {
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* 3. Question Bank & Academic Library Precision Dot Matrix */
+.bg-dots-pattern {
+  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.08) 1px, transparent 1px);
+}
+.dark .bg-dots-pattern, html.dark .bg-dots-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+}
+
+/* 4. Neural Analytics & Topic Node Network */
+.bg-nodes-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    radial-gradient(circle at 0 0, transparent 0, transparent 18px, rgba(99, 102, 241, 0.06) 19px, transparent 20px),
+    radial-gradient(circle at 40px 40px, transparent 0, transparent 18px, rgba(99, 102, 241, 0.06) 19px, transparent 20px);
+}
+.dark .bg-nodes-pattern, html.dark .bg-nodes-pattern {
+  background-image: 
+    radial-gradient(circle at 0 0, transparent 0, transparent 18px, rgba(129, 140, 248, 0.10) 19px, transparent 20px),
+    radial-gradient(circle at 40px 40px, transparent 0, transparent 18px, rgba(129, 140, 248, 0.10) 19px, transparent 20px);
+}
+
+/* 5. Institutional Audit Ledger Ruling */
+.bg-ledger-pattern {
+  background-size: 100% 32px;
+  background-image: linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+}
+.dark .bg-ledger-pattern, html.dark .bg-ledger-pattern {
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* 6. Section Specific Ambient Meshes */
+.bg-mesh-passes {
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+    radial-gradient(at 90% 80%, rgba(37, 99, 235, 0.08) 0px, transparent 50%);
+}
+.dark .bg-mesh-passes, html.dark .bg-mesh-passes {
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(129, 140, 248, 0.14) 0px, transparent 50%),
+    radial-gradient(at 90% 80%, rgba(59, 130, 246, 0.14) 0px, transparent 50%);
+}
+
+.bg-mesh-contact {
+  background-image: 
+    radial-gradient(at 85% 15%, rgba(16, 185, 129, 0.07) 0px, transparent 50%),
+    radial-gradient(at 15% 85%, rgba(37, 99, 235, 0.07) 0px, transparent 50%);
+}
+.dark .bg-mesh-contact, html.dark .bg-mesh-contact {
+  background-image: 
+    radial-gradient(at 85% 15%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
+    radial-gradient(at 15% 85%, rgba(59, 130, 246, 0.12) 0px, transparent 50%);
+}
+
+.bg-mesh-catalog {
+  background-image: 
+    radial-gradient(at 20% 0%, rgba(37, 99, 235, 0.06) 0px, transparent 45%),
+    radial-gradient(at 80% 100%, rgba(14, 165, 233, 0.06) 0px, transparent 45%);
+}
+.dark .bg-mesh-catalog, html.dark .bg-mesh-catalog {
+  background-image: 
+    radial-gradient(at 20% 0%, rgba(59, 130, 246, 0.10) 0px, transparent 45%),
+    radial-gradient(at 80% 100%, rgba(56, 189, 248, 0.10) 0px, transparent 45%);
+}
+
 .bg-radial-glow {
   background: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
 }
