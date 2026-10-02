@@ -45,5 +45,5 @@ npm run dev
 
 SAMPLE : 
 
-<img width="1470" height="956" alt="image" src="https://github.com/user-attachments/assets/acbdc197-b3a7-4415-8648-a17dc41d9915" />
+<img width="1470" height="956" alt="image" src="https://github.com/user-attachments/assets/8d8c1df8-a184-4a8b-b7d5-4e105d755eb4" />
 
