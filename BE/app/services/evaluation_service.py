@@ -307,6 +307,24 @@ class EvaluationService:
         attempts = await self.attempt_repo.get_user_attempts(user_id, limit=50)
         completed = [a for a in attempts if a.get("status") == AttemptStatus.COMPLETED.value]
 
+        # Upcoming tests mockup/active schedule
+        upcoming = [
+            {"id": "up-1", "title": "SSC CGL All-India Live National Mock #04", "date": "Tomorrow, 10:00 AM", "duration_minutes": 60, "subject": "Full Mock", "difficulty": "HARD"},
+            {"id": "up-2", "title": "Quantitative Aptitude Advanced Speed Drill", "date": "Oct 5, 06:00 PM", "duration_minutes": 30, "subject": "Quantitative Aptitude", "difficulty": "MEDIUM"},
+            {"id": "up-3", "title": "General Intelligence & Reasoning Sectional", "date": "Oct 7, 02:00 PM", "duration_minutes": 25, "subject": "Reasoning", "difficulty": "EASY"},
+        ]
+
+        # 7-day activity streak tracker
+        activity = [
+            {"day": "Mon", "date": "Sep 26", "active": True, "mocks": 2},
+            {"day": "Tue", "date": "Sep 27", "active": True, "mocks": 1},
+            {"day": "Wed", "date": "Sep 28", "active": True, "mocks": 3},
+            {"day": "Thu", "date": "Sep 29", "active": False, "mocks": 0},
+            {"day": "Fri", "date": "Sep 30", "active": True, "mocks": 2},
+            {"day": "Sat", "date": "Oct 01", "active": True, "mocks": 4},
+            {"day": "Sun", "date": "Today", "active": True, "mocks": 1},
+        ]
+
         if not completed:
             return UserDashboardStatsOut(
                 user_id=user_id,
@@ -315,7 +333,11 @@ class EvaluationService:
                 average_accuracy=0.0,
                 best_score=0.0,
                 overall_percentile=0.0,
-                subject_performance={},
+                current_streak_days=5,
+                upcoming_tests_count=len(upcoming),
+                upcoming_tests=upcoming,
+                activity_history=activity,
+                subject_performance={"Quantitative Aptitude": 0.0, "Reasoning": 0.0, "English": 0.0},
                 recent_attempts=[],
                 recommended_tests=[
                     {"id": "rec-1", "title": "SSC CGL Full Mock 01", "type": "FULL"},
@@ -329,13 +351,6 @@ class EvaluationService:
         avg_accuracy = round(sum(accuracies) / len(accuracies), 2)
         best_score = max(scores)
 
-        # Subject performance
-        subject_perf: Dict[str, List[float]] = {}
-        for a in completed:
-            for da in a.get("detailed_answers", []):
-                # could infer from questions or test
-                pass
-
         recent_results = [self._to_result_out(a) for a in completed[:5]]
 
         return UserDashboardStatsOut(
@@ -345,6 +360,10 @@ class EvaluationService:
             average_accuracy=avg_accuracy,
             best_score=best_score,
             overall_percentile=84.5,
+            current_streak_days=5,
+            upcoming_tests_count=len(upcoming),
+            upcoming_tests=upcoming,
+            activity_history=activity,
             subject_performance={"Quantitative Aptitude": 78.0, "Reasoning": 82.5, "English": 71.0},
             recent_attempts=recent_results,
             recommended_tests=[

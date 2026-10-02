@@ -1,9 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Sleek Academic Background Mesh & Ambient Glows */
+.bg-grid-pattern {
+  background-size: 36px 36px;
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+}
+.dark .bg-grid-pattern, html.dark .bg-grid-pattern, body.dark .bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+.bg-radial-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+}
+.dark .bg-radial-glow, html.dark .bg-radial-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+}
+
+.bg-mesh-hero {
+  background-image: 
+    radial-gradient(at 20% 15%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 10%, rgba(16, 185, 129, 0.06) 0px, transparent 45%),
+    radial-gradient(at 50% 60%, rgba(124, 58, 237, 0.05) 0px, transparent 55%);
+}
+.dark .bg-mesh-hero, html.dark .bg-mesh-hero {
+  background-image: 
+    radial-gradient(at 20% 15%, rgba(59, 130, 246, 0.14) 0px, transparent 50%),
+    radial-gradient(at 80% 10%, rgba(16, 185, 129, 0.10) 0px, transparent 45%),
+    radial-gradient(at 50% 60%, rgba(139, 92, 246, 0.09) 0px, transparent 55%);
+}
+
 /* ==========================================================================
    GovExam Pro — Design System & Global Styles
-   Fully Responsive, Light / Dark Themed, TCS iON Exam Engine Ready
+   Fully Responsive, Dual-Themed (Light/Dark), TCS iON Exam Engine Ready
    ========================================================================== */
 
-:root {
+:root,
+[data-theme="light"],
+html:not(.dark),
+body:not(.dark) {
   /* Color Tokens - Light Theme */
   --bg-primary: #F8FAFC;
   --bg-secondary: #FFFFFF;
@@ -69,23 +109,26 @@
   --transition-normal: 250ms ease;
 }
 
-[data-theme="dark"] {
+[data-theme="dark"],
+.dark,
+html.dark,
+body.dark {
   /* Color Tokens - Dark Theme */
-  --bg-primary: #0A0D14;
-  --bg-secondary: #111622;
-  --bg-tertiary: #192030;
-  --bg-card: #131927;
-  --bg-card-hover: #182235;
-  --bg-glass: rgba(19, 25, 39, 0.85);
+  --bg-primary: #0B0F19;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1F2937;
+  --bg-card: #111827;
+  --bg-card-hover: #1A2436;
+  --bg-glass: rgba(17, 24, 39, 0.85);
 
   --text-primary: #F8FAFC;
   --text-secondary: #CBD5E1;
   --text-muted: #94A3B8;
-  --text-inverse: #0A0D14;
+  --text-inverse: #0B0F19;
 
-  --border-light: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-light: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-subtle: rgba(255, 255, 255, 0.05);
 
   --primary: #3B82F6;
   --primary-hover: #60A5FA;
@@ -111,10 +154,10 @@
   --purple-bg: rgba(139, 92, 246, 0.15);
   --purple-border: rgba(139, 92, 246, 0.3);
 
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
 }
 
 /* Base & Resets */

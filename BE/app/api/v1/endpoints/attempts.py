@@ -78,3 +78,36 @@ async def submit_attempt(
         message="Test successfully submitted and evaluated",
         data=result,
     )
+
+
+@router.post("/{attempt_id}/pause", response_model=APIResponse[dict])
+async def pause_attempt(
+    attempt_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Pause an active test session."""
+    engine_service = ExamEngineService(db)
+    data = await engine_service.pause_attempt(attempt_id, current_user.id)
+    return APIResponse(
+        success=True,
+        message="Test paused successfully",
+        data=data,
+    )
+
+
+@router.post("/{attempt_id}/resume", response_model=APIResponse[dict])
+async def resume_attempt(
+    attempt_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Resume a paused test session."""
+    engine_service = ExamEngineService(db)
+    data = await engine_service.resume_attempt(attempt_id, current_user.id)
+    return APIResponse(
+        success=True,
+        message="Test resumed successfully",
+        data=data,
+    )
+

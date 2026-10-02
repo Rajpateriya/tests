@@ -1,19 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, DEMO_QUESTIONS } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../theme/ThemeContext';
 import {
   ClockIcon,
-  AlertTriangleIcon,
-  CheckCircleIcon,
   FlagIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  BookOpenIcon,
   HelpCircleIcon,
+  CheckIcon,
+  PauseIcon,
+  PlayIcon,
+  XCircleIcon,
+  AlertTriangleIcon,
+  LayersIcon,
+  SunIcon,
+  MoonIcon,
 } from '../components/Icons';
 
+/**
+ * ExamRoomPage — Focused, Distraction-Free Assessment Interface
+ * Core UX:
+ * - Unobtrusive sticky top bar with countdown timer, test title, Pause and Submit actions.
+ * - Distraction-free question zone with 1.6 line-height and large readable question typography.
+ * - Entire clickable option block rows with custom radio buttons and subtle selected states.
+ * - Desktop sidebar palette + Mobile collapsible bottom drawer sheet.
+ * - Palette state tracking: Answered (Green), Unattempted (Gray outline), Marked for Review (Amber/Purple).
+ * - Full Pause / Resume session support and Submit confirmation modal.
+ * - Heartbeat synchronization to prevent state loss on tab refresh.
+ */
 export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -21,32 +39,36 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
   const [paletteStates, setPaletteStates] = useState({}); // question_id -> 'NOT_VISITED'|'NOT_ANSWERED'|'ANSWERED'|'MARKED_FOR_REVIEW'|'ANSWERED_AND_MARKED_FOR_REVIEW'
   const [timeSpent, setTimeSpent] = useState({}); // question_id -> seconds
   const [remainingSeconds, setRemainingSeconds] = useState(3600);
+
+  // Modals & States
+  const [isPaused, setIsPaused] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showMobileDrawer, setShowMobileDrawer] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [showTabWarning, setShowTabWarning] = useState(false);
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const attemptId = attemptSession?.attempt_id || 'demo-attempt';
   const timerRef = useRef(null);
   const syncTimerRef = useRef(null);
-  const questionStartTimeRef = useRef(Date.now());
 
   // 1. Initialize attempt data
   useEffect(() => {
-    initExam();
+    initExamSession();
     return () => {
       clearInterval(timerRef.current);
       clearInterval(syncTimerRef.current);
     };
   }, [attemptSession]);
 
-  const initExam = async () => {
+  const initExamSession = async () => {
     setLoading(true);
     try {
       const data = await api.attempts.getQuestions(attemptId);
       setQuestions(data.questions || DEMO_QUESTIONS);
-      setRemainingSeconds(data.remaining_seconds || (attemptSession?.duration_minutes ? attemptSession.duration_minutes * 60 : 3600));
+      setRemainingSeconds(
+        data.remaining_seconds || (attemptSession?.duration_minutes ? attemptSession.duration_minutes * 60 : 3600)
+      );
       setAnswers(data.answers || {});
       setTimeSpent(data.time_spent_per_question || {});
 
@@ -72,9 +94,12 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }
   };
 
-  // 2. Countdown Timer
+  // 2. Countdown Timer (pauses when isPaused is true)
   useEffect(() => {
-    if (loading) return;
+    if (loading || isPaused) {
+      clearInterval(timerRef.current);
+      return;
+    }
 
     timerRef.current = setInterval(() => {
       setRemainingSeconds((prev) => {
@@ -86,7 +111,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
         return prev - 1;
       });
 
-      // Track time on active question
+      // Track active question dwell time
       const currentQ = questions[currentIndex];
       if (currentQ) {
         setTimeSpent((prev) => ({
@@ -97,18 +122,18 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [loading, currentIndex, questions]);
+  }, [loading, isPaused, currentIndex, questions]);
 
-  // 3. Periodic Sync Heartbeat (every 8 seconds)
+  // 3. Periodic Background Sync (every 8 seconds)
   useEffect(() => {
-    if (loading) return;
+    if (loading || isPaused) return;
 
     syncTimerRef.current = setInterval(() => {
       syncCurrentState();
     }, 8000);
 
     return () => clearInterval(syncTimerRef.current);
-  }, [loading, currentIndex, answers, paletteStates, timeSpent, tabSwitchCount]);
+  }, [loading, isPaused, currentIndex, answers, paletteStates, timeSpent, tabSwitchCount]);
 
   const syncCurrentState = async () => {
     try {
@@ -120,14 +145,14 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
         tab_switch_count: tabSwitchCount,
       });
     } catch (err) {
-      // Sync retry silently in background
+      // Background retry silently
     }
   };
 
   // 4. Anti-Cheat: Detect Tab Switch
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      if (document.hidden && !isPaused) {
         setTabSwitchCount((prev) => prev + 1);
         setShowTabWarning(true);
       }
@@ -135,9 +160,9 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  }, [isPaused]);
 
-  // Format seconds to HH:MM:SS
+  // Format seconds to HH:MM:SS or MM:SS
   const formatTime = (secs) => {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
@@ -148,9 +173,9 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
   const currentQuestion = questions[currentIndex] || questions[0];
 
-  // Option selection
+  // Option selection handler
   const handleSelectOption = (optionId) => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || isPaused) return;
     setAnswers((prev) => ({
       ...prev,
       [currentQuestion.id]: optionId,
@@ -159,7 +184,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
   // Action: Clear Response
   const handleClearResponse = () => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || isPaused) return;
     setAnswers((prev) => {
       const copy = { ...prev };
       delete copy[currentQuestion.id];
@@ -172,29 +197,39 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }));
   };
 
-  // Action: Save & Next
-  const handleSaveAndNext = () => {
-    if (!currentQuestion) return;
+  // Action: Toggle Mark for Review
+  const handleToggleMarkForReview = () => {
+    if (!currentQuestion || isPaused) return;
     const isAnswered = !!answers[currentQuestion.id];
+    const currentState = paletteStates[currentQuestion.id];
+
+    let newState;
+    if (currentState === 'MARKED_FOR_REVIEW' || currentState === 'ANSWERED_AND_MARKED_FOR_REVIEW') {
+      newState = isAnswered ? 'ANSWERED' : 'NOT_ANSWERED';
+    } else {
+      newState = isAnswered ? 'ANSWERED_AND_MARKED_FOR_REVIEW' : 'MARKED_FOR_REVIEW';
+    }
 
     setPaletteStates((prev) => ({
       ...prev,
-      [currentQuestion.id]: isAnswered ? 'ANSWERED' : 'NOT_ANSWERED',
+      [currentQuestion.id]: newState,
     }));
-
-    goToNextQuestion();
   };
 
-  // Action: Mark for Review & Next
-  const handleMarkForReviewAndNext = () => {
-    if (!currentQuestion) return;
+  // Action: Save & Next
+  const handleSaveAndNext = () => {
+    if (!currentQuestion || isPaused) return;
     const isAnswered = !!answers[currentQuestion.id];
+    const currentState = paletteStates[currentQuestion.id];
+
+    let finalState = isAnswered ? 'ANSWERED' : 'NOT_ANSWERED';
+    if (currentState === 'MARKED_FOR_REVIEW' || currentState === 'ANSWERED_AND_MARKED_FOR_REVIEW') {
+      finalState = isAnswered ? 'ANSWERED_AND_MARKED_FOR_REVIEW' : 'MARKED_FOR_REVIEW';
+    }
 
     setPaletteStates((prev) => ({
       ...prev,
-      [currentQuestion.id]: isAnswered
-        ? 'ANSWERED_AND_MARKED_FOR_REVIEW'
-        : 'MARKED_FOR_REVIEW',
+      [currentQuestion.id]: finalState,
     }));
 
     goToNextQuestion();
@@ -204,7 +239,6 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     if (currentIndex < questions.length - 1) {
       const nextIdx = currentIndex + 1;
       const nextQ = questions[nextIdx];
-      // Mark as not answered if not visited yet
       if (paletteStates[nextQ.id] === 'NOT_VISITED') {
         setPaletteStates((prev) => ({
           ...prev,
@@ -230,6 +264,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       }));
     }
     setCurrentIndex(idx);
+    setShowMobileDrawer(false); // Close mobile drawer when question chosen
   };
 
   // Palette counts
@@ -238,17 +273,35 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     notAnswered: 0,
     notVisited: 0,
     markedReview: 0,
-    answeredMarkedReview: 0,
   };
 
   questions.forEach((q) => {
     const state = paletteStates[q.id] || 'NOT_VISITED';
     if (state === 'ANSWERED') counts.answered++;
     else if (state === 'NOT_ANSWERED') counts.notAnswered++;
-    else if (state === 'MARKED_FOR_REVIEW') counts.markedReview++;
-    else if (state === 'ANSWERED_AND_MARKED_FOR_REVIEW') counts.answeredMarkedReview++;
+    else if (state === 'MARKED_FOR_REVIEW' || state === 'ANSWERED_AND_MARKED_FOR_REVIEW') counts.markedReview++;
     else counts.notVisited++;
   });
+
+  // Pause Exam Action
+  const handlePauseExam = async () => {
+    setIsPaused(true);
+    try {
+      await api.attempts.pause(attemptId);
+    } catch (e) {
+      console.warn('Pause API fallback');
+    }
+  };
+
+  // Resume Exam Action
+  const handleResumeExam = async () => {
+    setIsPaused(false);
+    try {
+      await api.attempts.resume(attemptId);
+    } catch (e) {
+      console.warn('Resume API fallback');
+    }
+  };
 
   // Final Submit
   const handleAutoSubmit = () => {
@@ -266,223 +319,390 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       onTestCompleted(result);
     } catch (err) {
       console.error('Submission error:', err);
-      // Fallback result
       onTestCompleted({ attempt_id: attemptId });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Timer warning status
+  // Timer urgency states
   const isTimerDanger = remainingSeconds < 60;
   const isTimerWarning = remainingSeconds < 300 && !isTimerDanger;
 
+  const isCurrentMarkedForReview =
+    paletteStates[currentQuestion?.id] === 'MARKED_FOR_REVIEW' ||
+    paletteStates[currentQuestion?.id] === 'ANSWERED_AND_MARKED_FOR_REVIEW';
+
+  // Skeleton screen while initializing
   if (loading) {
     return (
-      <div className="exam-full-container" style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Initializing TCS iON Exam Engine...</h2>
-        <p style={{ color: 'var(--text-muted)' }}>Configuring server-side timer and question security...</p>
+      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 space-y-4 font-sans">
+        <div className="w-12 h-12 rounded-full border-4 border-charcoal-200 border-t-charcoal-800 animate-spin" />
+        <div className="text-center space-y-1">
+          <h2 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">
+            Initializing Secure Exam Engine
+          </h2>
+          <p className="text-xs text-charcoal-500">
+            Verifying candidate token, questions encryption, and server-side timer...
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Current question unique subject
-  const currentSubject = currentQuestion?.subject || 'Test Section';
-
   return (
-    <div className="exam-full-container">
-      {/* 1. TCS iON Top Bar */}
-      <header className="exam-header">
-        <div className="exam-info-title">
-          <span className="badge badge-full">TCS iON ENGINE</span>
-          <span style={{ fontWeight: 800 }}>{attemptSession?.test_title || 'Mock Examination'}</span>
+    <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 font-sans flex flex-col justify-between selection:bg-institutional-100">
+      {/* ========================================================================= */}
+      {/* 1. STICKY TOP BAR (Academic, Focused, Clear Timer)                         */}
+      {/* ========================================================================= */}
+      <header className="sticky top-0 z-30 bg-white dark:bg-charcoal-900 border-b border-charcoal-200 dark:border-charcoal-800 px-4 sm:px-6 py-3 flex items-center justify-between shadow-subtle">
+        {/* Left: Test Title & Section Indicator */}
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center justify-center w-8 h-8 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-mono font-bold text-xs">
+            TCS
+          </div>
+          <div>
+            <h1 className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100 truncate max-w-xs sm:max-w-md">
+              {attemptSession?.test_title || 'Mock Examination'}
+            </h1>
+            <div className="flex items-center gap-2 text-xs text-charcoal-500 dark:text-charcoal-400">
+              <span className="font-medium text-institutional-700 dark:text-institutional-400">
+                {currentQuestion?.subject || 'General Section'}
+              </span>
+              <span>•</span>
+              <span>Section 1 of 1</span>
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {/* Server Timer */}
-          <div
-            className={`exam-timer-box ${isTimerDanger ? 'timer-danger' : isTimerWarning ? 'timer-warning' : ''}`}
-          >
-            <ClockIcon size={20} />
-            <span>Time Left: {formatTime(remainingSeconds)}</span>
-          </div>
+        {/* Center: Unobtrusive Countdown Timer */}
+        <div
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border font-mono text-sm sm:text-base font-bold transition-colors ${
+            isTimerDanger
+              ? 'bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 animate-pulse'
+              : isTimerWarning
+              ? 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300'
+              : 'bg-charcoal-100 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200'
+          }`}
+          aria-label={`Time remaining: ${formatTime(remainingSeconds)}`}
+        >
+          <ClockIcon size={16} />
+          <span>{formatTime(remainingSeconds)}</span>
+        </div>
 
-          {/* Candidate Profile */}
-          <div className="candidate-badge">
-            <div className="candidate-photo">
-              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'C'}
-            </div>
-            <div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                {user?.full_name || 'Candidate'}
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                Roll: CGL-2026-{user?.id?.slice(0, 5) || '99281'}
-              </div>
-            </div>
-          </div>
+        {/* Right: Theme Toggle, Pause & Submit Actions */}
+        <div className="flex items-center gap-2">
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors focus:outline-none"
+            aria-label="Toggle theme"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+          </button>
+
+          {/* Pause Exam Button */}
+          <button
+            onClick={handlePauseExam}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-charcoal-700 dark:text-charcoal-300 bg-white dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 hover:bg-charcoal-100 dark:hover:bg-charcoal-700/60 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-charcoal-400"
+          >
+            <PauseIcon size={14} />
+            <span>Pause</span>
+          </button>
+
+          {/* Submit Test Button */}
+          <button
+            onClick={() => setShowSubmitModal(true)}
+            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 dark:bg-institutional-700 dark:hover:bg-institutional-600 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-institutional-500 shadow-sm"
+          >
+            <span>Submit Exam</span>
+          </button>
         </div>
       </header>
 
-      {/* 2. Section Tabs & Tools Bar */}
-      <div className="exam-section-bar">
-        <div className="section-tabs">
-          <div className="section-tab-btn active">
-            <span>{currentSubject}</span>
+      {/* Tab Switch Alert Banner */}
+      {showTabWarning && (
+        <div className="bg-amber-50 dark:bg-amber-950/60 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <AlertTriangleIcon size={16} className="text-amber-600 shrink-0" />
+            <span>
+              <strong>Integrity Notice:</strong> Tab switch detected ({tabSwitchCount} warning{tabSwitchCount > 1 ? 's' : ''}). Please stay in the exam tab during your timed session.
+            </span>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
           <button
-            className="btn btn-outline btn-sm"
-            onClick={() => setShowInstructionsModal(true)}
+            onClick={() => setShowTabWarning(false)}
+            className="text-xs font-bold underline hover:no-underline ml-4"
           >
-            <HelpCircleIcon size={14} />
-            <span>Instructions</span>
+            Dismiss
           </button>
         </div>
-      </div>
+      )}
 
-      {/* 3. Main Workspace: Question Area (Left) & Palette (Right) */}
-      <div className="exam-workspace">
-        {/* Left: Active Question Area */}
-        <div className="exam-question-area">
-          {/* Question Subheader */}
-          <div className="question-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span className="question-number-pill">
-                Question No. {currentIndex + 1} of {questions.length}
-              </span>
-              <span className={`badge badge-${currentQuestion?.difficulty?.toLowerCase() || 'medium'}`}>
-                {currentQuestion?.difficulty || 'MEDIUM'}
-              </span>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                Topic: <strong>{currentQuestion?.topic}</strong>
-              </span>
+      {/* ========================================================================= */}
+      {/* 2. MAIN WORKSPACE: Question Area (Center) & Palette Sidebar (Desktop)     */}
+      {/* ========================================================================= */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden max-w-7xl mx-auto w-full">
+        {/* Main Content Area: Distraction-Free Zone */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          <div className="max-w-3xl mx-auto space-y-6">
+            {/* Question Subheader Card */}
+            <div className="flex items-center justify-between pb-3 border-b border-charcoal-200 dark:border-charcoal-800">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <span className="text-sm font-bold text-charcoal-900 dark:text-charcoal-100 font-mono">
+                  Question {currentIndex + 1} of {questions.length}
+                </span>
+
+                <span className="text-xs font-medium px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
+                  {currentQuestion?.difficulty || 'MEDIUM'}
+                </span>
+
+                <span className="text-xs text-charcoal-500 dark:text-charcoal-400">
+                  Topic: <strong>{currentQuestion?.topic || 'General'}</strong>
+                </span>
+              </div>
+
+              {/* Marking Scheme */}
+              <div className="flex items-center gap-2 text-xs font-mono font-semibold">
+                <span className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                  +2.00
+                </span>
+                <span className="text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
+                  -0.50
+                </span>
+              </div>
             </div>
 
-            <div className="question-marks-pill">
-              <span className="mark-pos">+2.00</span>
-              <span className="mark-neg">-0.50</span>
-            </div>
-          </div>
-
-          {/* Question & Options Body */}
-          <div className="question-body">
-            <div className="question-text">
-              {currentQuestion?.question_text}
+            {/* Question Text Box (Large, Sustained Reading, 1.6 Line Height) */}
+            <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-7 shadow-subtle">
+              <p className="text-question font-medium text-charcoal-900 dark:text-charcoal-100 whitespace-pre-line leading-[1.6]">
+                {currentQuestion?.question_text}
+              </p>
             </div>
 
-            <div className="options-list">
+            {/* Answer Options: Clickable Block Rows (WCAG AA accessible) */}
+            <div className="space-y-3" role="radiogroup" aria-labelledby="question-options">
               {currentQuestion?.options?.map((opt) => {
                 const isSelected = answers[currentQuestion.id] === opt.id;
                 return (
                   <div
                     key={opt.id}
-                    className={`option-item ${isSelected ? 'selected' : ''}`}
                     onClick={() => handleSelectOption(opt.id)}
+                    role="radio"
+                    aria-checked={isSelected}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSelectOption(opt.id);
+                      }
+                    }}
+                    className={`p-4 sm:p-4.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none ${
+                      isSelected
+                        ? 'border-institutional-600 bg-institutional-50/70 dark:bg-institutional-950/30 text-charcoal-950 dark:text-white shadow-sm ring-1 ring-institutional-600/30'
+                        : 'border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:bg-charcoal-50/50 dark:hover:bg-charcoal-850/30 text-charcoal-800 dark:text-charcoal-200'
+                    }`}
                   >
-                    <div className="option-radio">{opt.id}</div>
-                    <div className="option-text">{opt.text}</div>
+                    <div className="flex items-center gap-3.5 pr-2">
+                      {/* Customized Radio Button */}
+                      <div
+                        className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
+                          isSelected
+                            ? 'border-institutional-600 bg-institutional-600 text-white dark:border-institutional-500 dark:bg-institutional-500'
+                            : 'border-charcoal-400 dark:border-charcoal-600 bg-white dark:bg-charcoal-800'
+                        }`}
+                      >
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+
+                      {/* Option Letter Tag */}
+                      <span className="font-mono font-bold text-xs text-charcoal-500 dark:text-charcoal-400">
+                        {opt.id}.
+                      </span>
+
+                      {/* Option Content Text */}
+                      <span className="text-sm sm:text-base font-normal leading-relaxed">
+                        {opt.text}
+                      </span>
+                    </div>
+
+                    {isSelected && (
+                      <span className="text-xs font-bold text-institutional-700 dark:text-institutional-400 shrink-0">
+                        Selected
+                      </span>
+                    )}
                   </div>
                 );
               })}
             </div>
-          </div>
 
-          {/* Exam Navigation Footer */}
-          <div className="exam-footer">
-            <div className="footer-btn-group">
+            {/* Mobile Palette Toggle Bar (Native App Feel Drawer Trigger) */}
+            <div className="lg:hidden pt-2">
               <button
-                className="btn btn-purple"
-                onClick={handleMarkForReviewAndNext}
+                onClick={() => setShowMobileDrawer(true)}
+                className="w-full py-2.5 px-4 bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 rounded-xl text-xs font-bold text-charcoal-800 dark:text-charcoal-200 flex items-center justify-between"
               >
-                <FlagIcon size={16} />
-                <span>Mark for Review & Next</span>
-              </button>
-
-              <button
-                className="btn btn-outline"
-                onClick={handleClearResponse}
-                disabled={!answers[currentQuestion?.id]}
-              >
-                Clear Response
-              </button>
-            </div>
-
-            <div className="footer-btn-group">
-              <button
-                className="btn btn-secondary"
-                onClick={goToPrevQuestion}
-                disabled={currentIndex === 0}
-              >
-                <ChevronLeftIcon size={16} />
-                <span>Previous</span>
-              </button>
-
-              <button
-                className="btn btn-success"
-                onClick={handleSaveAndNext}
-              >
-                <span>Save & Next</span>
-                <ChevronRightIcon size={16} />
+                <div className="flex items-center gap-2">
+                  <LayersIcon size={16} />
+                  <span>Question Palette ({counts.answered}/{questions.length} Answered)</span>
+                </div>
+                <span className="text-institutional-600 dark:text-institutional-400">Tap to View Grid →</span>
               </button>
             </div>
           </div>
-        </div>
+        </main>
 
-        {/* Right: TCS iON Question Palette Sidebar */}
-        <aside className="exam-palette-sidebar">
-          <div className="palette-header">
-            <span>QUESTION PALETTE</span>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Total: {questions.length}
-            </span>
+        {/* ========================================================================= */}
+        {/* DESKTOP SIDEBAR: Question Navigation Palette (Anti-AI Minimalist Design)   */}
+        {/* ========================================================================= */}
+        <aside className="hidden lg:flex w-80 border-l border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 flex-col justify-between shrink-0">
+          <div className="p-5 space-y-4 overflow-y-auto">
+            {/* Palette Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
+              <span className="text-xs font-bold uppercase tracking-wider text-charcoal-600 dark:text-charcoal-400">
+                Question Palette
+              </span>
+              <span className="text-xs font-mono font-semibold text-charcoal-500">
+                {questions.length} Questions
+              </span>
+            </div>
+
+            {/* Color-Coded State Legend Grid */}
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold">
+              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700">
+                <span className="w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] bg-emerald-600 text-white font-bold">
+                  {counts.answered}
+                </span>
+                <span className="text-charcoal-700 dark:text-charcoal-300">Answered</span>
+              </div>
+
+              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700">
+                <span className="w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] bg-white dark:bg-charcoal-800 border border-charcoal-400 text-charcoal-800 dark:text-charcoal-200 font-bold">
+                  {counts.notAnswered}
+                </span>
+                <span className="text-charcoal-700 dark:text-charcoal-300">Unanswered</span>
+              </div>
+
+              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700">
+                <span className="w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] bg-amber-500 text-white font-bold">
+                  {counts.markedReview}
+                </span>
+                <span className="text-charcoal-700 dark:text-charcoal-300">Review</span>
+              </div>
+
+              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700">
+                <span className="w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-400 font-bold">
+                  {counts.notVisited}
+                </span>
+                <span className="text-charcoal-700 dark:text-charcoal-300">Not Visited</span>
+              </div>
+            </div>
+
+            {/* Questions Numbers Grid */}
+            <div className="pt-2">
+              <div className="grid grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
+                {questions.map((q, idx) => {
+                  const state = paletteStates[q.id] || 'NOT_VISITED';
+                  const isCurrent = idx === currentIndex;
+
+                  let styleClass = 'bg-white dark:bg-charcoal-800 border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300';
+                  if (state === 'ANSWERED') {
+                    styleClass = 'bg-emerald-600 text-white border-emerald-600';
+                  } else if (state === 'NOT_ANSWERED') {
+                    styleClass = 'bg-white dark:bg-charcoal-800 border-charcoal-400 text-charcoal-800 dark:text-charcoal-200 font-semibold';
+                  } else if (state === 'MARKED_FOR_REVIEW') {
+                    styleClass = 'bg-amber-500 text-white border-amber-500';
+                  } else if (state === 'ANSWERED_AND_MARKED_FOR_REVIEW') {
+                    styleClass = 'bg-purple-600 text-white border-purple-600';
+                  }
+
+                  return (
+                    <button
+                      key={q.id}
+                      onClick={() => jumpToQuestion(idx)}
+                      className={`h-9 w-full rounded-md font-mono text-xs font-bold border transition-all flex items-center justify-center relative ${styleClass} ${
+                        isCurrent
+                          ? 'ring-2 ring-charcoal-900 dark:ring-white scale-105 shadow-sm'
+                          : 'hover:opacity-90'
+                      }`}
+                      aria-label={`Jump to Question ${idx + 1}`}
+                    >
+                      {idx + 1}
+                      {state === 'ANSWERED_AND_MARKED_FOR_REVIEW' && (
+                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-300" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          {/* Official Legend Grid with Real-time Counters */}
-          <div className="palette-legend">
-            <div className="legend-item">
-              <span className="legend-badge ans">{counts.answered}</span>
-              <span>Answered</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-badge not-ans">{counts.notAnswered}</span>
-              <span>Not Answered</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-badge not-vis">{counts.notVisited}</span>
-              <span>Not Visited</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-badge review">{counts.markedReview}</span>
-              <span>Marked for Review</span>
-            </div>
-            <div className="legend-item" style={{ gridColumn: 'span 2' }}>
-              <span className="legend-badge review-ans">{counts.answeredMarkedReview}</span>
-              <span>Answered & Marked for Review</span>
-            </div>
+          {/* Sidebar Bottom: Candidate Profile Snippet */}
+          <div className="p-4 border-t border-charcoal-150 dark:border-charcoal-800 bg-charcoal-50/70 dark:bg-charcoal-850/50 flex items-center justify-between text-xs text-charcoal-500">
+            <span>Candidate: <strong>{user?.full_name?.split(' ')[0] || 'Aspirant'}</strong></span>
+            <span className="font-mono">TCS-iON Engine</span>
           </div>
+        </aside>
+      </div>
 
-          {/* Palette Questions Grid */}
-          <div className="palette-grid-wrapper">
-            <div className="palette-grid">
+      {/* ========================================================================= */}
+      {/* 3. MOBILE COLLAPSIBLE BOTTOM DRAWER (Native App Bottom Sheet)             */}
+      {/* ========================================================================= */}
+      {showMobileDrawer && (
+        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-charcoal-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-charcoal-900 rounded-t-2xl border-t border-charcoal-200 dark:border-charcoal-800 p-5 max-h-[80vh] overflow-y-auto space-y-4 shadow-drawer">
+            {/* Sheet Handle & Header */}
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-1 bg-charcoal-300 dark:bg-charcoal-700 rounded-full mb-3" />
+              <div className="w-full flex items-center justify-between pb-2 border-b border-charcoal-200 dark:border-charcoal-800">
+                <span className="text-sm font-bold text-charcoal-900 dark:text-charcoal-100">
+                  Question Palette ({questions.length} Total)
+                </span>
+                <button
+                  onClick={() => setShowMobileDrawer(false)}
+                  className="p-1 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800 text-charcoal-500"
+                >
+                  <XCircleIcon size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Legend */}
+            <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-100 dark:bg-charcoal-800">
+                <span className="w-4 h-4 rounded bg-emerald-600 text-white flex items-center justify-center font-mono text-[9px]">
+                  {counts.answered}
+                </span>
+                <span>Answered</span>
+              </div>
+              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-100 dark:bg-charcoal-800">
+                <span className="w-4 h-4 rounded bg-amber-500 text-white flex items-center justify-center font-mono text-[9px]">
+                  {counts.markedReview}
+                </span>
+                <span>Review</span>
+              </div>
+            </div>
+
+            {/* Mobile Numbers Grid */}
+            <div className="grid grid-cols-5 gap-2.5 py-2">
               {questions.map((q, idx) => {
                 const state = paletteStates[q.id] || 'NOT_VISITED';
                 const isCurrent = idx === currentIndex;
 
-                let stateClass = 'btn-not-visited';
-                if (state === 'ANSWERED') stateClass = 'btn-answered';
-                else if (state === 'NOT_ANSWERED') stateClass = 'btn-not-answered';
-                else if (state === 'MARKED_FOR_REVIEW') stateClass = 'btn-review';
-                else if (state === 'ANSWERED_AND_MARKED_FOR_REVIEW') stateClass = 'btn-review-answered';
+                let styleClass = 'bg-white dark:bg-charcoal-800 border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300';
+                if (state === 'ANSWERED') styleClass = 'bg-emerald-600 text-white border-emerald-600';
+                else if (state === 'NOT_ANSWERED') styleClass = 'bg-white dark:bg-charcoal-800 border-charcoal-400 text-charcoal-900 font-bold';
+                else if (state === 'MARKED_FOR_REVIEW') styleClass = 'bg-amber-500 text-white border-amber-500';
+                else if (state === 'ANSWERED_AND_MARKED_FOR_REVIEW') styleClass = 'bg-purple-600 text-white border-purple-600';
 
                 return (
                   <button
                     key={q.id}
-                    className={`q-btn ${stateClass} ${isCurrent ? 'current' : ''}`}
                     onClick={() => jumpToQuestion(idx)}
-                    title={`Question ${idx + 1} (${state})`}
+                    className={`h-11 rounded-lg font-mono text-sm font-bold border flex items-center justify-center ${styleClass} ${
+                      isCurrent ? 'ring-2 ring-charcoal-900 dark:ring-white scale-105' : ''
+                    }`}
                   >
                     {idx + 1}
                   </button>
@@ -490,166 +710,169 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
               })}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Bottom Actions: Submit Test */}
-          <div className="palette-bottom-actions">
+      {/* ========================================================================= */}
+      {/* 4. FOOTER ACTIONS (Previous, Next, Mark for Review Toggle, Clear Response) */}
+      {/* ========================================================================= */}
+      <footer className="sticky bottom-0 z-20 bg-white dark:bg-charcoal-900 border-t border-charcoal-200 dark:border-charcoal-800 px-4 sm:px-6 py-3.5 shadow-subtle">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          {/* Left Actions: Review Toggle & Clear */}
+          <div className="flex items-center gap-2">
             <button
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '0.75rem', fontWeight: 800 }}
-              onClick={() => setShowSubmitModal(true)}
+              onClick={handleToggleMarkForReview}
+              className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                isCurrentMarkedForReview
+                  ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800'
+                  : 'bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border-charcoal-300 dark:border-charcoal-700 hover:bg-charcoal-50'
+              }`}
             >
-              Submit Examination
+              <FlagIcon size={14} className={isCurrentMarkedForReview ? 'text-amber-600' : 'text-charcoal-500'} />
+              <span className="hidden sm:inline">
+                {isCurrentMarkedForReview ? 'Marked for Review' : 'Mark for Review'}
+              </span>
+              <span className="sm:hidden">Review</span>
+            </button>
+
+            <button
+              onClick={handleClearResponse}
+              disabled={!answers[currentQuestion?.id]}
+              className="px-3 py-2 rounded-lg text-xs font-semibold text-charcoal-500 hover:text-charcoal-800 dark:hover:text-charcoal-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Clear
             </button>
           </div>
-        </aside>
-      </div>
 
-      {/* Confirmation Submit Modal */}
-      {showSubmitModal && (
-        <div className="modal-backdrop">
-          <div className="modal-dialog-box" style={{ maxWidth: '520px' }}>
-            <div className="modal-header">
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Confirm Test Submission</h3>
-              <button onClick={() => setShowSubmitModal(false)}>✕</button>
+          {/* Right Actions: Previous & Save and Next */}
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={goToPrevQuestion}
+              disabled={currentIndex === 0}
+              className="inline-flex items-center gap-1 px-3 sm:px-4 py-2 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-700/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeftIcon size={16} />
+              <span className="hidden sm:inline">Previous</span>
+            </button>
+
+            <button
+              onClick={handleSaveAndNext}
+              className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 dark:bg-institutional-700 dark:hover:bg-institutional-600 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-institutional-500 shadow-sm"
+            >
+              <span>{currentIndex === questions.length - 1 ? 'Save Response' : 'Save & Next'}</span>
+              <ChevronRightIcon size={16} />
+            </button>
+          </div>
+        </div>
+      </footer>
+
+      {/* ========================================================================= */}
+      {/* 5. MODAL: PAUSE EXAMINATION OVERLAY                                       */}
+      {/* ========================================================================= */}
+      {isPaused && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-lifted text-center space-y-5">
+            <div className="w-14 h-14 mx-auto rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center border border-amber-200 dark:border-amber-800">
+              <PauseIcon size={24} />
             </div>
 
-            <div className="modal-body">
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', fontSize: '0.92rem' }}>
-                Are you sure you want to submit your mock test? Here is your current attempt summary:
+            <div className="space-y-1.5">
+              <h2 className="text-xl font-bold text-charcoal-900 dark:text-charcoal-100">
+                Examination Paused
+              </h2>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-400">
+                Your remaining time is frozen at <strong className="font-mono text-charcoal-800 dark:text-charcoal-200">{formatTime(remainingSeconds)}</strong>. Your responses are safely synchronized to the server.
               </p>
+            </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '0.75rem',
-                  padding: '1rem',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: '1.25rem',
-                }}
+            <div className="p-3 bg-charcoal-50 dark:bg-charcoal-800/60 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs text-charcoal-600 dark:text-charcoal-300 text-left space-y-1">
+              <div className="font-semibold text-charcoal-800 dark:text-charcoal-200">Exam Snapshot:</div>
+              <div>• Answered: <strong>{counts.answered}</strong> questions</div>
+              <div>• Pending: <strong>{questions.length - counts.answered}</strong> questions</div>
+            </div>
+
+            <button
+              onClick={handleResumeExam}
+              className="w-full py-2.5 px-4 rounded-lg font-bold text-xs text-white bg-institutional-600 hover:bg-institutional-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+            >
+              <PlayIcon size={14} />
+              <span>Resume Examination</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. MODAL: FINAL SUBMISSION CONFIRMATION                                   */}
+      {/* ========================================================================= */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-lifted space-y-5">
+            <div className="flex items-start justify-between border-b border-charcoal-150 dark:border-charcoal-800 pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-charcoal-900 dark:text-charcoal-100">
+                  Confirm Final Submission
+                </h2>
+                <p className="text-xs text-charcoal-500">
+                  Please review your attempt breakdown before final submission and grading.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSubmitModal(false)}
+                className="text-charcoal-400 hover:text-charcoal-700 p-1"
               >
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>TOTAL QUESTIONS</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800 }}>{questions.length}</div>
+                <XCircleIcon size={20} />
+              </button>
+            </div>
+
+            {/* Summary Stat Grid */}
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                <div className="text-2xl font-bold font-mono text-emerald-800 dark:text-emerald-300">
+                  {counts.answered}
                 </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ANSWERED</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--success)' }}>
-                    {counts.answered + counts.answeredMarkedReview}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>NOT ANSWERED</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--danger)' }}>
-                    {counts.notAnswered}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>MARKED FOR REVIEW</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--purple)' }}>
-                    {counts.markedReview}
-                  </div>
+                <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase mt-0.5">
+                  Answered
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--warning-bg)',
-                  color: 'var(--warning)',
-                  fontSize: '0.85rem',
-                }}
-              >
-                <AlertTriangleIcon size={18} />
-                <span>Once submitted, you cannot change your answers. Instant evaluation will follow.</span>
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
+                <div className="text-2xl font-bold font-mono text-amber-800 dark:text-amber-300">
+                  {counts.markedReview}
+                </div>
+                <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 uppercase mt-0.5">
+                  In Review
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700">
+                <div className="text-2xl font-bold font-mono text-charcoal-700 dark:text-charcoal-300">
+                  {counts.notAnswered + counts.notVisited}
+                </div>
+                <div className="text-[11px] font-semibold text-charcoal-500 uppercase mt-0.5">
+                  Unattempted
+                </div>
               </div>
             </div>
 
-            <div className="modal-footer">
+            <p className="text-xs text-charcoal-500 bg-charcoal-50 dark:bg-charcoal-800/60 p-3 rounded-lg border border-charcoal-200 dark:border-charcoal-700">
+              Note: Marking will deduct <strong>0.50 marks</strong> for every incorrect answer. Once submitted, answers cannot be modified.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
               <button
-                className="btn btn-outline"
                 onClick={() => setShowSubmitModal(false)}
-                disabled={submitting}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 transition-colors"
               >
-                Return to Test
+                Return to Exam
               </button>
+
               <button
-                className="btn btn-success"
                 onClick={submitExam}
                 disabled={submitting}
+                className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 transition-colors disabled:opacity-50 shadow-sm"
               >
-                {submitting ? 'Evaluating Score...' : 'Confirm & Final Submit'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab Switch Warning Modal */}
-      {showTabWarning && (
-        <div className="modal-backdrop">
-          <div className="modal-dialog-box" style={{ maxWidth: '480px', border: '2px solid var(--danger)' }}>
-            <div className="modal-header" style={{ background: 'var(--danger-bg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--danger)' }}>
-                <AlertTriangleIcon size={20} />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Anti-Cheat Warning Flagged</h3>
-              </div>
-            </div>
-
-            <div className="modal-body">
-              <p style={{ fontSize: '0.92rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>
-                You have switched browser tabs or windows during an active examination.
-              </p>
-              <div
-                style={{
-                  padding: '0.75rem',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Total tab switches detected: <strong>{tabSwitchCount}</strong>.
-                Repeated deviations will result in automatic test invalidation.
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button
-                className="btn btn-danger"
-                style={{ width: '100%' }}
-                onClick={() => setShowTabWarning(false)}
-              >
-                I Understand, Return to Test
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Instructions Reference Modal */}
-      {showInstructionsModal && (
-        <div className="modal-backdrop" onClick={() => setShowInstructionsModal(false)}>
-          <div className="modal-dialog-box" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Exam Instructions Reference</h3>
-              <button onClick={() => setShowInstructionsModal(false)}>✕</button>
-            </div>
-            <div className="modal-body" style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>
-              <p>• Correct answer awards: <strong>+2.00 marks</strong></p>
-              <p>• Incorrect answer incurs negative marking of: <strong>-0.50 marks</strong></p>
-              <p>• Unattempted questions carry: <strong>0.00 marks</strong></p>
-              <p>• Questions <strong>Answered and Marked for Review</strong> will be considered for evaluation.</p>
-              <p>• Server timer auto-submits once 00:00 is reached.</p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-primary" onClick={() => setShowInstructionsModal(false)}>
-                Close
+                {submitting ? 'Evaluating Answers...' : 'Confirm Submission'}
               </button>
             </div>
           </div>

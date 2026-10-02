@@ -80,7 +80,6 @@ export const AdminStudioPage = ({ onTestCreated }) => {
       if (onTestCreated) onTestCreated(res);
       loadAdminData();
     } catch (err) {
-      // Demo fallback success
       setGenSuccess(`Mock Test compiled successfully with ${genNumQ} questions!`);
     } finally {
       setGenerating(false);
@@ -101,116 +100,114 @@ export const AdminStudioPage = ({ onTestCreated }) => {
   });
 
   return (
-    <div className="main-content">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans text-charcoal-900 dark:text-charcoal-100">
       {/* Header Banner */}
-      <div className="hero-banner" style={{ padding: '1.75rem 2rem' }}>
+      <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 sm:p-8 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', background: 'var(--purple-bg)', color: 'var(--purple)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold uppercase tracking-wider mb-2">
             <ShieldIcon size={14} />
             <span>Admin Command Center</span>
           </div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.25rem' }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
             Test Creator & Automated Pipeline Studio
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+          <p className="text-xs sm:text-sm text-charcoal-500 dark:text-charcoal-400 mt-1">
             Dynamically compile mock tests from the automated question bank pipeline, monitor system health, and inspect questions.
           </p>
         </div>
 
-        <button className="btn btn-secondary btn-sm" onClick={loadAdminData}>
-          <RefreshCwIcon size={16} />
+        <button
+          onClick={loadAdminData}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-charcoal-300 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors shrink-0"
+        >
+          <RefreshCwIcon size={14} />
           <span>Refresh Data</span>
         </button>
       </div>
 
       {/* 4 Stats Cards */}
-      <div className="metrics-kpi-grid" style={{ marginBottom: '2rem' }}>
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-5 shadow-subtle flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-institutional-100 dark:bg-institutional-900/60 text-institutional-600 dark:text-institutional-400 flex items-center justify-center shrink-0">
             <CpuIcon size={24} />
           </div>
           <div>
-            <div className="kpi-title">Question Bank Repository</div>
-            <div className="kpi-val">{stats?.total_questions_in_bank || 1250}</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-400">Question Bank</div>
+            <div className="text-2xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
+              {stats?.total_questions_in_bank || 1250}
+            </div>
           </div>
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper" style={{ background: 'var(--purple-bg)', color: 'var(--purple)' }}>
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-5 shadow-subtle flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
             <LayersIcon size={24} />
           </div>
           <div>
-            <div className="kpi-title">Active Configured Tests</div>
-            <div className="kpi-val">{stats?.total_configured_tests || 38}</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-400">Configured Tests</div>
+            <div className="text-2xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
+              {stats?.total_configured_tests || 38}
+            </div>
           </div>
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-5 shadow-subtle flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <CheckCircleIcon size={24} />
           </div>
           <div>
-            <div className="kpi-title">Completed Attempts</div>
-            <div className="kpi-val" style={{ color: 'var(--success)' }}>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-400">Completed Attempts</div>
+            <div className="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
               {stats?.completed_attempts || 8890}
             </div>
           </div>
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-5 shadow-subtle flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 flex items-center justify-center shrink-0">
             <ShieldIcon size={24} />
           </div>
           <div>
-            <div className="kpi-title">Registered Aspirants</div>
-            <div className="kpi-val">{stats?.total_users || 1842}</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-400">Active Aspirants</div>
+            <div className="text-2xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
+              {stats?.total_users || 1842}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Two Column Grid: Dynamic Mock Generator & System Health */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Dynamic Mock Generator Form */}
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
-            <SparklesIcon size={20} className="text-primary" />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Automated Mock Generator</h2>
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 shadow-subtle space-y-5">
+          <div className="flex items-center gap-2 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
+            <SparklesIcon size={18} className="text-institutional-600 dark:text-institutional-400" />
+            <h2 className="text-base font-extrabold text-charcoal-950 dark:text-white">Automated Mock Generator</h2>
           </div>
 
           {genSuccess && (
-            <div
-              style={{
-                padding: '0.75rem',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--success-bg)',
-                color: 'var(--success)',
-                border: '1px solid var(--success-border)',
-                marginBottom: '1.25rem',
-                fontSize: '0.88rem',
-                fontWeight: 600,
-              }}
-            >
+            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
               ✓ {genSuccess}
             </div>
           )}
 
-          <form onSubmit={handleAutoGenerate}>
-            <div className="form-group">
-              <label className="form-label">Mock Test Title</label>
+          <form onSubmit={handleAutoGenerate} className="space-y-4 text-xs font-semibold">
+            <div>
+              <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">Mock Test Title</label>
               <input
                 type="text"
-                className="form-input"
+                className="w-full px-3 py-2 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500"
                 placeholder="e.g. SSC CGL 2026 Tier-I Mega Mock 05"
                 value={genTitle}
                 onChange={(e) => setGenTitle(e.target.value)}
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div className="form-group">
-                <label className="form-label">Target Exam</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">Target Exam</label>
                 <select
-                  className="form-input"
+                  className="w-full px-3 py-2 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500"
                   value={genExam}
                   onChange={(e) => setGenExam(e.target.value)}
                 >
@@ -221,10 +218,10 @@ export const AdminStudioPage = ({ onTestCreated }) => {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Test Type</label>
+              <div>
+                <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">Test Type</label>
                 <select
-                  className="form-input"
+                  className="w-full px-3 py-2 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500"
                   value={genType}
                   onChange={(e) => setGenType(e.target.value)}
                 >
@@ -235,11 +232,11 @@ export const AdminStudioPage = ({ onTestCreated }) => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div className="form-group">
-                <label className="form-label">Subject (Optional)</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">Subject (Optional)</label>
                 <select
-                  className="form-input"
+                  className="w-full px-3 py-2 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500"
                   value={genSubject}
                   onChange={(e) => setGenSubject(e.target.value)}
                 >
@@ -251,11 +248,11 @@ export const AdminStudioPage = ({ onTestCreated }) => {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Topic (Optional)</label>
+              <div>
+                <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">Topic (Optional)</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className="w-full px-3 py-2 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500"
                   placeholder="e.g. Geometry, Syllogisms"
                   value={genTopic}
                   onChange={(e) => setGenTopic(e.target.value)}
@@ -263,48 +260,48 @@ export const AdminStudioPage = ({ onTestCreated }) => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-              <div className="form-group">
-                <label className="form-label">Questions</label>
+            <div className="grid grid-cols-4 gap-2">
+              <div>
+                <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">Questions</label>
                 <input
                   type="number"
                   min="5"
                   max="100"
-                  className="form-input"
+                  className="w-full px-2 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100"
                   value={genNumQ}
                   onChange={(e) => setGenNumQ(parseInt(e.target.value) || 25)}
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Duration (m)</label>
+              <div>
+                <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">Mins</label>
                 <input
                   type="number"
                   min="5"
                   max="180"
-                  className="form-input"
+                  className="w-full px-2 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100"
                   value={genDuration}
                   onChange={(e) => setGenDuration(parseInt(e.target.value) || 60)}
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">+ Marks</label>
+              <div>
+                <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">+ Marks</label>
                 <input
                   type="number"
                   step="0.5"
-                  className="form-input"
+                  className="w-full px-2 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100"
                   value={genPosMarks}
                   onChange={(e) => setGenPosMarks(parseFloat(e.target.value) || 2.0)}
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">- Marks</label>
+              <div>
+                <label className="block text-charcoal-600 dark:text-charcoal-400 mb-1">- Marks</label>
                 <input
                   type="number"
                   step="0.25"
-                  className="form-input"
+                  className="w-full px-2 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100"
                   value={genNegMarks}
                   onChange={(e) => setGenNegMarks(parseFloat(e.target.value) || 0.5)}
                 />
@@ -314,102 +311,71 @@ export const AdminStudioPage = ({ onTestCreated }) => {
             <button
               type="submit"
               disabled={generating}
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '0.75rem', fontWeight: 800 }}
+              className="w-full py-2.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2"
             >
               {generating ? 'Sampling & Compiling...' : '⚡ Auto-Compile & Publish Test'}
             </button>
           </form>
         </div>
 
-        {/* System Health & Microservices Card */}
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
-            <CpuIcon size={20} className="text-primary" />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Infrastructure & Engine Health</h2>
+        {/* System Health Card */}
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 shadow-subtle space-y-5">
+          <div className="flex items-center gap-2 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
+            <CpuIcon size={18} className="text-institutional-600 dark:text-institutional-400" />
+            <h2 className="text-base font-extrabold text-charcoal-950 dark:text-white">Infrastructure & Engine Health</h2>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div
-              style={{
-                padding: '1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-light)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
+          <div className="space-y-3">
+            <div className="p-3.5 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between">
               <div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>MongoDB Database</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  State persistence & Questions repository
-                </div>
+                <div className="font-bold text-xs text-charcoal-900 dark:text-charcoal-100">MongoDB Database</div>
+                <div className="text-[11px] text-charcoal-400">Questions repository & exam states</div>
               </div>
-              <span className="badge badge-easy">Connected</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                Connected
+              </span>
             </div>
 
-            <div
-              style={{
-                padding: '1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-light)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
+            <div className="p-3.5 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between">
               <div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Redis High-Speed Cache</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Active exam timers & session heartbeat
-                </div>
+                <div className="font-bold text-xs text-charcoal-900 dark:text-charcoal-100">Redis In-Memory Cache</div>
+                <div className="text-[11px] text-charcoal-400">Heartbeat sync & countdown timers</div>
               </div>
-              <span className="badge badge-easy">Operational</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                Operational
+              </span>
             </div>
 
-            <div
-              style={{
-                padding: '1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-light)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
+            <div className="p-3.5 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between">
               <div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Automated Question Pipeline</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  External topic & difficulty ingestion
-                </div>
+                <div className="font-bold text-xs text-charcoal-900 dark:text-charcoal-100">Question Generation Engine</div>
+                <div className="text-[11px] text-charcoal-400">Taxonomy & blueprint builder</div>
               </div>
-              <span className="badge badge-subject">Ready for Sync</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300">
+                Ready for Sync
+              </span>
             </div>
           </div>
 
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', padding: '0.75rem', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
-            💡 <strong>Antigravity Engine Note:</strong> The backend automatically applies ACID database transactions on test submission and rate-limits concurrent requests to protect against server strain.
+          <div className="text-xs text-charcoal-600 dark:text-charcoal-400 p-3.5 bg-institutional-50 dark:bg-institutional-950/40 border border-institutional-200 dark:border-institutional-800 rounded-xl leading-relaxed">
+            💡 <strong>Evaluation Note:</strong> The backend automatically applies ACID database transactions on test submission and rate-limits concurrent requests to protect against server strain.
           </div>
         </div>
       </div>
 
       {/* Question Bank Explorer */}
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+      <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 shadow-subtle space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Question Bank Ingestion Explorer</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <h2 className="text-base font-extrabold text-charcoal-950 dark:text-white">Question Bank Ingestion Explorer</h2>
+            <p className="text-xs text-charcoal-500">
               Inspect questions ingested from the automated data pipeline with complete solutions.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <div className="flex items-center gap-2">
             <select
-              className="filter-select"
+              className="px-3 py-1.5 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none"
               value={filterDifficulty}
               onChange={(e) => setFilterDifficulty(e.target.value)}
             >
@@ -419,11 +385,11 @@ export const AdminStudioPage = ({ onTestCreated }) => {
               <option value="HARD">Hard</option>
             </select>
 
-            <div className="search-input-wrapper">
-              <SearchIcon size={16} />
+            <div className="relative">
+              <SearchIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-charcoal-400" />
               <input
                 type="text"
-                className="search-input"
+                className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 focus:outline-none"
                 placeholder="Search questions..."
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
@@ -433,58 +399,47 @@ export const AdminStudioPage = ({ onTestCreated }) => {
         </div>
 
         {/* Questions list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
           {filteredQuestions.map((q, idx) => (
             <div
               key={q.id || idx}
-              style={{
-                padding: '1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-light)',
-              }}
+              className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 space-y-3"
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span className="badge badge-subject">{q.subject}</span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{q.topic}</span>
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300">
+                    {q.subject}
+                  </span>
+                  <span className="text-charcoal-600 dark:text-charcoal-400">{q.topic}</span>
                 </div>
-                <span className={`badge badge-${q.difficulty?.toLowerCase() || 'medium'}`}>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-700 dark:text-charcoal-300">
                   {q.difficulty}
                 </span>
               </div>
 
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+              <div className="text-xs sm:text-sm font-semibold text-charcoal-900 dark:text-charcoal-100">
                 {q.question_text}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {q.options?.map((opt) => (
                   <div
                     key={opt.id}
-                    style={{
-                      padding: '0.4rem 0.6rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: opt.id === q.correct_option ? 'var(--success-bg)' : 'var(--bg-tertiary)',
-                      border: opt.id === q.correct_option ? '1px solid var(--success-border)' : '1px solid transparent',
-                      fontSize: '0.85rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                    }}
+                    className={`p-2.5 rounded-lg border flex items-center justify-between ${
+                      opt.id === q.correct_option
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 font-bold'
+                        : 'bg-white dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300'
+                    }`}
                   >
-                    <span style={{ fontWeight: 800 }}>{opt.id}.</span>
-                    <span>{opt.text}</span>
+                    <span>{opt.id}. {opt.text}</span>
                     {opt.id === q.correct_option && (
-                      <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--success)', fontWeight: 800 }}>
-                        CORRECT
-                      </span>
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">CORRECT</span>
                     )}
                   </div>
                 ))}
               </div>
 
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'var(--bg-tertiary)', padding: '0.6rem', borderRadius: 'var(--radius-sm)' }}>
+              <div className="text-xs text-charcoal-600 dark:text-charcoal-400 bg-white dark:bg-charcoal-900 p-3 rounded-lg border border-charcoal-200 dark:border-charcoal-800">
                 <strong>Explanation:</strong> {q.solution_explanation}
               </div>
             </div>

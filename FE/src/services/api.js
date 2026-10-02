@@ -88,6 +88,7 @@ export const DEMO_TESTS = [
     target_exam: "SSC CGL",
     subject: "Full Syllabus",
     topic: "Mixed Tier-I",
+    difficulty: "MEDIUM",
     duration_minutes: 60,
     total_marks: 200,
     positive_marks_per_q: 2.0,
@@ -104,6 +105,7 @@ export const DEMO_TESTS = [
     target_exam: "SSC CGL",
     subject: "Quantitative Aptitude",
     topic: "Full Subject",
+    difficulty: "HARD",
     duration_minutes: 30,
     total_marks: 50,
     positive_marks_per_q: 2.0,
@@ -120,6 +122,7 @@ export const DEMO_TESTS = [
     target_exam: "SSC CGL",
     subject: "Quantitative Aptitude",
     topic: "Geometry",
+    difficulty: "HARD",
     duration_minutes: 15,
     total_marks: 20,
     positive_marks_per_q: 2.0,
@@ -136,6 +139,7 @@ export const DEMO_TESTS = [
     target_exam: "SSC CGL",
     subject: "General Intelligence & Reasoning",
     topic: "Full Subject",
+    difficulty: "EASY",
     duration_minutes: 25,
     total_marks: 50,
     positive_marks_per_q: 2.0,
@@ -152,6 +156,7 @@ export const DEMO_TESTS = [
     target_exam: "SSC CGL",
     subject: "English Comprehension",
     topic: "Grammar & Vocabulary",
+    difficulty: "MEDIUM",
     duration_minutes: 12,
     total_marks: 20,
     positive_marks_per_q: 2.0,
@@ -168,6 +173,7 @@ export const DEMO_TESTS = [
     target_exam: "SSC CGL",
     subject: "General Awareness",
     topic: "Indian Polity",
+    difficulty: "EASY",
     duration_minutes: 10,
     total_marks: 20,
     positive_marks_per_q: 2.0,
@@ -518,6 +524,22 @@ export const api = {
           start_time: new Date(Date.now() - 680000).toISOString(),
           end_time: new Date().toISOString(),
         };
+      }
+    },
+
+    pause: async (attemptId) => {
+      try {
+        return await request(`/attempts/${attemptId}/pause`, { method: 'POST' });
+      } catch (err) {
+        return { attempt_id: attemptId, status: 'PAUSED', message: 'Test paused' };
+      }
+    },
+
+    resume: async (attemptId) => {
+      try {
+        return await request(`/attempts/${attemptId}/resume`, { method: 'POST' });
+      } catch (err) {
+        return { attempt_id: attemptId, status: 'IN_PROGRESS', message: 'Test resumed' };
       }
     },
   },

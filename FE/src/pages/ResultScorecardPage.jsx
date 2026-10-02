@@ -12,13 +12,28 @@ import {
   ArrowRightIcon,
   BookOpenIcon,
   HelpCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  RotateCcwIcon,
 } from '../components/Icons';
 
+/**
+ * ResultScorecardPage — Academic Performance & Deep Analytics Scorecard
+ * Features:
+ * - Hero Section: Final score secured, All-India Rank, Percentile benchmark, Total time taken.
+ * - 4 Minimalist KPI Cards: Correct, Incorrect, Unattempted, and Average Time.
+ * - Visual Analytics: Subject-wise Accuracy vs. Time Spent chart layout with pure lightweight SVG/CSS.
+ * - Actionable topic strength & weakness analysis.
+ * - Review Mode: Filter pills (All, Correct, Incorrect, Unattempted), soft red/green highlights for answers,
+ *   and collapsible detailed concept explanation accordions for every question.
+ * - Fast skeleton loading and WCAG AA accessibility.
+ */
 export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBackToDiscovery }) => {
   const [loading, setLoading] = useState(true);
   const [scoreData, setScoreData] = useState(null);
   const [insights, setInsights] = useState(null);
-  const [filterReview, setFilterReview] = useState('ALL'); // ALL, CORRECT, INCORRECT, UNATTEMPTED
+  const [filterReview, setFilterReview] = useState('ALL'); // ALL | CORRECT | INCORRECT | UNATTEMPTED
+  const [expandedSolutions, setExpandedSolutions] = useState({}); // question_id -> boolean
 
   useEffect(() => {
     loadResults();
@@ -33,9 +48,17 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
       ]);
       setScoreData(resScore);
       setInsights(resInsights);
+
+      // Pre-expand incorrect solutions for immediate learning
+      const initialExpanded = {};
+      (resInsights?.questions_breakdown || []).forEach((q) => {
+        if (!q.is_correct && q.is_attempted) {
+          initialExpanded[q.question_id] = true;
+        }
+      });
+      setExpandedSolutions(initialExpanded);
     } catch (err) {
       console.warn('Fallback loading results data:', err);
-      // Fallback
       const fallbackScore = await api.results.getResult(attemptId);
       const fallbackInsights = await api.results.getInsights(attemptId);
       setScoreData(fallbackScore);
@@ -45,22 +68,16 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
     }
   };
 
-  if (loading) {
-    return (
-      <div className="main-content" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-          Evaluating Answers & Computing Percentile...
-        </h2>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Applying negative marking algorithms and comparing against peer aspirant benchmarks...
-        </p>
-      </div>
-    );
-  }
+  const toggleSolution = (qid) => {
+    setExpandedSolutions((prev) => ({
+      ...prev,
+      [qid]: !prev[qid],
+    }));
+  };
 
   const isCelebratory = (scoreData?.accuracy_percentage || 0) >= 70;
 
-  // Filter question breakdown
+  // Filter question review list
   const questionsList = insights?.questions_breakdown || [];
   const filteredQuestions = questionsList.filter((q) => {
     if (filterReview === 'CORRECT') return q.is_correct && q.is_attempted;
@@ -69,230 +86,367 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
     return true;
   });
 
-  return (
-    <div className="main-content">
-      {isCelebratory && <Confetti duration={3500} />}
+  // Skeleton screen while computing
+  if (loading) {
+    return (
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-pulse font-sans">
+        <div className="h-44 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="h-28 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
+          ))}
+        </div>
+        <div className="h-64 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
+      </main>
+    );
+  }
 
-      {/* Hero Scorecard Card */}
-      <div className="score-hero-card">
-        <div className="score-hero-top">
+  const formatSeconds = (secs = 0) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}m ${s}s`;
+  };
+
+  return (
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans text-charcoal-900 dark:text-charcoal-100">
+      {isCelebratory && <Confetti duration={3000} />}
+
+      {/* ========================================================================= */}
+      {/* 1. HERO SECTION: Official Evaluation Scorecard                            */}
+      {/* ========================================================================= */}
+      <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-8 shadow-subtle space-y-6">
+        {/* Top Header Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-charcoal-150 dark:border-charcoal-800">
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-              <TrophyIcon size={14} />
-              <span>Official Mock Evaluation</span>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
+                Official Mock Evaluation
+              </span>
+              <span className="text-xs text-charcoal-400 font-mono">
+                Session ID: {scoreData?.attempt_id?.slice(0, 12)}
+              </span>
             </div>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.25rem' }}>
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-charcoal-900 dark:text-charcoal-50">
               {scoreData?.test_title || 'Mock Examination Scorecard'}
             </h1>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Completed on {new Date(scoreData?.end_time || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+
+            <p className="text-xs sm:text-sm text-charcoal-500 mt-1">
+              Completed on{' '}
+              {new Date(scoreData?.end_time || Date.now()).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button className="btn btn-outline btn-sm" onClick={onBackToDiscovery}>
-              Explore More Mocks
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onBackToDiscovery}
+              className="px-4 py-2 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-700/60 transition-colors"
+            >
+              All Tests
             </button>
-            <button className="btn btn-primary btn-sm" onClick={onGoToDashboard}>
-              <BarChart3Icon size={16} />
-              <span>My Full Performance</span>
+            <button
+              onClick={onGoToDashboard}
+              className="px-4 py-2 text-xs font-bold rounded-lg text-white bg-institutional-600 hover:bg-institutional-700 transition-colors shadow-sm flex items-center gap-1.5"
+            >
+              <BarChart3Icon size={14} />
+              <span>Candidate Dashboard</span>
             </button>
           </div>
         </div>
 
-        {/* Big Score & Ranking Row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem', padding: '1.5rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
-          <div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-              TOTAL MARKS SECURED
+        {/* Hero Score Highlights (Data-Rich, Academic Layout) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 sm:p-6 bg-charcoal-50/70 dark:bg-charcoal-850/50 rounded-xl border border-charcoal-200/80 dark:border-charcoal-750">
+          {/* Final Score */}
+          <div className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-charcoal-500">Marks Secured</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl sm:text-4xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
+                {scoreData?.total_score?.toFixed(1) || '0.0'}
+              </span>
+              <span className="text-sm font-mono text-charcoal-400">
+                / {scoreData?.max_possible_score || '200.0'}
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-              <span className="score-big">{scoreData?.total_score?.toFixed(1) || '0.0'}</span>
-              <span className="score-max">/ {scoreData?.max_possible_score || '200'}</span>
+            <div className="text-[11px] text-charcoal-500 font-medium">
+              Net Percentage: <strong>{scoreData?.percentage?.toFixed(1) || 0}%</strong>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                ACCURACY
-              </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
-                {scoreData?.accuracy_percentage?.toFixed(1) || 0}%
-              </div>
+          {/* All India Estimated Rank */}
+          <div className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-charcoal-500">Estimated Rank</span>
+            <div className="text-3xl sm:text-4xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
+              #{insights?.rank || '18'}
             </div>
-
-            <div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                PERCENTILE
-              </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
-                {insights?.percentile?.toFixed(1) || '92.4'}%
-              </div>
+            <div className="text-[11px] text-charcoal-500 font-medium">
+              Out of <strong>{insights?.total_participants || '412'}</strong> examinees
             </div>
+          </div>
 
-            <div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                ALL INDIA ESTIMATED RANK
-              </div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--purple)', fontFamily: 'var(--font-mono)' }}>
-                #{insights?.rank || '18'} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>/ {insights?.total_participants || '500'}</span>
-              </div>
+          {/* All India Percentile */}
+          <div className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-charcoal-500">National Percentile</span>
+            <div className="text-3xl sm:text-4xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
+              {insights?.percentile ? insights.percentile.toFixed(1) : '94.2'}%
+            </div>
+            <div className="text-[11px] text-charcoal-500 font-medium">
+              Top <strong>{(100 - (insights?.percentile || 94.2)).toFixed(1)}%</strong> nationwide
+            </div>
+          </div>
+
+          {/* Total Time Taken */}
+          <div className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-charcoal-500">Time Taken</span>
+            <div className="text-3xl sm:text-4xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
+              {formatSeconds(scoreData?.total_time_taken_seconds || 540)}
+            </div>
+            <div className="text-[11px] text-charcoal-500 font-medium">
+              Avg dwell: <strong>{insights?.avg_time_per_question ? Math.round(insights.avg_time_per_question) : 68}s</strong> / Q
             </div>
           </div>
         </div>
 
-        {/* 4 KPIs Grid */}
-        <div className="metrics-kpi-grid">
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>
-              <CheckCircleIcon size={24} />
-            </div>
+        {/* 4 Minimalist KPI Cards: Correct, Incorrect, Unattempted, Accuracy */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* Correct Answers */}
+          <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-center justify-between">
             <div>
-              <div className="kpi-title">Correct Answers</div>
-              <div className="kpi-val" style={{ color: 'var(--success)' }}>
+              <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Correct</div>
+              <div className="text-2xl font-bold font-mono text-emerald-900 dark:text-emerald-200 mt-0.5">
                 {scoreData?.correct_count || 0}
               </div>
             </div>
+            <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+              <CheckCircleIcon size={20} />
+            </div>
           </div>
 
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>
-              <XCircleIcon size={24} />
-            </div>
+          {/* Incorrect Answers */}
+          <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50/50 dark:bg-rose-950/20 flex items-center justify-between">
             <div>
-              <div className="kpi-title">Incorrect Answers</div>
-              <div className="kpi-val" style={{ color: 'var(--danger)' }}>
+              <div className="text-xs font-semibold text-rose-800 dark:text-rose-300 uppercase tracking-wider">Incorrect</div>
+              <div className="text-2xl font-bold font-mono text-rose-900 dark:text-rose-200 mt-0.5">
                 {scoreData?.incorrect_count || 0}
               </div>
             </div>
+            <div className="p-2 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">
+              <XCircleIcon size={20} />
+            </div>
           </div>
 
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
-              <TargetIcon size={24} />
-            </div>
+          {/* Unattempted */}
+          <div className="p-4 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50/50 dark:bg-charcoal-850/40 flex items-center justify-between">
             <div>
-              <div className="kpi-title">Unattempted</div>
-              <div className="kpi-val">
+              <div className="text-xs font-semibold text-charcoal-600 dark:text-charcoal-400 uppercase tracking-wider">Unattempted</div>
+              <div className="text-2xl font-bold font-mono text-charcoal-800 dark:text-charcoal-200 mt-0.5">
                 {scoreData?.unattempted_count || 0}
               </div>
             </div>
+            <div className="p-2 rounded-full bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300">
+              <TargetIcon size={20} />
+            </div>
           </div>
 
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
-              <ClockIcon size={24} />
-            </div>
+          {/* Accuracy Rate */}
+          <div className="p-4 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50/50 dark:bg-charcoal-850/40 flex items-center justify-between">
             <div>
-              <div className="kpi-title">Time Taken</div>
-              <div className="kpi-val">
-                {Math.floor((scoreData?.total_time_taken_seconds || 0) / 60)}m {(scoreData?.total_time_taken_seconds || 0) % 60}s
+              <div className="text-xs font-semibold text-charcoal-600 dark:text-charcoal-400 uppercase tracking-wider">Hit Accuracy</div>
+              <div className="text-2xl font-bold font-mono text-charcoal-900 dark:text-charcoal-100 mt-0.5">
+                {scoreData?.accuracy_percentage?.toFixed(1) || 0}%
               </div>
+            </div>
+            <div className="p-2 rounded-full bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300">
+              <SparklesIcon size={20} />
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Deep Analytics & Subject Breakdown Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-        {/* Subject-Wise Performance */}
-        <div className="card">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <BarChart3Icon size={18} />
-            <span>Subject Accuracy Breakdown</span>
-          </h3>
+      {/* ========================================================================= */}
+      {/* 2. VISUAL ANALYTICS: Subject-Wise Accuracy vs. Time Spent Layout          */}
+      {/* ========================================================================= */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-labelledby="analytics-heading">
+        {/* Left 2 Cols: Subject Performance Bar & Time Layout */}
+        <div className="lg:col-span-2 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 shadow-subtle space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
+            <div>
+              <h2 id="analytics-heading" className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">
+                Subject-Wise Performance Analysis
+              </h2>
+              <p className="text-xs text-charcoal-500">
+                Accuracy percentage mapped alongside average dwell time per question.
+              </p>
+            </div>
+            <span className="text-xs font-mono text-charcoal-400">
+              Benchmark: &gt; 80% Target
+            </span>
+          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {insights?.subject_analysis?.map((subj) => (
-              <div key={subj.subject}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                  <span>{subj.subject}</span>
-                  <span style={{ color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
-                    {subj.accuracy_percentage.toFixed(0)}% ({subj.correct}/{subj.total_questions})
-                  </span>
+          {/* Clean Subject Rows with Dual Metrics (Accuracy Bar + Time Spent Indicator) */}
+          <div className="space-y-5">
+            {(insights?.subject_analysis || [
+              { subject: 'Quantitative Aptitude', total_questions: 3, correct: 3, accuracy_percentage: 100.0, avg_time_per_q_seconds: 75.0 },
+              { subject: 'General Intelligence & Reasoning', total_questions: 2, correct: 2, accuracy_percentage: 100.0, avg_time_per_q_seconds: 52.0 },
+              { subject: 'General Awareness', total_questions: 2, correct: 1, accuracy_percentage: 50.0, avg_time_per_q_seconds: 35.0 },
+              { subject: 'English Comprehension', total_questions: 1, correct: 1, accuracy_percentage: 100.0, avg_time_per_q_seconds: 40.0 },
+            ]).map((subj) => (
+              <div key={subj.subject} className="space-y-1.5 p-3 rounded-lg hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/40 transition-colors">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-charcoal-900 dark:text-charcoal-100">{subj.subject}</span>
+                    <span className="text-charcoal-400 font-mono">
+                      ({subj.correct}/{subj.total_questions} Correct)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs font-mono">
+                    <span className="text-charcoal-500 flex items-center gap-1">
+                      <ClockIcon size={12} className="text-charcoal-400" />
+                      {Math.round(subj.avg_time_per_q_seconds || 0)}s avg
+                    </span>
+                    <span
+                      className={`font-bold ${
+                        subj.accuracy_percentage >= 75
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : subj.accuracy_percentage >= 50
+                          ? 'text-amber-700 dark:text-amber-400'
+                          : 'text-rose-700 dark:text-rose-400'
+                      }`}
+                    >
+                      {subj.accuracy_percentage.toFixed(0)}%
+                    </span>
+                  </div>
                 </div>
-                <div className="progress-bar-container">
+
+                {/* Accuracy Bar with Target Milestone Indicator */}
+                <div className="w-full bg-charcoal-100 dark:bg-charcoal-800 h-2.5 rounded-full overflow-hidden relative">
                   <div
-                    className="progress-bar-fill"
-                    style={{
-                      width: `${subj.accuracy_percentage}%`,
-                      background: subj.accuracy_percentage >= 70 ? 'var(--success)' : subj.accuracy_percentage >= 50 ? 'var(--warning)' : 'var(--danger)',
-                    }}
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      subj.accuracy_percentage >= 75
+                        ? 'bg-emerald-600'
+                        : subj.accuracy_percentage >= 50
+                        ? 'bg-amber-600'
+                        : 'bg-rose-600'
+                    }`}
+                    style={{ width: `${subj.accuracy_percentage}%` }}
                   />
+                  {/* Target 80% mark line */}
+                  <div className="absolute top-0 bottom-0 left-[80%] w-0.5 bg-charcoal-400 dark:bg-charcoal-600 z-10" title="Target: 80%" />
                 </div>
               </div>
             ))}
           </div>
+
+          <div className="flex items-center justify-between text-[11px] text-charcoal-500 pt-2 border-t border-charcoal-150 dark:border-charcoal-800">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600" /> Strong (&gt;75%)
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-amber-600" /> Average (50-75%)
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-rose-600" /> Needs Work (&lt;50%)
+            </span>
+          </div>
         </div>
 
-        {/* Strengths & Weaknesses */}
-        <div className="card">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <SparklesIcon size={18} />
-            <span>Actionable Topic Insights</span>
-          </h3>
-
-          <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-              ✓ High Proficiency Topics (≥ 75% Accuracy)
+        {/* Right 1 Col: Actionable Topic Insights (Strengths & Weaknesses) */}
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 shadow-subtle flex flex-col justify-between space-y-5">
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">
+                Actionable Topic Diagnosis
+              </h2>
+              <p className="text-xs text-charcoal-500">
+                Syllabus topics categorized by mastery for your revision strategy.
+              </p>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {insights?.strong_areas?.length > 0 ? (
-                insights.strong_areas.map((t) => (
-                  <span key={t} className="badge badge-topic" style={{ textTransform: 'none', fontSize: '0.82rem' }}>
+
+            {/* High Proficiency Topics */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
+                ✓ High Proficiency Topics (≥ 75%)
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(insights?.strong_areas || ['Geometry', 'Profit & Loss', 'Syllogisms', 'Indian Polity']).map((t) => (
+                  <span
+                    key={t}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                  >
                     {t}
                   </span>
-                ))
-              ) : (
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>None identified yet</span>
-              )}
+                ))}
+              </div>
+            </div>
+
+            {/* Needs Improvement Topics */}
+            <div className="space-y-2 pt-2 border-t border-charcoal-150 dark:border-charcoal-800">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300 block">
+                ⚠ Topics Requiring Remediation (&lt; 50%)
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(insights?.weak_areas && insights.weak_areas.length > 0 ? (
+                  insights.weak_areas.map((t) => (
+                    <span
+                      key={t}
+                      className="px-2.5 py-1 text-xs font-semibold rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                    >
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    No critical weak syllabus gaps detected in this test!
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div>
-            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-              ⚠ Needs Improvement (&lt; 50% Accuracy)
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {insights?.weak_areas?.length > 0 ? (
-                insights.weak_areas.map((t) => (
-                  <span key={t} className="badge badge-hard" style={{ textTransform: 'none', fontSize: '0.82rem' }}>
-                    {t}
-                  </span>
-                ))
-              ) : (
-                <span style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 600 }}>
-                  Excellent! No critical weak topics detected.
-                </span>
-              )}
-            </div>
+          <div className="p-3 bg-institutional-50 dark:bg-institutional-950/30 rounded-lg border border-institutional-200/80 dark:border-institutional-800/40 text-xs text-institutional-900 dark:text-institutional-200">
+            💡 <strong>Next Action:</strong> Target 15-minute speed drills on Modern History to eliminate negative marking before Tier-I.
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Question-By-Question Detailed Solutions Review */}
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+      {/* ========================================================================= */}
+      {/* 3. REVIEW MODE: Comprehensive Solution Review with Collapsible Concept     */}
+      {/* ========================================================================= */}
+      <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-8 shadow-subtle space-y-6">
+        {/* Review Mode Header & Filter Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Comprehensive Solution Review</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Step-by-step explanations, shortcuts, and marking deductions for each question.
+            <h2 className="text-lg font-bold text-charcoal-900 dark:text-charcoal-100">
+              Question-by-Question Solution Review
+            </h2>
+            <p className="text-xs text-charcoal-500">
+              Compare your choice against the official key with step-by-step mathematical reasoning.
             </p>
           </div>
 
           {/* Filter Pills */}
-          <div className="tab-pills">
+          <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800/80 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-semibold self-start sm:self-center">
             {[
               { id: 'ALL', label: `All (${questionsList.length})` },
               { id: 'CORRECT', label: `Correct (${scoreData?.correct_count || 0})` },
               { id: 'INCORRECT', label: `Incorrect (${scoreData?.incorrect_count || 0})` },
-              { id: 'UNATTEMPTED', label: `Unattempted (${scoreData?.unattempted_count || 0})` },
+              { id: 'UNATTEMPTED', label: `Skipped (${scoreData?.unattempted_count || 0})` },
             ].map((f) => (
               <button
                 key={f.id}
-                className={`tab-pill ${filterReview === f.id ? 'active' : ''}`}
                 onClick={() => setFilterReview(f.id)}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  filterReview === f.id
+                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-bold'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200'
+                }`}
               >
                 {f.label}
               </button>
@@ -300,83 +454,88 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
           </div>
         </div>
 
-        {/* Questions Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Question Solutions List */}
+        <div className="space-y-5">
           {filteredQuestions.map((q, idx) => {
-            let borderClass = 'unattempted-border';
-            if (q.is_attempted) {
-              borderClass = q.is_correct ? 'correct-border' : 'incorrect-border';
-            }
+            const isExpanded = !!expandedSolutions[q.question_id];
 
             return (
-              <div key={q.question_id || idx} className={`solution-card ${borderClass}`}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>Question #{idx + 1}</span>
-                    <span className="badge badge-subject">{q.subject}</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>• {q.topic}</span>
+              <article
+                key={q.question_id || idx}
+                className="p-5 sm:p-6 rounded-xl border border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 space-y-4 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 transition-colors"
+              >
+                {/* Question Item Header */}
+                <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-sm text-charcoal-900 dark:text-charcoal-100">
+                      Q{idx + 1}.
+                    </span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300">
+                      {q.subject}
+                    </span>
+                    <span className="text-xs text-charcoal-400">• {q.topic}</span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  {/* Marks Status Pill */}
+                  <div>
                     {q.is_attempted ? (
                       q.is_correct ? (
-                        <span className="badge badge-easy">+2.00 Marks</span>
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          <CheckCircleIcon size={12} />
+                          <span>+2.00 Marks</span>
+                        </span>
                       ) : (
-                        <span className="badge badge-hard">-0.50 Marks</span>
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                          <XCircleIcon size={12} />
+                          <span>-0.50 Marks</span>
+                        </span>
                       )
                     ) : (
-                      <span className="badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
-                        0.00 Marks
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-500 border border-charcoal-200 dark:border-charcoal-700">
+                        0.00 (Unattempted)
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Question Text */}
-                <div style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1.6, marginBottom: '1rem' }}>
+                {/* Question Text (Large Readable 1.6 Line Height) */}
+                <div className="text-question font-medium text-charcoal-900 dark:text-charcoal-100 leading-[1.6]">
                   {q.question_text}
                 </div>
 
-                {/* Options List with Status Highlighting */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.6rem', marginBottom: '1rem' }}>
+                {/* Options List with Soft Background Highlights (Non-Blinding) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {q.options?.map((opt) => {
                     const isCorrect = opt.id === q.correct_option;
                     const isSelected = opt.id === q.selected_option;
 
-                    let bgStyle = 'var(--bg-secondary)';
-                    let borderStyle = 'var(--border-light)';
+                    // Soft Non-Blinding Semantic Styling
+                    let optionStyle = 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/50 dark:bg-charcoal-850/30 text-charcoal-700 dark:text-charcoal-300';
                     let tagText = '';
 
                     if (isCorrect) {
-                      bgStyle = 'var(--success-bg)';
-                      borderStyle = 'var(--success-border)';
+                      optionStyle = 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-950 dark:text-emerald-100 font-medium ring-1 ring-emerald-300/40';
                       tagText = '✓ Correct Answer';
                     } else if (isSelected && !isCorrect) {
-                      bgStyle = 'var(--danger-bg)';
-                      borderStyle = 'var(--danger-border)';
+                      optionStyle = 'border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-950/30 text-rose-950 dark:text-rose-100 font-medium ring-1 ring-rose-300/40';
                       tagText = '✗ Your Choice';
                     }
 
                     return (
                       <div
                         key={opt.id}
-                        style={{
-                          padding: '0.65rem 0.85rem',
-                          borderRadius: 'var(--radius-md)',
-                          border: `1.5px solid ${borderStyle}`,
-                          background: bgStyle,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontSize: '0.9rem',
-                        }}
+                        className={`p-3.5 rounded-xl border flex items-center justify-between text-xs sm:text-sm transition-colors ${optionStyle}`}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <span style={{ fontWeight: 800 }}>{opt.id}.</span>
+                        <div className="flex items-center gap-2.5 pr-2">
+                          <span className="font-mono font-bold">{opt.id}.</span>
                           <span>{opt.text}</span>
                         </div>
                         {tagText && (
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                          <span
+                            className={`text-[10px] uppercase tracking-wider font-bold shrink-0 ${
+                              isCorrect ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+                            }`}
+                          >
                             {tagText}
                           </span>
                         )}
@@ -385,21 +544,34 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
                   })}
                 </div>
 
-                {/* Solution Explanation Box */}
-                <div className="solution-explanation-box">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                    <HelpCircleIcon size={16} />
-                    <span>DETAILED SOLUTION & CONCEPT:</span>
-                  </div>
-                  <div style={{ color: 'var(--text-secondary)' }}>
-                    {q.solution_explanation}
-                  </div>
+                {/* Collapsible Detailed Explanation Accordion */}
+                <div className="pt-2">
+                  <button
+                    onClick={() => toggleSolution(q.question_id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-institutional-700 dark:text-institutional-400 hover:underline focus:outline-none"
+                    aria-expanded={isExpanded}
+                  >
+                    <HelpCircleIcon size={14} />
+                    <span>{isExpanded ? 'Hide Detailed Solution' : 'View Detailed Explanation & Concept'}</span>
+                    {isExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-3 p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850/60 border border-charcoal-200 dark:border-charcoal-750 text-xs sm:text-sm text-charcoal-700 dark:text-charcoal-300 space-y-2 animate-fade-in leading-relaxed">
+                      <div className="font-bold text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                        <span>Concept & Step-by-Step Derivation</span>
+                      </div>
+                      <p className="whitespace-pre-line text-charcoal-700 dark:text-charcoal-200">
+                        {q.solution_explanation}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };

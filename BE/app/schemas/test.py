@@ -28,6 +28,7 @@ class TestSummaryOut(BaseModel):
     subject: Optional[str] = None
     sub_subject: Optional[str] = None
     topic: Optional[str] = None
+    difficulty: Optional[str] = "MEDIUM"
     duration_minutes: int
     total_marks: float
     positive_marks_per_q: float
@@ -35,6 +36,7 @@ class TestSummaryOut(BaseModel):
     total_questions: int
     is_active: bool
     created_at: datetime
+
 
 
 class TestDetailOut(TestSummaryOut):

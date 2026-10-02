@@ -268,3 +268,57 @@ class ExamEngineService:
             is_expired=is_expired,
             message="State saved and synced" if not is_expired else "Exam time has expired",
         )
+
+    async def pause_attempt(self, attempt_id: str, user_id: str) -> Dict[str, Any]:
+        """Pause the ongoing exam session and store remaining seconds."""
+        attempt = await self.attempt_repo.get_by_id(attempt_id)
+        if not attempt:
+            raise NotFoundException("Attempt session not found")
+        if attempt["user_id"] != user_id:
+            raise BadRequestException("Unauthorized attempt access")
+        if attempt.get("status") == AttemptStatus.COMPLETED.value:
+            raise ExamStateException("Cannot pause a completed exam")
+
+        now = datetime.now(timezone.utc)
+        expiry_time = attempt["expiry_time"]
+        if expiry_time.tzinfo is None:
+            expiry_time = expiry_time.replace(tzinfo=timezone.utc)
+        remaining = max(0, int((expiry_time - now).total_seconds()))
+
+        await self.db.attempts.update_one(
+            {"_id": attempt_id},
+            {
+                "$set": {
+                    "status": AttemptStatus.PAUSED.value,
+                    "paused_remaining_seconds": remaining,
+                    "updated_at": now,
+                }
+            },
+        )
+        return {"attempt_id": attempt_id, "status": "PAUSED", "remaining_seconds": remaining}
+
+    async def resume_attempt(self, attempt_id: str, user_id: str) -> Dict[str, Any]:
+        """Resume the paused exam session without losing remaining time."""
+        attempt = await self.attempt_repo.get_by_id(attempt_id)
+        if not attempt:
+            raise NotFoundException("Attempt session not found")
+        if attempt["user_id"] != user_id:
+            raise BadRequestException("Unauthorized attempt access")
+
+        remaining = attempt.get("paused_remaining_seconds", 3600)
+        now = datetime.now(timezone.utc)
+        new_expiry = now + timedelta(seconds=remaining)
+
+        await self.db.attempts.update_one(
+            {"_id": attempt_id},
+            {
+                "$set": {
+                    "status": AttemptStatus.IN_PROGRESS.value,
+                    "expiry_time": new_expiry,
+                    "updated_at": now,
+                },
+                "$unset": {"paused_remaining_seconds": ""},
+            },
+        )
+        return {"attempt_id": attempt_id, "status": "IN_PROGRESS", "remaining_seconds": remaining}
+

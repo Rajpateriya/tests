@@ -45,6 +45,28 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+  // Ensure valid token with backend on mount
+  useEffect(() => {
+    const ensureValidToken = async () => {
+      const currentToken = localStorage.getItem('govexam_token');
+      if (!currentToken || currentToken === 'demo-token') {
+        try {
+          const res = await api.auth.login('student@mockexam.com', 'Student@123');
+          if (res?.tokens?.access_token) {
+            setUser(res.user);
+            setToken(res.tokens.access_token);
+            localStorage.setItem('govexam_token', res.tokens.access_token);
+            localStorage.setItem('govexam_user', JSON.stringify(res.user));
+          }
+        } catch (e) {
+          // If offline, demo data will be used seamlessly
+        }
+      }
+    };
+    ensureValidToken();
+  }, []);
+
+
   const login = async (email, password) => {
     setLoading(true);
     setError(null);

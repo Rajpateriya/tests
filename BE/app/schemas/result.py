@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 from pydantic import BaseModel
 from app.models.attempt import AttemptStatus
@@ -83,6 +83,11 @@ class UserDashboardStatsOut(BaseModel):
     average_accuracy: float
     best_score: float
     overall_percentile: float
+    current_streak_days: int = 5
+    upcoming_tests_count: int = 3
     subject_performance: Dict[str, float]  # subject -> accuracy
     recent_attempts: List[AttemptResultOut]
-    recommended_tests: List[Dict[str, str]]
+    recommended_tests: List[Dict[str, Any]]
+    upcoming_tests: Optional[List[Dict[str, Any]]] = None
+    activity_history: Optional[List[Dict[str, Any]]] = None
+

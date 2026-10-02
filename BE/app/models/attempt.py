@@ -6,8 +6,10 @@ from pydantic import BaseModel, Field
 
 class AttemptStatus(str, Enum):
     IN_PROGRESS = "IN_PROGRESS"
+    PAUSED = "PAUSED"
     COMPLETED = "COMPLETED"
     ABANDONED = "ABANDONED"
+
 
 
 class PaletteStatus(str, Enum):
