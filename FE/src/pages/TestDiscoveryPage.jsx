@@ -273,8 +273,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
 
             {!user ? (
               <button
-                onClick={onOpenAuthModal}
-                className="w-full sm:w-auto px-6 py-3 rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-300 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 font-bold text-sm transition-all shadow-subtle"
+                onClick={() => onOpenAuthModal('register')}
+                className="w-full sm:w-auto px-6 py-3 rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-300 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 font-bold text-sm transition-all shadow-subtle cursor-pointer"
               >
                 Sign In / Join Free
               </button>
@@ -588,7 +588,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                   className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${
                     selectedExamBlueprint === tab.id
                       ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
+                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
                 >
                   {tab.label}
@@ -746,7 +746,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 className={`px-4 py-2 rounded-full transition-all ${
                   activeFeatureTab === 'engine'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                 }`}
               >
                 1. TCS iON Exam Engine
@@ -756,7 +756,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 className={`px-4 py-2 rounded-full transition-all ${
                   activeFeatureTab === 'analytics'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                 }`}
               >
                 2. Deep Percentile Analytics
@@ -766,7 +766,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 className={`px-4 py-2 rounded-full transition-all ${
                   activeFeatureTab === 'solutions'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                 }`}
               >
                 3. Mathematical Derivations
@@ -887,7 +887,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                   className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${
                     selectedType === tab.id
                       ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
+                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
                 >
                   {tab.label}
@@ -1027,7 +1027,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
 
           <div className="text-center max-w-xl mx-auto space-y-2 relative z-10">
             <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-charcoal-900 dark:text-charcoal-100">
-              Why Serious Rankers Choose GovExam Pro
+              Why Serious Rankers Choose PrepMagnet
             </h2>
             <p className="text-xs text-charcoal-500">
               Don't be fooled by inflated mock scores that give false confidence before the official exam.
@@ -1040,7 +1040,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 uppercase tracking-wider font-bold">
                   <th className="pb-3 pr-4">Evaluation Metric</th>
                   <th className="pb-3 px-4 text-rose-700 dark:text-rose-400">Generic Test Series</th>
-                  <th className="pb-3 px-4 text-emerald-700 dark:text-emerald-400 font-extrabold">GovExam Pro Platform</th>
+                  <th className="pb-3 px-4 text-emerald-700 dark:text-emerald-400 font-extrabold">PrepMagnet Platform</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-charcoal-100 dark:divide-charcoal-800">
@@ -1209,7 +1209,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 className={`px-4 py-1.5 rounded-full transition-all duration-200 ${
                   landingBillingCycle === 'monthly'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                 }`}
                 onClick={() => setLandingBillingCycle('monthly')}
               >
@@ -1220,7 +1220,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 className={`px-4 py-1.5 rounded-full transition-all duration-200 flex items-center gap-1.5 ${
                   landingBillingCycle === 'yearly'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                 }`}
                 onClick={() => setLandingBillingCycle('yearly')}
               >
@@ -1484,10 +1484,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                         Academic Coordination Email
                       </div>
                       <a
-                        href="mailto:support@govexampro.edu.in"
+                        href="mailto:support@prepmagnet.com"
                         className="font-bold text-institutional-600 dark:text-institutional-400 hover:underline block"
                       >
-                        support@govexampro.edu.in
+                        support@prepmagnet.com
                       </a>
                       <div className="text-[11px] text-charcoal-500">
                         Disputes reviewed by subject matter leads
@@ -1757,7 +1757,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
               Start Benchmarking Your Speed & Accuracy Today.
             </h2>
             <p className="text-xs sm:text-sm text-institutional-200 leading-relaxed max-w-xl mx-auto">
-              Join thousands of serious government exam aspirants practicing on GovExam Pro every morning.
+              Join thousands of serious government exam aspirants practicing on PrepMagnet every morning.
             </p>
             <div className="pt-3 flex flex-wrap justify-center gap-3">
               <button
@@ -1772,8 +1772,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
               </button>
               {!user && (
                 <button
-                  onClick={onOpenAuthModal}
-                  className="px-6 py-3.5 rounded-full bg-institutional-700/80 border border-institutional-500 text-white font-bold text-xs hover:bg-institutional-700 transition-colors"
+                  onClick={() => onOpenAuthModal('register')}
+                  className="px-6 py-3.5 rounded-full bg-institutional-700/80 border border-institutional-500 text-white font-bold text-xs hover:bg-institutional-700 transition-colors cursor-pointer"
                 >
                   Create Aspirant Account
                 </button>

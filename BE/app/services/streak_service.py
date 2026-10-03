@@ -27,8 +27,12 @@ class StreakService:
         if difficulty:
             qs = await self.question_repo.sample_questions(count=count, difficulty=difficulty)
             questions.extend(qs)
+        elif count == 1:
+            # Pick exactly 1 random daily question from the DB
+            qs = await self.question_repo.sample_questions(count=1)
+            questions.extend(qs)
         else:
-            # Progressive 3-tier challenge: 1 Easy -> 1 Medium -> 1 Hard
+            # Multi-tier challenge
             easy_qs = await self.question_repo.sample_questions(count=1, difficulty="Easy")
             med_qs = await self.question_repo.sample_questions(count=1, difficulty="Medium")
             hard_qs = await self.question_repo.sample_questions(count=1, difficulty="Hard")
@@ -47,6 +51,9 @@ class StreakService:
                     if qid not in existing_ids and len(questions) < count:
                         questions.append(q)
                         existing_ids.add(qid)
+
+        # Cap to requested count
+        questions = questions[:count]
 
         # Sanitize and format for client (hide correct_option and explanation to prevent inspect-element cheating)
         formatted = []
@@ -125,23 +132,47 @@ class StreakService:
         else:
             effective_streak = current_streak
 
-        # 7-day milestone cycle
-        days_in_current_cycle = effective_streak % 7
-        if days_in_current_cycle == 0 and effective_streak > 0 and today_completed:
-            days_in_current_cycle = 7
-        days_until_bonus = 7 - days_in_current_cycle if days_in_current_cycle < 7 else 0
+        # 30-Day Monthly Discipline Roadmap Configuration
+        MILESTONE_CONFIG = {
+            7: {"bonus": 100, "total": 120, "label": "Week 1 Habit", "badge": "BRONZE"},
+            14: {"bonus": 150, "total": 170, "label": "Fortnight Anchor", "badge": "SILVER"},
+            21: {"bonus": 200, "total": 220, "label": "Discipline Master", "badge": "GOLD"},
+            28: {"bonus": 300, "total": 320, "label": "Focus Champion", "badge": "DIAMOND"},
+            30: {"bonus": 500, "total": 520, "label": "Grand Monthly Master", "badge": "PLATINUM"},
+        }
 
-        # Build 7-day timeline tracker (Day 1 to Day 7)
+        # 30-day milestone cycle
+        days_in_30_cycle = effective_streak % 30
+        if days_in_30_cycle == 0 and effective_streak > 0 and today_completed:
+            days_in_30_cycle = 30
+
+        # Calculate next upcoming milestone
+        next_milestone_day = 30
+        next_milestone_bonus = 500
+        for m_day in [7, 14, 21, 28, 30]:
+            if m_day > days_in_30_cycle:
+                next_milestone_day = m_day
+                next_milestone_bonus = MILESTONE_CONFIG[m_day]["bonus"]
+                break
+        days_until_bonus = max(0, next_milestone_day - days_in_30_cycle)
+
+        # Build 30-day timeline tracker (Day 1 to Day 30)
         timeline: List[Dict[str, Any]] = []
-        for i in range(1, 8):
-            is_done = i <= days_in_current_cycle
+        for i in range(1, 31):
+            is_done = i <= days_in_30_cycle
+            is_today = (i == days_in_30_cycle + 1) and not today_completed
+            is_milestone = i in MILESTONE_CONFIG
+            cfg = MILESTONE_CONFIG.get(i)
+            reward = cfg["total"] if is_milestone else 20
             timeline.append({
                 "day_number": i,
                 "label": f"Day {i}",
                 "completed": is_done,
-                "is_current": (i == days_in_current_cycle + 1) and not today_completed,
-                "coins_reward": 100 if i == 7 else 20,
-                "is_milestone": i == 7,
+                "is_current": is_today,
+                "coins_reward": reward,
+                "is_milestone": is_milestone,
+                "milestone_title": cfg["label"] if cfg else None,
+                "milestone_badge": cfg["badge"] if cfg else None,
             })
 
         # Fetch actual user attempts to count recent activity
@@ -155,9 +186,12 @@ class StreakService:
             "today_completed": today_completed,
             "last_quiz_date": last_quiz_date,
             "days_until_bonus": days_until_bonus,
-            "bonus_coins": 100,
+            "next_milestone_day": next_milestone_day,
+            "bonus_coins": next_milestone_bonus,
             "daily_reward_coins": 20,
             "timeline": timeline,
+            "total_days_in_month": 30,
+            "days_completed_in_cycle": days_in_30_cycle,
             "heatmap": [],
             "total_active_days": max(total_active_days, effective_streak),
             "can_solve_today": not today_completed,
@@ -170,6 +204,14 @@ class StreakService:
         total_count: int = 3,
     ) -> Dict[str, Any]:
         """Record solving today's daily quiz, advancing streak and granting coins."""
+        MILESTONE_CONFIG = {
+            7: {"bonus": 100, "label": "Week 1 Habit"},
+            14: {"bonus": 150, "label": "Fortnight Anchor"},
+            21: {"bonus": 200, "label": "Discipline Master"},
+            28: {"bonus": 300, "label": "Focus Champion"},
+            30: {"bonus": 500, "label": "Grand Monthly Master"},
+        }
+
         user = await self.user_repo.get_by_id(user_id)
         if not user:
             raise ValueError("User not found")
@@ -190,7 +232,7 @@ class StreakService:
                 "success": True,
                 "already_completed": True,
                 "coins_earned": 0,
-                "is_7day_milestone": False,
+                "is_milestone": False,
                 "current_streak": current_streak,
                 "coins_balance": current_coins,
                 "message": "You've already solved today's quiz! Come back tomorrow to continue your streak.",
@@ -204,13 +246,24 @@ class StreakService:
 
         new_longest = max(longest_streak, new_streak)
 
-        # Coins logic:
-        # Base daily reward = 20 coins
-        # If new_streak hits a multiple of 7 (e.g. 7, 14, 21...) -> Bonus +100 coins!
-        is_milestone = (new_streak % 7 == 0)
+        # Milestone detection:
+        day_in_cycle = new_streak % 30
+        if day_in_cycle == 0 and new_streak > 0:
+            day_in_cycle = 30
+
         earned_coins = 20
-        if is_milestone:
+        is_milestone = False
+        milestone_title = ""
+
+        if day_in_cycle in MILESTONE_CONFIG:
+            is_milestone = True
+            bonus = MILESTONE_CONFIG[day_in_cycle]["bonus"]
+            earned_coins += bonus
+            milestone_title = MILESTONE_CONFIG[day_in_cycle]["label"]
+        elif new_streak % 7 == 0:
+            is_milestone = True
             earned_coins += 100
+            milestone_title = "7-Day Consistency Bonus"
 
         # Update in DB
         await self.user_repo.update_streak(
@@ -224,13 +277,14 @@ class StreakService:
 
         msg = f"Awesome! Daily quiz completed ({correct_count}/{total_count} correct)! 🔥 Streak: {new_streak} days (+{earned_coins} GovCoins)"
         if is_milestone:
-            msg = f"🎉 7-DAY STREAK UNLOCKED! Earned {earned_coins} GovCoins including a +100 Milestone Bonus!"
+            msg = f"🎉 {milestone_title.upper()} UNLOCKED! Earned {earned_coins} GovCoins including milestone bonus!"
 
         return {
             "success": True,
             "already_completed": False,
             "coins_earned": earned_coins,
-            "is_7day_milestone": is_milestone,
+            "is_milestone": is_milestone,
+            "milestone_title": milestone_title,
             "current_streak": new_streak,
             "longest_streak": new_longest,
             "coins_balance": new_balance,

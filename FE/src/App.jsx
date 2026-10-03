@@ -44,7 +44,15 @@ function AppContent() {
 
   const [activeAttempt, setActiveAttempt] = useState(null);
   const [lastCompletedAttemptId, setLastCompletedAttemptId] = useState(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalState, setAuthModalState] = useState({ isOpen: false, initialTab: 'login' });
+
+  const handleOpenAuthModal = (tab = 'login') => {
+    setAuthModalState({ isOpen: true, initialTab: tab });
+  };
+
+  const handleCloseAuthModal = () => {
+    setAuthModalState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   // Architectural Guard: Auto-route on login or logout
   useEffect(() => {
@@ -69,7 +77,7 @@ function AppContent() {
   // Start / Resume Mock Exam
   const handleStartTest = (testOrAttempt) => {
     if (!user) {
-      setIsAuthModalOpen(true);
+      handleOpenAuthModal('login');
       return;
     }
 
@@ -98,7 +106,7 @@ function AppContent() {
           currentView={currentView}
           setCurrentView={setCurrentView}
           activeAttempt={activeAttempt}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenAuthModal={handleOpenAuthModal}
         />
       )}
 
@@ -109,7 +117,7 @@ function AppContent() {
           <TestDiscoveryPage
             onStartTest={handleStartTest}
             activeAttempt={activeAttempt}
-            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            onOpenAuthModal={handleOpenAuthModal}
             onNavigate={setCurrentView}
           />
         )}
@@ -168,8 +176,9 @@ function AppContent() {
 
       {/* Authentication Modal (Sign In / Register / 1-Click Demo) */}
       <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        isOpen={authModalState.isOpen}
+        initialTab={authModalState.initialTab}
+        onClose={handleCloseAuthModal}
       />
     </div>
   );

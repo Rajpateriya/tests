@@ -1,5 +1,5 @@
 /**
- * Centralized API Service for GovExam Pro Platform
+ * Centralized API Service for PrepMagnet Platform
  * Handles authentication tokens, REST calls, error handling, and demo mock fallback data.
  */
 
@@ -859,6 +859,28 @@ export const api = {
         return await request('/streak/me');
       } catch (err) {
         // Fallback for offline demo
+        const timeline = Array.from({ length: 30 }, (_, idx) => {
+          const day = idx + 1;
+          const isMilestone = [7, 14, 21, 28, 30].includes(day);
+          const milestoneRewards = { 7: 120, 14: 170, 21: 220, 28: 320, 30: 520 };
+          const milestoneTitles = {
+            7: 'Week 1 Habit',
+            14: 'Fortnight Anchor',
+            21: 'Discipline Master',
+            28: 'Focus Champion',
+            30: 'Grand Monthly Master',
+          };
+          return {
+            day_number: day,
+            label: `Day ${day}`,
+            completed: day <= 6,
+            is_current: day === 7,
+            coins_reward: isMilestone ? milestoneRewards[day] : 20,
+            is_milestone: isMilestone,
+            milestone_title: isMilestone ? milestoneTitles[day] : null,
+          };
+        });
+
         return {
           coins_balance: 150,
           current_streak: 6,
@@ -866,19 +888,13 @@ export const api = {
           today_completed: false,
           last_quiz_date: null,
           days_until_bonus: 1,
+          next_milestone_day: 7,
           bonus_coins: 100,
           daily_reward_coins: 20,
           can_solve_today: true,
           total_active_days: 18,
-          timeline: [
-            { day_number: 1, label: "Day 1", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
-            { day_number: 2, label: "Day 2", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
-            { day_number: 3, label: "Day 3", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
-            { day_number: 4, label: "Day 4", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
-            { day_number: 5, label: "Day 5", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
-            { day_number: 6, label: "Day 6", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
-            { day_number: 7, label: "Day 7", completed: false, is_current: true, coins_reward: 100, is_milestone: true },
-          ],
+          total_days_in_month: 30,
+          timeline,
         };
       }
     },

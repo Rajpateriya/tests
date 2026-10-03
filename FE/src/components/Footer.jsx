@@ -38,7 +38,7 @@ export const Footer = ({ onNavigate }) => {
               </div>
               <div className="flex items-center gap-1">
                 <span className="font-extrabold text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
-                  GovExam
+                  PrepMagnet
                 </span>
                 <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 font-mono tracking-wider">
                   PRO
@@ -167,11 +167,11 @@ export const Footer = ({ onNavigate }) => {
             </h4>
             <div className="space-y-2 text-xs">
               <a
-                href="mailto:support@govexampro.edu.in"
+                href="mailto:support@prepmagnet.com"
                 className="flex items-center gap-2 hover:text-institutional-600 dark:hover:text-institutional-400 transition-colors"
               >
                 <MailIcon size={14} className="text-institutional-600 shrink-0" />
-                <span className="truncate">support@govexampro.edu.in</span>
+                <span className="truncate">support@prepmagnet.com</span>
               </a>
               <div className="flex items-center gap-2">
                 <PhoneIcon size={14} className="text-institutional-600 shrink-0" />
@@ -198,10 +198,10 @@ export const Footer = ({ onNavigate }) => {
       <div className="border-t border-charcoal-150 dark:border-charcoal-800/80 bg-charcoal-50/50 dark:bg-charcoal-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-charcoal-500">
           <p className="max-w-2xl text-center md:text-left leading-relaxed">
-            <strong>Institutional Disclaimer:</strong> GovExam Pro is an independent academic testing and simulation system. SSC, IBPS, RRB, and State PSC examination names, schemes, and logos are properties of their respective conducting boards.
+            <strong>Institutional Disclaimer:</strong> PrepMagnet is an independent academic testing and simulation system. SSC, IBPS, RRB, and State PSC examination names, schemes, and logos are properties of their respective conducting boards.
           </p>
           <div className="flex items-center gap-4 shrink-0 font-medium">
-            <span>© 2026 GovExam Pro Educational Systems.</span>
+            <span>© 2026 PrepMagnet Educational Systems.</span>
             <span>All rights reserved.</span>
           </div>
         </div>

@@ -11,9 +11,15 @@ class UserRepository(BaseRepository):
         return await self.find_one({"email": email.lower().strip()})
 
     async def update_profile(self, user_id: str, profile_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        flat_update = {f"profile.{k}": v for k, v in profile_data.items() if v is not None}
-        if flat_update:
-            await self.collection.update_one({"_id": user_id}, {"$set": flat_update})
+        update_set = {}
+        for k, v in profile_data.items():
+            if v is not None:
+                if k in ("full_name",):
+                    update_set[k] = v
+                else:
+                    update_set[f"profile.{k}"] = v
+        if update_set:
+            await self.collection.update_one({"_id": user_id}, {"$set": update_set})
         return await self.get_by_id(user_id)
 
     async def update_coins(self, user_id: str, delta: int) -> int:

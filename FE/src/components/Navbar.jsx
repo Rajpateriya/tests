@@ -107,7 +107,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
         </div>
         <div className="flex items-center gap-1">
           <span className="font-extrabold text-sm sm:text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
-            GovExam
+            PrepMagnet
           </span>
           <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full font-mono tracking-wider ${
             !user
@@ -285,14 +285,14 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
         {!user ? (
           <div className="flex items-center gap-1.5">
             <button
-              onClick={onOpenAuthModal}
-              className="px-3 py-1.5 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:text-charcoal-950 dark:hover:text-white transition-colors"
+              onClick={() => onOpenAuthModal('login')}
+              className="px-3 py-1.5 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:text-charcoal-950 dark:hover:text-white transition-colors cursor-pointer"
             >
               Sign In
             </button>
             <button
-              onClick={onOpenAuthModal}
-              className="px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-full transition-colors shadow-sm"
+              onClick={() => onOpenAuthModal('register')}
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-full transition-colors shadow-sm cursor-pointer"
             >
               Join Free
             </button>
@@ -302,13 +302,19 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-              className="flex items-center gap-2 p-1 pl-2 sm:pl-2.5 rounded-full border border-charcoal-200 dark:border-charcoal-750 bg-charcoal-50/80 dark:bg-charcoal-800/80 hover:bg-charcoal-100 dark:hover:bg-charcoal-750 transition-colors text-xs font-semibold focus:outline-none"
+              className="flex items-center gap-2 p-1 pl-2 sm:pl-2.5 rounded-full border border-charcoal-200 dark:border-charcoal-750 bg-charcoal-50/80 dark:bg-charcoal-800/80 hover:bg-charcoal-100 dark:hover:bg-charcoal-750 transition-colors text-xs font-semibold focus:outline-none cursor-pointer"
             >
               <span className="hidden sm:inline font-bold text-charcoal-800 dark:text-charcoal-200 max-w-[90px] truncate">
                 {user.full_name?.split(' ')[0] || 'User'}
               </span>
-              <div className="w-6 h-6 rounded-full bg-institutional-600 text-white font-bold flex items-center justify-center text-[11px] shrink-0">
-                {user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+              <div className="w-6 h-6 rounded-full bg-institutional-600 text-white font-bold flex items-center justify-center text-[11px] shrink-0 overflow-hidden">
+                {user?.profile?.avatar_url ? (
+                  <img src={user.profile.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
+                ) : user.full_name ? (
+                  user.full_name.charAt(0).toUpperCase()
+                ) : (
+                  'U'
+                )}
               </div>
               <ChevronDownIcon size={13} className="text-charcoal-400 mr-0.5" />
             </button>
@@ -317,11 +323,24 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             {userDropdownOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-lifted z-50 p-3 space-y-3 animate-fade-in text-xs">
                 {/* User Info Header */}
-                <div className="pb-2.5 border-b border-charcoal-150 dark:border-charcoal-800 space-y-1">
-                  <div className="font-bold text-charcoal-900 dark:text-charcoal-100 truncate">
-                    {user.full_name}
+                <div className="pb-2.5 border-b border-charcoal-150 dark:border-charcoal-800 space-y-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-institutional-600 text-white font-bold flex items-center justify-center text-xs shrink-0 overflow-hidden shadow-xs border border-charcoal-200 dark:border-charcoal-700">
+                      {user?.profile?.avatar_url ? (
+                        <img src={user.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : user.full_name ? (
+                        user.full_name.charAt(0).toUpperCase()
+                      ) : (
+                        'U'
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-charcoal-900 dark:text-charcoal-100 truncate">
+                        {user.full_name}
+                      </div>
+                      <div className="text-[11px] text-charcoal-500 truncate">{user.email}</div>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-charcoal-500 truncate">{user.email}</div>
                   <div className="pt-1 flex flex-wrap items-center gap-1.5">
                     {isAdmin ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/50 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
@@ -503,12 +522,21 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <div className="pt-2 border-t border-charcoal-200 dark:border-charcoal-800 flex gap-2">
                 <button
                   onClick={() => {
-                    onOpenAuthModal();
+                    onOpenAuthModal('login');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex-1 py-2 text-center rounded-lg border border-charcoal-300 dark:border-charcoal-700 font-bold text-charcoal-800 dark:text-charcoal-200"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => {
+                    onOpenAuthModal('register');
                     setMobileMenuOpen(false);
                   }}
                   className="flex-1 py-2 text-center rounded-lg bg-institutional-600 text-white font-bold"
                 >
-                  Sign In / Register
+                  Join Free
                 </button>
               </div>
             </>

@@ -88,7 +88,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
   const faqs = [
     {
       q: 'How do GovCoins work and how can I earn them?',
-      a: 'You earn GovCoins automatically by solving practice quizzes every day! Daily quiz completion rewards 20 GovCoins, and maintaining a 7-day streak awards a massive 100 Bonus GovCoins. Every GovCoin equals ₹1 discount on any subscription pass.',
+      a: 'You earn GovCoins automatically by solving practice quizzes every day! Daily quiz completion rewards 20 GovCoins, plus 5 progressive milestone jackpots (up to 500 Bonus GovCoins on the 30-day monthly habit roadmap). Every GovCoin equals ₹1 discount on any subscription pass.',
     },
     {
       q: 'How does the TCS iON exam simulation help my real exam score?',
@@ -298,18 +298,22 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
               return (
                 <div
                   key={idx}
-                  className="border border-charcoal-200 dark:border-charcoal-800 rounded-xl overflow-hidden transition-colors"
+                  className="border border-slate-200 dark:border-charcoal-700 rounded-2xl overflow-hidden transition-all bg-white dark:bg-charcoal-850 shadow-xs"
                 >
                   <button
                     type="button"
                     onClick={() => setActiveFaq(isOpen ? null : idx)}
-                    className="w-full p-3.5 text-left font-bold text-xs sm:text-sm text-charcoal-900 dark:text-charcoal-100 flex items-center justify-between gap-4 hover:bg-charcoal-50 dark:hover:bg-charcoal-850"
+                    className="w-full p-4 text-left font-bold text-xs sm:text-sm flex items-center justify-between gap-4 bg-white hover:bg-blue-50/70 dark:bg-charcoal-850 dark:hover:bg-charcoal-800 transition-colors group cursor-pointer"
                   >
-                    <span>{faq.q}</span>
-                    <span className="text-sm text-institutional-600 font-mono font-bold">{isOpen ? '−' : '+'}</span>
+                    <span className="text-slate-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors font-extrabold">
+                      {faq.q}
+                    </span>
+                    <span className="text-sm font-mono font-black text-blue-700 dark:text-blue-400 bg-blue-100/70 dark:bg-charcoal-800 px-2.5 py-0.5 rounded-lg border border-blue-200 dark:border-charcoal-700 shrink-0">
+                      {isOpen ? '−' : '+'}
+                    </span>
                   </button>
                   {isOpen && (
-                    <div className="px-3.5 pb-3.5 text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed border-t border-charcoal-150 dark:border-charcoal-800/60 pt-2.5">
+                    <div className="px-4 pb-4 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed border-t border-slate-200 dark:border-charcoal-800 pt-3 bg-slate-50 dark:bg-charcoal-900/50 font-medium">
                       {faq.a}
                     </div>
                   )}

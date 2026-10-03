@@ -107,7 +107,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
           <div className="flex items-end justify-between pt-1">
             <div>
               <div className="text-[10px] text-blue-200 uppercase tracking-wider font-semibold">
-                GovExam Pro Subscription
+                PrepMagnet Pro Subscription
               </div>
               <div className="text-base font-extrabold text-white">
                 {plan.name} ({plan.duration_days || 30} Days)
