@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 
 const AuthContext = createContext();
@@ -6,29 +6,51 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const cached = localStorage.getItem('govexam_user');
-    return cached ? JSON.parse(cached) : {
-      id: 'demo-student-id',
-      email: 'student@mockexam.com',
-      full_name: 'Rajesh Kumar',
-      role: 'student',
-      is_active: true,
-      profile: {
-        target_exams: ['SSC CGL', 'SSC CHSL'],
-        preferred_subjects: ['Quantitative Aptitude', 'General Intelligence'],
+    if (!cached) return null;
+    try {
+      return JSON.parse(cached);
+    } catch {
+      return null;
+    }
+  });
+
+  const [baseRole, setBaseRole] = useState(() => {
+    const cached = localStorage.getItem('govexam_base_role');
+    if (cached) return cached;
+    const cachedUser = localStorage.getItem('govexam_user');
+    if (cachedUser) {
+      try {
+        const u = JSON.parse(cachedUser);
+        return u.role === 'admin' || u.email === 'admin@gmail.com' ? 'admin' : 'student';
+      } catch {
+        return null;
       }
-    };
+    }
+    return null;
   });
 
   const [subscription, setSubscription] = useState(() => {
+    const cachedUser = localStorage.getItem('govexam_user');
+    if (cachedUser) {
+      try {
+        const u = JSON.parse(cachedUser);
+        // Administrators never have student passes
+        if (u.role === 'admin' || u.email === 'admin@gmail.com') {
+          return { plan: 'NONE', status: 'INACTIVE' };
+        }
+      } catch {
+        // ignore
+      }
+    }
     const cached = localStorage.getItem('govexam_subscription');
     return cached ? JSON.parse(cached) : { plan: 'FREE', status: 'INACTIVE' };
   });
 
-  const [token, setToken] = useState(() => localStorage.getItem('govexam_token') || 'demo-token');
-
+  const [token, setToken] = useState(() => localStorage.getItem('govexam_token') || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Sync user to localStorage
   useEffect(() => {
     if (user) {
       localStorage.setItem('govexam_user', JSON.stringify(user));
@@ -37,6 +59,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
+  // Sync token to localStorage
   useEffect(() => {
     if (token) {
       localStorage.setItem('govexam_token', token);
@@ -45,36 +68,88 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Ensure valid token with backend on mount
+  // Sync subscription to localStorage (only for non-admin accounts)
   useEffect(() => {
-    const ensureValidToken = async () => {
-      const currentToken = localStorage.getItem('govexam_token');
-      if (!currentToken || currentToken === 'demo-token') {
-        try {
-          const res = await api.auth.login('student@mockexam.com', 'Student@123');
-          if (res?.tokens?.access_token) {
-            setUser(res.user);
-            setToken(res.tokens.access_token);
-            localStorage.setItem('govexam_token', res.tokens.access_token);
-            localStorage.setItem('govexam_user', JSON.stringify(res.user));
-          }
-        } catch (e) {
-          // If offline, demo data will be used seamlessly
+    if (user?.role === 'admin' || user?.email === 'admin@gmail.com') {
+      localStorage.removeItem('govexam_subscription');
+    } else if (subscription && subscription.status === 'ACTIVE') {
+      localStorage.setItem('govexam_subscription', JSON.stringify(subscription));
+    }
+  }, [subscription, user]);
+
+  // Validate existing token or refresh profile from backend
+  const refreshProfile = useCallback(async () => {
+    const currentToken = localStorage.getItem('govexam_token');
+    if (!currentToken) return;
+
+    try {
+      const me = await api.auth.getMe();
+      if (me) {
+        setUser((prev) => ({
+          ...prev,
+          ...me,
+          profile: { ...(prev?.profile || {}), ...(me.profile || {}) },
+        }));
+
+        if (me.role === 'admin' || me.email === 'admin@gmail.com') {
+          setSubscription({ plan: 'NONE', status: 'INACTIVE' });
+          localStorage.removeItem('govexam_subscription');
+        } else if (me.profile?.subscription_plan && me.profile?.subscription_status === 'ACTIVE') {
+          setSubscription({
+            plan: me.profile.subscription_plan,
+            status: 'ACTIVE',
+            expiresAt: me.profile.subscription_expires_at,
+          });
         }
       }
-    };
-    ensureValidToken();
+    } catch (e) {
+      console.warn('Token validation skipped or failed:', e.message);
+    }
   }, []);
 
+  useEffect(() => {
+    if (token) {
+      refreshProfile();
+    }
+  }, [token, refreshProfile]);
 
   const login = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
       const res = await api.auth.login(email, password);
-      setUser(res.user);
-      setToken(res.tokens.access_token);
-      return res.user;
+      const loggedUser = res.user;
+      const accessToken = res.tokens?.access_token || 'demo-jwt-access-token';
+      const isAdminAccount = loggedUser.role === 'admin' || loggedUser.email === 'admin@gmail.com';
+
+      const realRole = isAdminAccount ? 'admin' : 'student';
+      setBaseRole(realRole);
+      localStorage.setItem('govexam_base_role', realRole);
+
+      setUser(loggedUser);
+      setToken(accessToken);
+      localStorage.setItem('govexam_token', accessToken);
+      localStorage.setItem('govexam_user', JSON.stringify(loggedUser));
+
+      if (isAdminAccount) {
+        // Admin: clear student pass completely
+        setSubscription({ plan: 'NONE', status: 'INACTIVE' });
+        localStorage.removeItem('govexam_subscription');
+      } else {
+        // Student: populate active pass if exists
+        if (loggedUser.profile?.subscription_plan && loggedUser.profile?.subscription_status === 'ACTIVE') {
+          setSubscription({
+            plan: loggedUser.profile.subscription_plan,
+            status: 'ACTIVE',
+            expiresAt: loggedUser.profile.subscription_expires_at,
+          });
+        } else {
+          setSubscription({ plan: 'FREE', status: 'INACTIVE' });
+          localStorage.removeItem('govexam_subscription');
+        }
+      }
+
+      return loggedUser;
     } catch (err) {
       setError(err.message || 'Login failed');
       throw err;
@@ -87,8 +162,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.auth.register(data);
-      // Auto login after register
+      await api.auth.register(data);
       return await login(data.email, data.password);
     } catch (err) {
       setError(err.message || 'Registration failed');
@@ -101,29 +175,62 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
+    setBaseRole(null);
+    setSubscription({ plan: 'FREE', status: 'INACTIVE' });
     localStorage.removeItem('govexam_user');
     localStorage.removeItem('govexam_token');
+    localStorage.removeItem('govexam_subscription');
+    localStorage.removeItem('govexam_base_role');
   };
 
-  const switchRole = (newRole) => {
+  // Only allowed if authenticated account is an administrator
+  const switchRole = async (newRole) => {
+    const isRealAdmin = baseRole === 'admin' || user?.email === 'admin@gmail.com';
+    if (!isRealAdmin) {
+      console.warn('Unauthorized role switch attempt blocked: only admin accounts can preview student mode.');
+      return;
+    }
+
     if (newRole === 'admin') {
-      setUser({
-        id: 'demo-admin-id',
-        email: 'admin@mockexam.com',
-        full_name: 'Platform Administrator',
-        role: 'admin',
-        is_active: true,
-        profile: { target_exams: ['All Exams'], preferred_subjects: [] },
-      });
+      try {
+        await login('admin@gmail.com', 'admin123');
+      } catch {
+        const adminUser = {
+          id: 'admin-primary-id',
+          email: 'admin@gmail.com',
+          full_name: 'Platform Administrator',
+          role: 'admin',
+          is_active: true,
+          profile: { target_exams: ['All Exams'], preferred_subjects: [], coins_balance: 500, current_streak: 10 },
+        };
+        setUser(adminUser);
+        setToken('demo-admin-token');
+      }
+      setSubscription({ plan: 'NONE', status: 'INACTIVE' });
+      localStorage.removeItem('govexam_subscription');
     } else {
-      setUser({
-        id: 'demo-student-id',
-        email: 'student@mockexam.com',
-        full_name: 'Rajesh Kumar',
-        role: 'student',
-        is_active: true,
-        profile: { target_exams: ['SSC CGL'], preferred_subjects: ['Quantitative Aptitude'] },
-      });
+      try {
+        await login('student@gmail.com', 'student123');
+      } catch {
+        const studentUser = {
+          id: 'student-primary-id',
+          email: 'student@gmail.com',
+          full_name: 'Alex Aspirant',
+          role: 'student',
+          is_active: true,
+          profile: {
+            target_exams: ['SSC CGL', 'SSC CHSL'],
+            preferred_subjects: ['Quantitative Aptitude', 'General Intelligence & Reasoning'],
+            coins_balance: 150,
+            current_streak: 6,
+            longest_streak: 14,
+            subscription_plan: 'FREE',
+            subscription_status: 'INACTIVE',
+          },
+        };
+        setUser(studentUser);
+        setToken('demo-student-token');
+      }
     }
   };
 
@@ -133,29 +240,48 @@ export const AuthProvider = ({ children }) => {
       setUser(updated);
       return updated;
     } catch (err) {
-      setUser(prev => ({
+      setUser((prev) => ({
         ...prev,
         ...updates,
-        profile: { ...prev.profile, ...updates },
+        profile: { ...prev?.profile, ...updates },
       }));
     }
   };
 
-  useEffect(() => {
-    if (subscription) {
-      localStorage.setItem('govexam_subscription', JSON.stringify(subscription));
-    }
-  }, [subscription]);
+  const updateCoins = (newCoins) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        profile: {
+          ...(prev.profile || {}),
+          coins_balance: newCoins,
+        },
+      };
+    });
+  };
 
-  const upgradeSubscription = (plan, transactionId = `pay_${Date.now().toString(36)}`) => {
+  const upgradeSubscription = (plan, transactionId = `pay_${Date.now().toString(36)}`, durationDays = 30) => {
+    // If admin is performing test upgrade
     const updated = {
-      plan, // 'BASIC' | 'PRO' | 'MAX'
+      plan,
       status: 'ACTIVE',
       transactionId,
       activatedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString(),
     };
     setSubscription(updated);
+    setUser((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        profile: {
+          ...(prev.profile || {}),
+          subscription_plan: plan,
+          subscription_status: 'ACTIVE',
+        },
+      };
+    });
     return updated;
   };
 
@@ -163,6 +289,12 @@ export const AuthProvider = ({ children }) => {
     const updated = { plan: 'FREE', status: 'INACTIVE' };
     setSubscription(updated);
   };
+
+  const isRealAdmin = baseRole === 'admin' || user?.email === 'admin@gmail.com';
+  const canSwitchRole = isRealAdmin;
+  const isPreviewingAsStudent = isRealAdmin && user?.role === 'student';
+  const coinsBalance = user?.profile?.coins_balance ?? 150;
+  const currentStreak = user?.profile?.current_streak ?? 6;
 
   return (
     <AuthContext.Provider
@@ -179,15 +311,21 @@ export const AuthProvider = ({ children }) => {
         logout,
         switchRole,
         updateProfile,
+        updateCoins,
+        refreshProfile,
+        coinsBalance,
+        currentStreak,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
-        isPremium: subscription?.status === 'ACTIVE' && subscription?.plan !== 'FREE',
+        isStudent: user?.role === 'student',
+        canSwitchRole,
+        isPreviewingAsStudent,
+        isPremium: !isRealAdmin && subscription?.status === 'ACTIVE' && subscription?.plan !== 'FREE' && subscription?.plan !== 'NONE',
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-
 };
 
 export const useAuth = () => useContext(AuthContext);

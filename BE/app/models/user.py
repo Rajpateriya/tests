@@ -16,6 +16,14 @@ class UserProfile(BaseModel):
     )
     phone_number: Optional[str] = None
     avatar_url: Optional[str] = None
+    coins_balance: int = 150
+    current_streak: int = 5
+    longest_streak: int = 12
+    last_quiz_date: Optional[str] = None
+    streak_history: List[str] = Field(default_factory=list)
+    subscription_plan: Optional[str] = "FREE"
+    subscription_status: Optional[str] = "INACTIVE"
+    subscription_expires_at: Optional[datetime] = None
 
 
 class UserInDB(BaseModel):

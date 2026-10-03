@@ -10,426 +10,1004 @@ import {
   ArrowRightIcon,
   BookOpenIcon,
   CheckCircleIcon,
+  XCircleIcon,
   UserIcon,
   BellIcon,
   FlameIcon,
   PlayIcon,
   ChevronRightIcon,
   FilterIcon,
+  StarIcon,
+  ShieldIcon,
+  ZapIcon,
+  CrownIcon,
+  CheckIcon,
 } from '../components/Icons';
 
 /**
- * Student Dashboard — Academic & Scholarly Command Center
- * Features:
- * - Minimalist academic header with profile overview, notification bell, and 7-day streak tracker.
- * - Minimalist metric cards: Exams Taken, Average Accuracy, Upcoming Tests, All-India Percentile.
- * - Live Mock Test Library with metadata (Duration, Subject Tags, Difficulty Badges).
- * - Lifetime Subject Proficiency breakdown and Recent Attempts Scorecard history.
- * - Shimmer skeleton loaders for perceived performance (Anti-spinner).
- * - Full WCAG AA accessible interactive elements.
+ * Architected Student Profile & Exam Prep Dashboard
+ * Tailored specifically for Competitive & Mock Test Examination Platforms (SSC, Banking, UPSC, Railways, TCS iON pattern).
+ *
+ * Core Pillars:
+ * 1. Aspirant Identity & Exam Readiness Index (Predicted AIR, Net Accuracy with Negative Marking, Speed).
+ * 2. Daily Practice Booster Arena:
+ *    - Auto-picks 3 questions randomly from DB (Easy -> Medium -> Hard).
+ *    - Solved one by one with live timer, interactive choice selection, instant DB verification,
+ *      and step-by-step official solution explanation.
+ *    - Advances daily streak & awards +20 daily coins (+100 milestone bonus on Day 7!).
+ *    - Free Practice Mode for unlimited one-by-one random questions from DB.
+ * 3. 7-Day Consistency & Habit Roadmap (Day 1 to Day 7 milestone with coin rewards).
+ * 4. Sectional Mastery & Diagnostic Weak Areas (Quant, Reasoning, English, General Awareness).
+ * 5. Recent Mock Test Scorecards & Quick Test Launch Library.
  */
-export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
-  const { user } = useAuth();
+export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate }) => {
+  const { user, updateCoins } = useAuth();
+
+  // General Dashboard & Test Data
   const [dashboard, setDashboard] = useState(null);
   const [availableTests, setAvailableTests] = useState([]);
-  const [selectedFilter, setSelectedFilter] = useState('ALL'); // ALL | FULL | SUBJECT | TOPIC_MINI
+  const [streakData, setStreakData] = useState(null);
+  const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
-  const [showNotifications, setShowNotifications] = useState(false);
 
-  // Notifications state
-  const notifications = [
-    { id: 1, title: 'SSC CGL All-India Mock #04 is now live', time: '2 hours ago', unread: true },
-    { id: 2, title: 'New Quant Speed Drill uploaded by editorial team', time: '1 day ago', unread: false },
-    { id: 3, title: 'Weekly Performance Digest ready for download', time: '3 days ago', unread: false },
-  ];
+  // Daily Quiz Booster State (One-by-One Engine)
+  const [boosterQuestions, setBoosterQuestions] = useState([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [answersSummary, setAnswersSummary] = useState([]); // [{ question_id, is_correct, selected, correct }]
+  const [isBoosterCompleted, setIsBoosterCompleted] = useState(false);
+  const [boosterReward, setBoosterReward] = useState(null);
+  const [questionTimer, setQuestionTimer] = useState(0);
+  const [boosterLoading, setBoosterLoading] = useState(false);
+
+  // Free Practice On-Demand Question State
+  const [isFreePracticeActive, setIsFreePracticeActive] = useState(false);
+  const [practiceDifficulty, setPracticeDifficulty] = useState('Medium');
+  const [practiceQuestion, setPracticeQuestion] = useState(null);
+  const [practiceLoading, setPracticeLoading] = useState(false);
+  const [practiceSelectedOption, setPracticeSelectedOption] = useState(null);
+  const [practiceVerification, setPracticeVerification] = useState(null);
 
   useEffect(() => {
-    loadDashboardData();
+    loadAllData();
   }, [user]);
 
-  const loadDashboardData = async () => {
+  // Question Timer
+  useEffect(() => {
+    let interval = null;
+    if (!isBoosterCompleted && !verificationResult && boosterQuestions.length > 0) {
+      interval = setInterval(() => {
+        setQuestionTimer((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isBoosterCompleted, verificationResult, boosterQuestions]);
+
+  const loadAllData = async () => {
     setLoading(true);
     try {
-      // Parallel API calls: Dashboard stats & Available tests
-      const [dashData, testsData] = await Promise.all([
-        api.users.getDashboard(user?.id || 'demo-student'),
+      const [dashData, testsData, streakRes] = await Promise.all([
+        api.users.getDashboard(user?.id || 'student-primary-id'),
         api.tests.list(),
+        api.streak.getStreak(),
       ]);
       setDashboard(dashData);
       setAvailableTests(testsData || []);
+      setStreakData(streakRes);
+
+      // Load Daily Booster Questions (Easy, Medium, Hard from DB)
+      await loadBoosterQuestions();
     } catch (err) {
-      console.warn('Dashboard API fallback:', err);
+      console.warn('Dashboard data fallback:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter available tests based on type tab
+  const loadBoosterQuestions = async () => {
+    setBoosterLoading(true);
+    try {
+      const questions = await api.streak.getDailyBoosterQuestions({ count: 3 });
+      if (questions && questions.length > 0) {
+        setBoosterQuestions(questions);
+        setCurrentStepIndex(0);
+        setSelectedOption(null);
+        setVerificationResult(null);
+        setAnswersSummary([]);
+        setQuestionTimer(0);
+      }
+    } catch (err) {
+      console.error('Failed to load booster questions:', err);
+    } finally {
+      setBoosterLoading(false);
+    }
+  };
+
+  // Submit & Verify single question answer in Daily Booster
+  const handleVerifyAnswer = async () => {
+    if (!selectedOption || !currentQuestion) return;
+    setIsVerifying(true);
+    try {
+      const res = await api.streak.verifyQuizAnswer({
+        question_id: currentQuestion.id,
+        selected_option: selectedOption,
+      });
+      setVerificationResult(res);
+      setAnswersSummary((prev) => [
+        ...prev,
+        {
+          question_id: currentQuestion.id,
+          step: currentStepIndex + 1,
+          difficulty: currentQuestion.difficulty,
+          is_correct: res.is_correct,
+          selected: selectedOption,
+          correct: res.correct_option,
+          explanation: res.solution_explanation,
+        },
+      ]);
+    } catch (err) {
+      console.error('Answer verification failed:', err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Move to next question or complete Daily Booster
+  const handleProceedNext = async () => {
+    if (currentStepIndex < boosterQuestions.length - 1) {
+      // Advance to next question (e.g. Medium or Hard)
+      setCurrentStepIndex((prev) => prev + 1);
+      setSelectedOption(null);
+      setVerificationResult(null);
+      setQuestionTimer(0);
+    } else {
+      // All 3 questions completed! Finalize Daily Booster in backend
+      setIsBoosterCompleted(true);
+      try {
+        const correctCount = answersSummary.filter((a) => a.is_correct).length;
+        const totalCount = boosterQuestions.length;
+        const rewardRes = await api.streak.solveDailyQuiz({
+          correct_count: correctCount,
+          total_count: totalCount,
+        });
+        setBoosterReward(rewardRes);
+
+        // Update auth context coin balance and refresh streak
+        if (rewardRes.coins_balance !== undefined) {
+          updateCoins(rewardRes.coins_balance);
+        }
+        const updatedStreak = await api.streak.getStreak();
+        setStreakData(updatedStreak);
+      } catch (err) {
+        console.error('Failed to record daily completion:', err);
+      }
+    }
+  };
+
+  // Free Practice On-Demand Question Flow
+  const handleStartFreePractice = async (diff = practiceDifficulty) => {
+    setIsFreePracticeActive(true);
+    setPracticeLoading(true);
+    setPracticeSelectedOption(null);
+    setPracticeVerification(null);
+    try {
+      const qs = await api.streak.getDailyBoosterQuestions({ count: 1, difficulty: diff });
+      if (qs && qs.length > 0) {
+        setPracticeQuestion(qs[0]);
+      }
+    } catch (err) {
+      console.error('Free practice question fetch error:', err);
+    } finally {
+      setPracticeLoading(false);
+    }
+  };
+
+  const handleVerifyPracticeAnswer = async () => {
+    if (!practiceSelectedOption || !practiceQuestion) return;
+    setPracticeLoading(true);
+    try {
+      const res = await api.streak.verifyQuizAnswer({
+        question_id: practiceQuestion.id,
+        selected_option: practiceSelectedOption,
+      });
+      setPracticeVerification(res);
+    } catch (err) {
+      console.error('Practice answer verification failed:', err);
+    } finally {
+      setPracticeLoading(false);
+    }
+  };
+
+  const currentQuestion = boosterQuestions[currentStepIndex] || null;
+
   const filteredTests = availableTests.filter((test) => {
     if (selectedFilter === 'ALL') return true;
     return test.test_type === selectedFilter;
   });
 
-  // Helper for difficulty badge styling (academic, non-neon)
   const getDifficultyBadge = (difficulty = 'MEDIUM') => {
     const diff = (difficulty || 'MEDIUM').toUpperCase();
     if (diff === 'EASY') {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
           Easy
         </span>
       );
     }
     if (diff === 'HARD') {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
           Hard
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-charcoal-100 text-charcoal-700 border border-charcoal-300 dark:bg-charcoal-800 dark:text-charcoal-300 dark:border-charcoal-700">
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
         Medium
       </span>
     );
   };
 
-  // Skeleton Loader for smooth perceived performance
   if (loading) {
     return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-pulse">
-        {/* Header Skeleton */}
-        <div className="h-32 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
-        {/* Metric Cards Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="h-28 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
-          ))}
-        </div>
-        {/* Test Grid Skeleton */}
-        <div className="space-y-4">
-          <div className="h-8 w-48 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="h-56 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
-            ))}
-          </div>
-        </div>
-      </main>
+      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <h2 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">
+          Loading Aspirant Performance Dashboard...
+        </h2>
+        <p className="text-xs text-charcoal-500 mt-1">
+          Calibrating exam readiness scores and question bank...
+        </p>
+      </div>
     );
   }
 
-  // Activity streak data from backend or sensible defaults
-  const activityHistory = dashboard?.activity_history || [
-    { day: 'Mon', active: true },
-    { day: 'Tue', active: true },
-    { day: 'Wed', active: true },
-    { day: 'Thu', active: true },
-    { day: 'Fri', active: true },
-    { day: 'Sat', active: false },
-    { day: 'Sun', active: true },
-  ];
+  const streakDays = streakData?.current_streak ?? 6;
+  const coinsBalance = user?.coins_balance ?? streakData?.coins_balance ?? 150;
+  const isTodayAlreadyDone = streakData?.today_completed || isBoosterCompleted;
 
   return (
-    <div className="relative overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-radial-glow">
-      {/* Moving Ambient Dashboard Glows */}
-      <div className="absolute -top-32 left-1/3 w-[500px] h-[350px] bg-institutional-500/10 dark:bg-institutional-500/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
-      <div className="absolute top-1/2 -right-24 w-[450px] h-[450px] bg-emerald-500/8 dark:bg-emerald-500/12 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
-      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-purple-500/8 dark:bg-purple-500/12 blur-[120px] rounded-full pointer-events-none animate-drift-slow" />
+    <div className="min-h-screen bg-slate-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 transition-colors">
+      {/* 1. TOP HERO & ASPIRANT IDENTITY BANNER */}
+      <section className="border-b border-charcoal-200/80 dark:border-charcoal-800/80 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-md sticky top-16 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Aspirant Identity */}
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary-600 via-indigo-600 to-amber-500 p-0.5 shadow-md">
+                  <div className="w-full h-full bg-white dark:bg-charcoal-900 rounded-[14px] flex items-center justify-center font-extrabold text-xl text-primary-600 dark:text-primary-400">
+                    {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'A'}
+                  </div>
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-white dark:border-charcoal-900 rounded-full flex items-center justify-center text-[10px] text-white font-bold" title="Active Aspirant">
+                  ✓
+                </div>
+              </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10">
-        {/* 1. ACADEMIC HEADER & PROFILE OVERVIEW */}
-        <header className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-8 shadow-subtle flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4">
-            {/* Avatar / Monogram */}
-            <div className="w-14 h-14 rounded-full bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 flex items-center justify-center text-charcoal-800 dark:text-charcoal-200 font-bold text-xl select-none shrink-0">
-              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'A'}
-          </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-extrabold text-charcoal-900 dark:text-charcoal-100">
+                    {user?.full_name || 'Alex Aspirant'}
+                  </h1>
 
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 rounded border border-institutional-200 dark:border-institutional-800">
-                Aspirant Portfolio
-              </span>
-              <span className="text-xs text-charcoal-500 dark:text-charcoal-400">
-                Roll No: CGL-2026-{(user?.id || '84920').slice(0, 6).toUpperCase()}
-              </span>
-            </div>
+                  {/* Verified Role Badge */}
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-50 text-primary-700 dark:bg-primary-950/60 dark:text-primary-300 border border-primary-200 dark:border-primary-800 shadow-xs">
+                    <ShieldIcon size={12} className="text-primary-500" />
+                    {user?.role === 'admin' ? 'ADMINISTRATOR' : 'VERIFIED ASPIRANT'}
+                  </span>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-charcoal-900 dark:text-charcoal-50">
-              Welcome back, {user?.full_name || 'Candidate'}
-            </h1>
+                  {/* Target Exam Tag */}
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-charcoal-100 text-charcoal-700 dark:bg-charcoal-800 dark:text-charcoal-300">
+                    <TargetIcon size={12} className="text-amber-500" />
+                    SSC CGL Tier-1 2026
+                  </span>
+                </div>
 
-            <p className="text-sm text-charcoal-600 dark:text-charcoal-400 mt-0.5">
-              Targeting: <strong className="text-charcoal-800 dark:text-charcoal-200">{user?.profile?.target_exams?.join(', ') || 'SSC CGL 2026 Tier-I'}</strong> • Aiming for 99+ Percentile
-            </p>
-          </div>
-        </div>
-
-        {/* Right Header: Streak & Notification Bell */}
-        <div className="flex items-center gap-4 self-start lg:self-center border-t lg:border-t-0 pt-4 lg:pt-0 border-charcoal-150 dark:border-charcoal-800">
-          {/* 7-Day Activity & Streak Tracker */}
-          <div className="bg-charcoal-50 dark:bg-charcoal-800/80 border border-charcoal-200 dark:border-charcoal-700 rounded-lg p-2.5 sm:px-4 flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-              <FlameIcon size={18} className="text-amber-500 fill-amber-500" />
-              <div className="text-left leading-tight">
-                <span className="text-xs font-bold uppercase tracking-wider block text-charcoal-500 dark:text-charcoal-400">Streak</span>
-                <span className="text-sm font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
-                  {dashboard?.current_streak_days || 5} Days
-                </span>
+                <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-0.5 flex items-center gap-2">
+                  <span>{user?.email}</span>
+                  <span>•</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                    <ClockIcon size={12} /> Target Exam in 42 Days
+                  </span>
+                </p>
               </div>
             </div>
 
-            {/* Micro 7-day indicator dots */}
-            <div className="flex items-center gap-1 pl-2 border-l border-charcoal-200 dark:border-charcoal-700">
-              {activityHistory.map((item, idx) => (
-                <div key={idx} className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-semibold text-charcoal-400 uppercase">
-                    {item.day.slice(0, 1)}
-                  </span>
+            {/* GovCoins Wallet & Subscription Action */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* GovCoins Wallet Pill */}
+              <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 shadow-xs">
+                <span className="text-lg">🪙</span>
+                <div>
+                  <div className="text-xs font-black tracking-tight leading-tight flex items-center gap-1">
+                    <span>{coinsBalance}</span>
+                    <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">GovCoins</span>
+                  </div>
+                  <div className="text-[10px] text-amber-800/70 dark:text-amber-300/70 font-medium">
+                    = ₹{coinsBalance} off any exam pass
+                  </div>
+                </div>
+              </div>
+
+              {/* Redeem for Pass CTA */}
+              <button
+                onClick={() => onNavigate && onNavigate('subscription')}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <CrownIcon size={14} />
+                <span>Redeem Coins for Pass</span>
+                <ArrowRightIcon size={12} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. MAIN DASHBOARD CONTENT */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        {/* ROW 1: EXAM PERFORMANCE PULSE METRICS */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: All India Rank Standing */}
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-charcoal-500 uppercase tracking-wider">
+                Predicted All-India Rank
+              </div>
+              <div className="text-2xl font-black text-charcoal-900 dark:text-charcoal-50 mt-1 flex items-baseline gap-1.5 font-mono">
+                <span>#420</span>
+                <span className="text-xs font-normal text-charcoal-400">/ 12,450</span>
+              </div>
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1 flex items-center gap-1">
+                <span>↑ Top 3.4% Percentile</span>
+                <span className="text-charcoal-400 font-normal">(Safe Cutoff Zone)</span>
+              </div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-primary-500/10 border border-primary-500/20 text-primary-600 dark:text-primary-400 flex items-center justify-center">
+              <TrophyIcon size={20} />
+            </div>
+          </div>
+
+          {/* Card 2: Net Mock Accuracy (with negative marking) */}
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-charcoal-500 uppercase tracking-wider">
+                Net Mock Accuracy
+              </div>
+              <div className="text-2xl font-black text-charcoal-900 dark:text-charcoal-50 mt-1 font-mono">
+                79.4%
+              </div>
+              <div className="text-[11px] text-charcoal-500 font-medium mt-1">
+                TCS iON Marking: +2.0 / -0.5
+              </div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <TargetIcon size={20} />
+            </div>
+          </div>
+
+          {/* Card 3: Average Speed per Question */}
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-charcoal-500 uppercase tracking-wider">
+                Avg Speed per Question
+              </div>
+              <div className="text-2xl font-black text-charcoal-900 dark:text-charcoal-50 mt-1 font-mono">
+                48s <span className="text-xs font-normal text-charcoal-400">/ Q</span>
+              </div>
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                ⚡ 12s faster than cutoff pace
+              </div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <ClockIcon size={20} />
+            </div>
+          </div>
+
+          {/* Card 4: Daily Study Streak */}
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-charcoal-500 uppercase tracking-wider">
+                Study Discipline Streak
+              </div>
+              <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono flex items-center gap-1.5">
+                <span>{streakDays} Days</span>
+                <span className="text-xl">🔥</span>
+              </div>
+              <div className="text-[11px] text-charcoal-500 font-medium mt-1">
+                {isTodayAlreadyDone ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Today's goal completed! ✓</span>
+                ) : (
+                  <span>1 day left for +100 Coins Milestone</span>
+                )}
+              </div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+              <FlameIcon size={20} />
+            </div>
+          </div>
+        </section>
+
+        {/* ROW 2: THE STAR COMPONENT - DAILY PRACTICE BOOSTER (ONE-BY-ONE FROM DB) */}
+        <section className="bg-white dark:bg-charcoal-900 border-2 border-primary-500/30 rounded-3xl p-6 sm:p-8 shadow-md relative overflow-hidden">
+          {/* Subtle background glow */}
+          <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-charcoal-200 dark:border-charcoal-800">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-md text-[11px] font-extrabold uppercase bg-primary-500 text-white tracking-wide">
+                  Daily Booster
+                </span>
+                <h2 className="text-lg sm:text-xl font-extrabold text-charcoal-900 dark:text-charcoal-100 flex items-center gap-2">
+                  <span>Today's Daily Practice Challenge</span>
+                  <span className="text-amber-500">⚡</span>
+                </h2>
+              </div>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1">
+                3 high-yield questions randomly selected from the Question Bank (Easy → Medium → Hard). Solve one-by-one to maintain your study streak and earn GovCoins!
+              </p>
+            </div>
+
+            {/* Stepper Tabs: Easy -> Medium -> Hard */}
+            <div className="flex items-center gap-2 bg-charcoal-100 dark:bg-charcoal-800/80 p-1.5 rounded-2xl self-start sm:self-auto">
+              {[
+                { label: '1. Easy', diff: 'Easy' },
+                { label: '2. Medium', diff: 'Medium' },
+                { label: '3. Hard', diff: 'Hard' },
+              ].map((step, idx) => {
+                const isCurrent = currentStepIndex === idx && !isBoosterCompleted;
+                const isPassed = currentStepIndex > idx || isBoosterCompleted;
+                const answered = answersSummary[idx];
+
+                return (
                   <div
-                    className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] transition-colors ${
-                      item.active
-                        ? 'bg-emerald-600 text-white dark:bg-emerald-500'
-                        : 'bg-charcoal-200 dark:bg-charcoal-700 text-transparent'
+                    key={step.label}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      isCurrent
+                        ? 'bg-primary-600 text-white shadow-sm ring-2 ring-primary-500/30'
+                        : isPassed
+                        ? answered?.is_correct
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                        : 'text-charcoal-400 dark:text-charcoal-500 opacity-70'
                     }`}
-                    title={`${item.day}: ${item.active ? 'Exam practice completed' : 'No attempt'}`}
                   >
-                    {item.active ? '✓' : ''}
+                    <span>{step.label}</span>
+                    {isPassed && (
+                      <span className="text-[10px] font-black">
+                        {answered?.is_correct ? '✓' : '✗'}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ACTIVE QUIZ ARENA */}
+          {boosterLoading ? (
+            <div className="py-16 text-center">
+              <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-xs text-charcoal-500">Auto-picking today's 3 questions from Question Bank...</p>
+            </div>
+          ) : isBoosterCompleted ? (
+            /* CELEBRATION / COMPLETED STATE */
+            <div className="py-10 text-center space-y-5 max-w-xl mx-auto">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-500 to-primary-600 text-white flex items-center justify-center text-3xl mx-auto shadow-lg animate-bounce">
+                🎉
+              </div>
+              <div>
+                <h3 className="text-xl font-extrabold text-charcoal-900 dark:text-charcoal-100">
+                  {boosterReward?.is_7day_milestone
+                    ? '7-DAY STREAK JACKPOT UNLOCKED!'
+                    : "Today's Daily Challenge Solved!"}
+                </h3>
+                <p className="text-xs text-charcoal-600 dark:text-charcoal-300 mt-1.5">
+                  {boosterReward?.message || `You solved all 3 daily questions! +${boosterReward?.coins_earned || 120} GovCoins added to your wallet.`}
+                </p>
+              </div>
+
+              {/* Reward Highlights */}
+              <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-charcoal-50 dark:bg-charcoal-800/50 border border-charcoal-200 dark:border-charcoal-700 text-left">
+                <div>
+                  <div className="text-[11px] text-charcoal-500 font-semibold uppercase">Daily Score</div>
+                  <div className="text-lg font-black text-charcoal-900 dark:text-charcoal-100 font-mono mt-0.5">
+                    {answersSummary.filter((a) => a.is_correct).length} / {boosterQuestions.length}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-charcoal-500 font-semibold uppercase">Discipline Streak</div>
+                  <div className="text-lg font-black text-amber-500 font-mono mt-0.5">
+                    {boosterReward?.current_streak || streakDays} Days 🔥
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-charcoal-500 font-semibold uppercase">Coins Rewarded</div>
+                  <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                    +{boosterReward?.coins_earned || 120} 🪙
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => onNavigate && onNavigate('subscription')}
+                  className="px-5 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm flex items-center gap-1.5 transition-all"
+                >
+                  <CrownIcon size={14} />
+                  <span>Use Coins on Subscription Pass</span>
+                </button>
+                <button
+                  onClick={() => handleStartFreePractice('Medium')}
+                  className="px-5 py-2.5 text-xs font-bold rounded-xl bg-charcoal-100 dark:bg-charcoal-800 hover:bg-charcoal-200 dark:hover:bg-charcoal-700 text-charcoal-800 dark:text-charcoal-200 transition-all flex items-center gap-1.5"
+                >
+                  <SparklesIcon size={14} />
+                  <span>Practice Infinite Random Questions</span>
+                </button>
+              </div>
+            </div>
+          ) : currentQuestion ? (
+            /* QUESTION VIEW (ONE BY ONE) */
+            <div className="pt-6 space-y-6">
+              {/* Question Header & Timer */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/60 px-2.5 py-1 rounded-lg border border-primary-200 dark:border-primary-800 font-mono">
+                    Question {currentStepIndex + 1} of {boosterQuestions.length}
+                  </span>
+                  {getDifficultyBadge(currentQuestion.difficulty)}
+                  <span className="text-xs font-semibold text-charcoal-500 dark:text-charcoal-400">
+                    {currentQuestion.subject} • {currentQuestion.topic}
+                  </span>
+                </div>
+
+                {/* Stopwatch Timer */}
+                <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-charcoal-600 dark:text-charcoal-400 bg-charcoal-100 dark:bg-charcoal-800 px-2.5 py-1 rounded-lg">
+                  <ClockIcon size={14} className="text-amber-500" />
+                  <span>{questionTimer}s spent</span>
+                </div>
+              </div>
+
+              {/* Question Text */}
+              <div className="text-base sm:text-lg font-bold text-charcoal-900 dark:text-charcoal-100 leading-relaxed font-sans bg-slate-50/70 dark:bg-charcoal-800/40 p-4 rounded-2xl border border-charcoal-200/70 dark:border-charcoal-800">
+                {currentQuestion.question_text}
+              </div>
+
+              {/* 4 Options (A, B, C, D) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(currentQuestion.options || []).map((opt) => {
+                  const isSelected = selectedOption === opt.id;
+                  const isVerified = verificationResult !== null;
+                  const isCorrect = verificationResult?.correct_option === opt.id;
+                  const isChosenWrong = isVerified && isSelected && !verificationResult?.is_correct;
+
+                  let cardStyle =
+                    'border-charcoal-200 dark:border-charcoal-800 hover:border-primary-400 dark:hover:border-primary-600 bg-white dark:bg-charcoal-800/60';
+                  let badgeStyle =
+                    'bg-charcoal-100 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300';
+
+                  if (isSelected && !isVerified) {
+                    cardStyle =
+                      'border-primary-600 dark:border-primary-500 bg-primary-50/40 dark:bg-primary-950/40 ring-2 ring-primary-500/20';
+                    badgeStyle = 'bg-primary-600 text-white';
+                  } else if (isVerified) {
+                    if (isCorrect) {
+                      cardStyle =
+                        'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-500/30';
+                      badgeStyle = 'bg-emerald-500 text-white';
+                    } else if (isChosenWrong) {
+                      cardStyle =
+                        'border-rose-500 bg-rose-50/60 dark:bg-rose-950/40 ring-2 ring-rose-500/30';
+                      badgeStyle = 'bg-rose-500 text-white';
+                    } else {
+                      cardStyle = 'opacity-50 border-charcoal-200 dark:border-charcoal-800';
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      disabled={isVerified}
+                      onClick={() => setSelectedOption(opt.id)}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all flex items-start gap-3 text-xs sm:text-sm font-medium ${cardStyle}`}
+                    >
+                      <div
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${badgeStyle}`}
+                      >
+                        {opt.id}
+                      </div>
+                      <span className="text-charcoal-900 dark:text-charcoal-100 flex-1 leading-snug">
+                        {opt.text}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* OFFICIAL SOLUTION & EXPLANATION PANEL */}
+              {verificationResult && (
+                <div
+                  className={`p-5 rounded-2xl border transition-all space-y-2 ${
+                    verificationResult.is_correct
+                      ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
+                      : 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 text-xs font-extrabold">
+                    {verificationResult.is_correct ? (
+                      <span className="text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                        <CheckCircleIcon size={16} /> Correct Answer! (+10 Speed XP)
+                      </span>
+                    ) : (
+                      <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                        <XCircleIcon size={16} /> Incorrect • Your Answer: Option {verificationResult.selected_option} | Correct: Option {verificationResult.correct_option}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400">
+                      Official TCS iON Solution & Explanation:
+                    </div>
+                    <p className="text-xs text-charcoal-800 dark:text-charcoal-200 leading-relaxed mt-1 font-sans">
+                      {verificationResult.solution_explanation}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ACTION BAR */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                {!verificationResult ? (
+                  <button
+                    type="button"
+                    disabled={!selectedOption || isVerifying}
+                    onClick={handleVerifyAnswer}
+                    className="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-2"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Evaluating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Submit Answer</span>
+                        <ArrowRightIcon size={14} />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleProceedNext}
+                    className="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-sm transition-all flex items-center gap-2 animate-pulse"
+                  >
+                    <span>
+                      {currentStepIndex < boosterQuestions.length - 1
+                        ? `Next Question (${boosterQuestions[currentStepIndex + 1]?.difficulty}) →`
+                        : 'Finish Daily Booster & Claim Coins 🎉'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="py-12 text-center text-charcoal-500">
+              No questions found. Click below to load new questions.
+              <div className="mt-3">
+                <button
+                  onClick={loadBoosterQuestions}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-primary-600 text-white"
+                >
+                  Reload Questions
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* FREE PRACTICE MODAL / INLINE ON-DEMAND ACCORDION */}
+        {isFreePracticeActive && (
+          <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-charcoal-200 dark:border-charcoal-800">
+              <div>
+                <h3 className="text-base font-extrabold text-charcoal-900 dark:text-charcoal-100 flex items-center gap-2">
+                  <span>Free Practice Arena (Infinite Questions)</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 font-bold">One by One</span>
+                </h3>
+                <p className="text-xs text-charcoal-500">
+                  Pick any difficulty and practice randomly sampled mock exam questions from the database.
+                </p>
+              </div>
+
+              {/* Difficulty selector */}
+              <div className="flex items-center gap-2">
+                {['Easy', 'Medium', 'Hard'].map((diff) => (
+                  <button
+                    key={diff}
+                    onClick={() => {
+                      setPracticeDifficulty(diff);
+                      handleStartFreePractice(diff);
+                    }}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                      practiceDifficulty === diff
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300'
+                    }`}
+                  >
+                    {diff}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setIsFreePracticeActive(false)}
+                  className="px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 ml-2"
+                >
+                  Close ✕
+                </button>
+              </div>
+            </div>
+
+            {practiceLoading ? (
+              <div className="py-8 text-center text-xs text-charcoal-500">
+                Fetching random {practiceDifficulty} question from database...
+              </div>
+            ) : practiceQuestion ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-xs">
+                  {getDifficultyBadge(practiceQuestion.difficulty)}
+                  <span className="font-semibold text-charcoal-500">{practiceQuestion.subject} • {practiceQuestion.topic}</span>
+                </div>
+                <div className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100">
+                  {practiceQuestion.question_text}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {(practiceQuestion.options || []).map((opt) => {
+                    const isSelected = practiceSelectedOption === opt.id;
+                    const isVerified = practiceVerification !== null;
+                    const isCorrect = practiceVerification?.correct_option === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        disabled={isVerified}
+                        onClick={() => setPracticeSelectedOption(opt.id)}
+                        className={`p-3 rounded-xl border text-left text-xs font-medium transition-all flex items-center gap-2.5 ${
+                          isSelected && !isVerified
+                            ? 'border-primary-600 bg-primary-50/50 dark:bg-primary-950/40 ring-1 ring-primary-500'
+                            : isVerified && isCorrect
+                            ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40'
+                            : 'border-charcoal-200 dark:border-charcoal-800'
+                        }`}
+                      >
+                        <span className="w-5 h-5 rounded bg-charcoal-100 dark:bg-charcoal-700 font-bold flex items-center justify-center shrink-0">
+                          {opt.id}
+                        </span>
+                        <span>{opt.text}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {practiceVerification && (
+                  <div className="p-3.5 rounded-xl bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700 text-xs space-y-1">
+                    <div className="font-bold text-charcoal-900 dark:text-charcoal-100">
+                      {practiceVerification.is_correct ? '✓ Correct Answer!' : `✗ Incorrect (Correct: ${practiceVerification.correct_option})`}
+                    </div>
+                    <p className="text-charcoal-600 dark:text-charcoal-300">{practiceVerification.solution_explanation}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                  {!practiceVerification ? (
+                    <button
+                      type="button"
+                      disabled={!practiceSelectedOption}
+                      onClick={handleVerifyPracticeAnswer}
+                      className="px-4 py-2 text-xs font-bold rounded-xl bg-primary-600 text-white disabled:opacity-50"
+                    >
+                      Check Answer
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleStartFreePractice(practiceDifficulty)}
+                      className="px-4 py-2 text-xs font-bold rounded-xl bg-primary-600 text-white"
+                    >
+                      Next Random Question →
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        )}
+
+        {/* ROW 3: 7-DAY CONSISTENCY HABIT ROADMAP */}
+        <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <FlameIcon size={18} className="text-amber-500" />
+                <h3 className="text-base font-extrabold text-charcoal-900 dark:text-charcoal-100">
+                  7-Day Study Discipline Roadmap
+                </h3>
+              </div>
+              <p className="text-xs text-charcoal-500 mt-0.5">
+                Maintain 7 consecutive daily practice sessions to earn +20 GovCoins daily and unlock the +100 Milestone Bonus jackpot!
+              </p>
+            </div>
+
+            <div className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20 self-start sm:self-auto font-mono">
+              🔥 Current Streak: {streakDays} Days
+            </div>
+          </div>
+
+          {/* Stepper Timeline */}
+          <div className="grid grid-cols-7 gap-2 sm:gap-3 pt-2">
+            {(streakData?.timeline || [
+              { day_number: 1, label: 'Day 1', completed: true, coins_reward: 20, is_milestone: false },
+              { day_number: 2, label: 'Day 2', completed: true, coins_reward: 20, is_milestone: false },
+              { day_number: 3, label: 'Day 3', completed: true, coins_reward: 20, is_milestone: false },
+              { day_number: 4, label: 'Day 4', completed: true, coins_reward: 20, is_milestone: false },
+              { day_number: 5, label: 'Day 5', completed: true, coins_reward: 20, is_milestone: false },
+              { day_number: 6, label: 'Day 6', completed: true, coins_reward: 20, is_milestone: false },
+              { day_number: 7, label: 'Day 7', completed: isTodayAlreadyDone, is_current: !isTodayAlreadyDone, coins_reward: 100, is_milestone: true },
+            ]).map((step) => {
+              const isDone = step.completed;
+              const isToday = step.is_current;
+              const isJackpot = step.is_milestone;
+
+              return (
+                <div
+                  key={step.day_number}
+                  className={`flex flex-col items-center justify-between p-3 rounded-2xl border text-center transition-all ${
+                    isDone
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                      : isToday
+                      ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/20 text-amber-700 dark:text-amber-300 scale-105 shadow-sm'
+                      : isJackpot
+                      ? 'bg-gradient-to-b from-amber-500/10 to-primary-500/10 border-amber-400/40 text-charcoal-700 dark:text-charcoal-300'
+                      : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200 dark:border-charcoal-800 text-charcoal-400'
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
+                    {step.label}
+                  </span>
+
+                  <div className="my-2">
+                    {isDone ? (
+                      <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                        ✓
+                      </div>
+                    ) : isJackpot ? (
+                      <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm shadow-xs animate-pulse">
+                        🎁
+                      </div>
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300 flex items-center justify-center font-mono text-xs">
+                        {step.day_number}
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="text-[10px] font-black font-mono">
+                    +{step.coins_reward} 🪙
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ROW 4: SECTIONAL ACCURACY & SUBJECT MASTERY (COMPETITIVE EXAM SPECIFIC) */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left: Subject Mastery Matrix */}
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 shadow-xs space-y-4">
+            <div>
+              <h3 className="text-base font-extrabold text-charcoal-900 dark:text-charcoal-100 flex items-center gap-2">
+                <BarChart3Icon size={18} className="text-primary-500" />
+                <span>Sectional Accuracy & Subject Mastery</span>
+              </h3>
+              <p className="text-xs text-charcoal-500">
+                Performance calibrated across recent full mocks and sectional speed tests.
+              </p>
+            </div>
+
+            <div className="space-y-4 pt-1">
+              {[
+                { name: 'Quantitative Aptitude', accuracy: 82, questions: '142 / 173', status: 'Strong Area', color: 'emerald' },
+                { name: 'General Intelligence & Reasoning', accuracy: 91, questions: '168 / 185', status: 'Mastered', color: 'emerald' },
+                { name: 'English Comprehension', accuracy: 74, questions: '118 / 160', status: 'Good Pace', color: 'amber' },
+                { name: 'General Awareness & Current Affairs', accuracy: 64, questions: '96 / 150', status: 'Focus Area', color: 'rose' },
+              ].map((subj) => (
+                <div key={subj.name} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-charcoal-800 dark:text-charcoal-200">{subj.name}</span>
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="text-charcoal-400 font-normal">{subj.questions}</span>
+                      <span className={`font-black ${
+                        subj.accuracy >= 85 ? 'text-emerald-600 dark:text-emerald-400' :
+                        subj.accuracy >= 70 ? 'text-amber-600 dark:text-amber-400' :
+                        'text-rose-600 dark:text-rose-400'
+                      }`}>
+                        {subj.accuracy}%
+                      </span>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full h-2 rounded-full bg-charcoal-100 dark:bg-charcoal-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        subj.accuracy >= 85 ? 'bg-emerald-500' :
+                        subj.accuracy >= 70 ? 'bg-amber-500' :
+                        'bg-rose-500'
+                      }`}
+                      style={{ width: `${subj.accuracy}%` }}
+                    />
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Subtle Notification Bell with Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-700/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-institutional-500 relative"
-              aria-label="View notifications"
-            >
-              <BellIcon size={18} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-charcoal-800" />
-            </button>
-
-            {/* Notification Dropdown Popover */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl shadow-lifted z-50 p-3 space-y-2">
-                <div className="flex items-center justify-between pb-2 border-b border-charcoal-150 dark:border-charcoal-800 text-xs font-bold uppercase tracking-wider text-charcoal-600 dark:text-charcoal-400">
-                  <span>Candidate Notices</span>
-                  <span className="text-institutional-600 dark:text-institutional-400">3 unread</span>
-                </div>
-                <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                  {notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className="p-2.5 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800/60 transition-colors text-xs space-y-0.5 cursor-pointer"
-                    >
-                      <div className="font-semibold text-charcoal-800 dark:text-charcoal-200">{n.title}</div>
-                      <div className="text-[11px] text-charcoal-400 font-mono">{n.time}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* 2. OVERVIEW METRIC CARDS (Minimalist, Data-Rich, Non-AI) */}
-      <section aria-labelledby="metrics-heading">
-        <h2 id="metrics-heading" className="sr-only">Performance Metrics Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {/* Card 1: Exams Taken */}
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-5 shadow-subtle hover:border-charcoal-300 dark:hover:border-charcoal-700 transition-colors">
-            <div className="flex items-center justify-between text-charcoal-500 dark:text-charcoal-400 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider">Exams Taken</span>
-              <div className="p-2 rounded-md bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300">
-                <BookOpenIcon size={18} />
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
-                {dashboard?.total_mocks_attempted || 14}
-              </span>
-              <span className="text-xs text-charcoal-500 font-medium">Tests Evaluated</span>
-            </div>
-            <div className="mt-3 text-xs text-charcoal-500 flex items-center gap-1 font-medium">
-              <span className="text-emerald-700 dark:text-emerald-400 font-semibold">+3 mocks</span> this week
-            </div>
-          </div>
-
-          {/* Card 2: Average Accuracy */}
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-5 shadow-subtle hover:border-charcoal-300 dark:hover:border-charcoal-700 transition-colors">
-            <div className="flex items-center justify-between text-charcoal-500 dark:text-charcoal-400 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider">Average Accuracy</span>
-              <div className="p-2 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
-                <TargetIcon size={18} />
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-mono text-emerald-800 dark:text-emerald-300">
-                {dashboard?.average_accuracy ? dashboard.average_accuracy.toFixed(1) : '82.4'}%
-              </span>
-              <span className="text-xs text-charcoal-500 font-medium">Net Hit Rate</span>
-            </div>
-            <div className="mt-3 text-xs text-charcoal-500 font-medium">
-              Target benchmark: <strong className="text-charcoal-700 dark:text-charcoal-300">&gt; 85%</strong> for Tier-I
-            </div>
-          </div>
-
-          {/* Card 3: Upcoming Tests */}
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-5 shadow-subtle hover:border-charcoal-300 dark:hover:border-charcoal-700 transition-colors">
-            <div className="flex items-center justify-between text-charcoal-500 dark:text-charcoal-400 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider">Upcoming Tests</span>
-              <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40">
-                <ClockIcon size={18} />
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
-                {dashboard?.upcoming_tests_count || 3}
-              </span>
-              <span className="text-xs text-charcoal-500 font-medium">Live Mocks</span>
-            </div>
-            <div className="mt-3 text-xs text-amber-700 dark:text-amber-400 font-semibold truncate">
-              Next: National Mock Tomorrow 10:00 AM
-            </div>
-          </div>
-
-          {/* Card 4: All-India Percentile */}
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-5 shadow-subtle hover:border-charcoal-300 dark:hover:border-charcoal-700 transition-colors">
-            <div className="flex items-center justify-between text-charcoal-500 dark:text-charcoal-400 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider">Estimated Percentile</span>
-              <div className="p-2 rounded-md bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800/60">
-                <TrophyIcon size={18} />
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-mono text-institutional-800 dark:text-institutional-300">
-                {dashboard?.overall_percentile ? dashboard.overall_percentile.toFixed(1) : '91.8'}%
-              </span>
-              <span className="text-xs text-charcoal-500 font-medium">All-India</span>
-            </div>
-            <div className="mt-3 text-xs text-charcoal-500 font-medium">
-              Top <strong className="text-charcoal-700 dark:text-charcoal-300">8.2%</strong> of 4,800 active aspirants
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. TEST LIST & DISCOVERY GRID */}
-      <section className="space-y-5" aria-labelledby="tests-heading">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 id="tests-heading" className="text-xl font-bold tracking-tight text-charcoal-900 dark:text-charcoal-100">
-              Available Mock Examinations
-            </h2>
-            <p className="text-xs text-charcoal-500 dark:text-charcoal-400">
-              Full-length mocks and targeted sectional drills with official marking and TCS iON pattern.
-            </p>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800/80 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-semibold">
-            {[
-              { id: 'ALL', label: 'All Tests' },
-              { id: 'FULL', label: 'Full Mocks' },
-              { id: 'SUBJECT', label: 'Subject Drills' },
-              { id: 'TOPIC_MINI', label: 'Mini Drills' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedFilter(tab.id)}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  selectedFilter === tab.id
-                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-bold'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Test Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredTests.map((test) => (
-            <article
-              key={test.id}
-              className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:bg-charcoal-50/50 dark:hover:bg-charcoal-850/40 transition-all flex flex-col justify-between"
-            >
-              <div>
-                {/* Meta Row: Type Badge + Difficulty Badge */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 border border-charcoal-200 dark:border-charcoal-700">
-                    {test.test_type === 'FULL' ? 'Full Mock' : test.test_type === 'SUBJECT' ? 'Subject Test' : 'Topic Drill'}
-                  </span>
-                  {getDifficultyBadge(test.difficulty)}
-                </div>
-
-                {/* Title */}
-                <h3 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-2 line-clamp-2">
-                  {test.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-4 leading-relaxed">
-                  {test.description || 'Standard examination format with negative marking and instant scorecard.'}
-                </p>
-
-                {/* Subject & Topic Tags */}
-                <div className="flex flex-wrap gap-1.5 mb-5">
-                  <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
-                    {test.subject || 'All Subjects'}
-                  </span>
-                  {test.topic && (
-                    <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
-                      {test.topic}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Card Footer: Metadata + Launch Button */}
-              <div className="pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
-                <div className="flex items-center gap-3 text-xs text-charcoal-500 font-mono">
-                  <span className="flex items-center gap-1">
-                    <ClockIcon size={14} className="text-charcoal-400" />
-                    {test.duration_minutes}m
-                  </span>
-                  <span>•</span>
-                  <span>{test.total_questions || 25} Qs</span>
-                  <span>•</span>
-                  <span>{test.total_marks || 50} Marks</span>
-                </div>
-
-                <button
-                  onClick={() => onStartTest(test)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 dark:bg-institutional-700 dark:hover:bg-institutional-600 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-institutional-500 shadow-sm"
-                >
-                  <PlayIcon size={12} />
-                  <span>Start Mock</span>
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* 4. PERFORMANCE BY SUBJECT & RECENT ATTEMPTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Recent Attempt History */}
-        <section className="lg:col-span-2 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 shadow-subtle">
-          <div className="flex items-center justify-between mb-5">
+          {/* Right: Mock Exam Question Breakdown & Speed Benchmarking */}
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 shadow-xs space-y-4">
             <div>
-              <h2 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">
-                Recent Mock Attempt History
-              </h2>
-              <p className="text-xs text-charcoal-500 dark:text-charcoal-400">
-                Historical scores, negative deductions, and detailed performance scorecards.
+              <h3 className="text-base font-extrabold text-charcoal-900 dark:text-charcoal-100 flex items-center gap-2">
+                <TargetIcon size={18} className="text-emerald-500" />
+                <span>Mock Exam Question Disposition</span>
+              </h3>
+              <p className="text-xs text-charcoal-500">
+                Attempt behavior analysis based on TCS iON negative marking principles.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">142</div>
+                <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 mt-0.5">Correct (+284)</div>
+                <div className="text-[10px] text-charcoal-500 mt-1">79% accuracy</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center">
+                <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">24</div>
+                <div className="text-xs font-bold text-rose-800 dark:text-rose-300 mt-0.5">Negative (-12)</div>
+                <div className="text-[10px] text-charcoal-500 mt-1">Avoid blind guesses</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-center">
+                <div className="text-2xl font-black text-charcoal-700 dark:text-charcoal-300 font-mono">18</div>
+                <div className="text-xs font-bold text-charcoal-600 dark:text-charcoal-400 mt-0.5">Skipped (0)</div>
+                <div className="text-[10px] text-charcoal-500 mt-1">Strategic skips</div>
+              </div>
+            </div>
+
+            {/* Diagnostic advice callout */}
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <span className="text-sm">💡</span>
+              <span className="leading-snug">
+                <strong>Aspirant Insight:</strong> Reducing your 24 negative attempts by just 10 questions would increase your predicted All-India Rank by over 150 places!
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* ROW 5: RECENT MOCK ATTEMPTS & SCORECARDS TABLE */}
+        <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-charcoal-100 dark:border-charcoal-800">
+            <div>
+              <h3 className="text-base font-extrabold text-charcoal-900 dark:text-charcoal-100">
+                Recent Mock Test Scorecards
+              </h3>
+              <p className="text-xs text-charcoal-500">
+                Detailed test scores, negative marking breakdown, and percentile standings.
               </p>
             </div>
           </div>
@@ -437,42 +1015,42 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 uppercase tracking-wider font-bold">
-                  <th className="pb-3 pr-4">Test Title</th>
+                <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-400 uppercase tracking-wider font-bold text-[10px]">
+                  <th className="pb-3 pr-4">Mock Test Title</th>
                   <th className="pb-3 px-3">Date</th>
-                  <th className="pb-3 px-3 font-mono">Score</th>
-                  <th className="pb-3 px-3">Accuracy</th>
+                  <th className="pb-3 px-3 font-mono">Raw Score</th>
+                  <th className="pb-3 px-3 font-mono">Accuracy</th>
                   <th className="pb-3 px-3">Status</th>
-                  <th className="pb-3 pl-3 text-right">Action</th>
+                  <th className="pb-3 pl-3 text-right">Diagnostic</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-charcoal-100 dark:divide-charcoal-800">
                 {(dashboard?.recent_attempts || []).length > 0 ? (
                   dashboard.recent_attempts.map((att) => (
                     <tr key={att.attempt_id} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-800/40 transition-colors">
-                      <td className="py-3.5 pr-4 font-semibold text-charcoal-900 dark:text-charcoal-100 max-w-xs truncate">
+                      <td className="py-3.5 pr-4 font-bold text-charcoal-900 dark:text-charcoal-100 max-w-xs truncate">
                         {att.test_title}
                       </td>
-                      <td className="py-3.5 px-3 text-charcoal-500 whitespace-nowrap">
-                        {new Date(att.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      <td className="py-3.5 px-3 text-charcoal-500 font-mono text-[11px] whitespace-nowrap">
+                        {new Date(att.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
-                      <td className="py-3.5 px-3 font-mono font-bold text-charcoal-800 dark:text-charcoal-200 whitespace-nowrap">
+                      <td className="py-3.5 px-3 font-mono font-bold text-charcoal-900 dark:text-charcoal-100 whitespace-nowrap">
                         {att.total_score?.toFixed(1)} / {att.max_possible_score || 50}
                       </td>
-                      <td className="py-3.5 px-3 font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                      <td className="py-3.5 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                         {att.accuracy_percentage?.toFixed(1)}%
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
-                        <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                          {att.status}
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          Qualified
                         </span>
                       </td>
                       <td className="py-3.5 pl-3 text-right whitespace-nowrap">
                         <button
                           onClick={() => onSelectAttempt(att.attempt_id)}
-                          className="px-2.5 py-1 text-xs font-semibold rounded border border-charcoal-300 dark:border-charcoal-700 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 transition-colors"
+                          className="px-3 py-1 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 transition-colors"
                         >
-                          Scorecard
+                          View Scorecard
                         </button>
                       </td>
                     </tr>
@@ -480,7 +1058,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                 ) : (
                   <tr>
                     <td colSpan="6" className="py-8 text-center text-charcoal-500">
-                      No past mock attempts recorded yet. Launch your first mock test above!
+                      No recent mock attempts yet. Launch your first full-length mock below to start benchmarking!
                     </td>
                   </tr>
                 )}
@@ -489,63 +1067,84 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
           </div>
         </section>
 
-        {/* Right 1 Col: Lifetime Subject Proficiency */}
-        <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 shadow-subtle flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <BarChart3Icon size={18} className="text-charcoal-600 dark:text-charcoal-400" />
-              <h2 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">
-                Subject Proficiency
-              </h2>
+        {/* ROW 6: AVAILABLE MOCK TESTS LIBRARY & SPEED DRILLS */}
+        <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-charcoal-100 dark:border-charcoal-800">
+            <div>
+              <h3 className="text-base font-extrabold text-charcoal-900 dark:text-charcoal-100">
+                Exam Mock Test Library
+              </h3>
+              <p className="text-xs text-charcoal-500 mt-0.5">
+                Full-Length Mocks, Sectional Speed Tests, and Topic Drills calibrated to the latest exam syllabus.
+              </p>
             </div>
-            <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mb-6">
-              Cumulative accuracy weighted across all attempted drills.
-            </p>
 
-            <div className="space-y-4">
-              {Object.entries(
-                dashboard?.subject_performance && Object.keys(dashboard.subject_performance).length > 0
-                  ? dashboard.subject_performance
-                  : {
-                      'Quantitative Aptitude': 88.0,
-                      'General Intelligence & Reasoning': 92.5,
-                      'English Comprehension': 78.0,
-                      'General Awareness': 71.0,
-                    }
-              ).map(([subject, accuracy]) => {
-                const accVal = typeof accuracy === 'number' ? accuracy : 0;
-                return (
-                  <div key={subject} className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-charcoal-700 dark:text-charcoal-300">{subject}</span>
-                      <span className="font-mono text-charcoal-900 dark:text-charcoal-100">{accVal.toFixed(0)}%</span>
-                    </div>
-                    {/* Progress Bar Container */}
-                    <div className="w-full bg-charcoal-100 dark:bg-charcoal-800 h-2 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          accVal >= 85
-                            ? 'bg-emerald-600'
-                            : accVal >= 75
-                            ? 'bg-institutional-600'
-                            : 'bg-amber-600'
-                        }`}
-                        style={{ width: `${accVal}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-2">
+              {['ALL', 'FULL', 'SUBJECT', 'TOPIC_MINI'].map((filterKey) => (
+                <button
+                  key={filterKey}
+                  onClick={() => setSelectedFilter(filterKey)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    selectedFilter === filterKey
+                      ? 'bg-primary-600 text-white shadow-xs'
+                      : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 hover:bg-charcoal-200'
+                  }`}
+                >
+                  {filterKey === 'ALL'
+                    ? 'All Mocks'
+                    : filterKey === 'FULL'
+                    ? 'Full Tests'
+                    : filterKey === 'SUBJECT'
+                    ? 'Sectional'
+                    : 'Topic Drills'}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 text-[11px] text-charcoal-500 flex items-center justify-between">
-            <span>Accuracy threshold</span>
-            <span className="font-semibold text-emerald-700 dark:text-emerald-400">≥ 85% Mastery</span>
+          {/* Test Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredTests.map((test) => (
+              <article
+                key={test.id}
+                className="p-5 rounded-2xl border border-charcoal-200 dark:border-charcoal-800 hover:border-primary-500/50 bg-charcoal-50/40 dark:bg-charcoal-800/40 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400 font-mono">
+                      {test.test_type}
+                    </span>
+                    {getDifficultyBadge(test.difficulty)}
+                  </div>
+                  <h4 className="text-sm font-bold text-charcoal-900 dark:text-charcoal-100 mt-2.5 line-clamp-1">
+                    {test.title}
+                  </h4>
+                  <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mt-1">
+                    {test.description}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-charcoal-200/60 dark:border-charcoal-700/60 flex items-center justify-between">
+                  <div className="text-xs font-mono text-charcoal-500 flex items-center gap-2">
+                    <span>⏱ {test.duration_minutes}m</span>
+                    <span>•</span>
+                    <span>📝 {test.total_questions} Qs</span>
+                  </div>
+                  <button
+                    onClick={() => onStartTest(test.id)}
+                    className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow-xs transition-all flex items-center gap-1.5"
+                  >
+                    <PlayIcon size={12} />
+                    <span>Start Test</span>
+                  </button>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
-      </div>
-    </main>
+
+      </main>
     </div>
   );
 };

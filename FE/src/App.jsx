@@ -64,7 +64,7 @@ function AppContent() {
         setCurrentView('dashboard');
       }
     }
-  }, [user]);
+  }, [user, currentView]);
 
   // Start / Resume Mock Exam
   const handleStartTest = (testOrAttempt) => {
@@ -141,6 +141,7 @@ function AppContent() {
               setCurrentView('results');
             }}
             onStartTest={handleStartTest}
+            onNavigate={setCurrentView}
           />
         )}
 

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.logging import logger
 from app.core.security import hash_password
@@ -186,47 +186,114 @@ async def seed_database(db: AsyncIOMotorDatabase) -> None:
     """Populate database with default admin, student, questions, and test suites."""
     logger.info("Starting database seeding...")
 
-    # 1. Seed Admin User
-    admin_email = "admin@mockexam.com"
-    existing_admin = await db.users.find_one({"email": admin_email})
-    if not existing_admin:
+    # 1. Seed Admin Users
+    primary_admin_email = "admin@gmail.com"
+    existing_primary_admin = await db.users.find_one({"email": primary_admin_email})
+    if not existing_primary_admin:
         admin_doc = {
             "_id": str(uuid.uuid4()),
-            "email": admin_email,
+            "email": primary_admin_email,
             "full_name": "Platform Administrator",
-            "hashed_password": hash_password("Admin@123"),
+            "hashed_password": hash_password("admin123"),
             "role": "admin",
             "is_active": True,
             "profile": {
                 "target_exams": ["SSC CGL", "UPSC"],
                 "preferred_subjects": [],
+                "coins_balance": 500,
+                "current_streak": 10,
+                "longest_streak": 20,
             },
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
         }
         await db.users.insert_one(admin_doc)
-        logger.info(f"Created default admin user: {admin_email} (password: Admin@123)")
+        logger.info(f"Created default admin user: {primary_admin_email} (password: admin123)")
+    else:
+        # Ensure password is admin123 and role is admin
+        await db.users.update_one(
+            {"email": primary_admin_email},
+            {"$set": {"hashed_password": hash_password("admin123"), "role": "admin"}}
+        )
 
-    # 2. Seed Sample Student User
-    student_email = "student@mockexam.com"
-    existing_student = await db.users.find_one({"email": student_email})
-    if not existing_student:
-        student_doc = {
+    # Legacy mock admin
+    legacy_admin_email = "admin@mockexam.com"
+    existing_admin = await db.users.find_one({"email": legacy_admin_email})
+    if not existing_admin:
+        await db.users.insert_one({
             "_id": str(uuid.uuid4()),
-            "email": student_email,
+            "email": legacy_admin_email,
+            "full_name": "Platform Administrator",
+            "hashed_password": hash_password("Admin@123"),
+            "role": "admin",
+            "is_active": True,
+            "profile": {"target_exams": ["SSC CGL"]},
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        })
+
+    # 2. Seed Primary Student User (student@gmail.com / student123)
+    primary_student_email = "student@gmail.com"
+    existing_primary_student = await db.users.find_one({"email": primary_student_email})
+    if not existing_primary_student:
+        student_doc = {
+            "_id": "student-primary-id",
+            "email": primary_student_email,
+            "full_name": "Alex Aspirant",
+            "hashed_password": hash_password("student123"),
+            "role": "student",
+            "is_active": True,
+            "profile": {
+                "target_exams": ["SSC CGL", "SSC CHSL"],
+                "preferred_subjects": ["Quantitative Aptitude", "General Intelligence & Reasoning"],
+                "coins_balance": 150,
+                "current_streak": 6,
+                "longest_streak": 14,
+                "last_quiz_date": (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d"),
+                "streak_history": ["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"],
+                "subscription_plan": "FREE",
+                "subscription_status": "INACTIVE",
+            },
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        await db.users.insert_one(student_doc)
+        logger.info(f"Created default student user: {primary_student_email} (password: student123)")
+    else:
+        # Ensure password is student123 and role is student
+        await db.users.update_one(
+            {"email": primary_student_email},
+            {
+                "$set": {
+                    "hashed_password": hash_password("student123"),
+                    "role": "student",
+                    "profile.current_streak": 6,
+                    "profile.last_quiz_date": (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d"),
+                }
+            }
+        )
+
+    # Legacy mock student
+    legacy_student_email = "student@mockexam.com"
+    existing_legacy_student = await db.users.find_one({"email": legacy_student_email})
+    if not existing_legacy_student:
+        await db.users.insert_one({
+            "_id": str(uuid.uuid4()),
+            "email": legacy_student_email,
             "full_name": "Aspirant Rahul Sharma",
             "hashed_password": hash_password("Student@123"),
             "role": "student",
             "is_active": True,
             "profile": {
                 "target_exams": ["SSC CGL"],
-                "preferred_subjects": ["Quantitative Aptitude", "General Awareness"],
+                "preferred_subjects": ["Quantitative Aptitude"],
+                "coins_balance": 150,
+                "current_streak": 6,
+                "longest_streak": 14,
             },
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
-        }
-        await db.users.insert_one(student_doc)
-        logger.info(f"Created default student user: {student_email} (password: Student@123)")
+        })
 
     # 3. Seed Questions
     existing_count = await db.questions.count_documents({})

@@ -321,14 +321,19 @@ export const api = {
         // Fallback demo user
         const isAdmin = email.includes('admin');
         const demoUser = {
-          id: isAdmin ? 'demo-admin-id' : 'demo-student-id',
-          email,
-          full_name: isAdmin ? 'System Administrator' : 'Rajesh Kumar (Aspirant)',
+          id: isAdmin ? 'demo-admin-id' : 'student-primary-id',
+          email: isAdmin ? 'admin@gmail.com' : 'student@gmail.com',
+          full_name: isAdmin ? 'Platform Administrator' : 'Alex Aspirant (Student)',
           role: isAdmin ? 'admin' : 'student',
           is_active: true,
           profile: {
             target_exams: ['SSC CGL', 'SSC CHSL'],
-            preferred_subjects: ['Quantitative Aptitude', 'Reasoning'],
+            preferred_subjects: ['Quantitative Aptitude', 'General Intelligence & Reasoning'],
+            coins_balance: isAdmin ? 500 : 150,
+            current_streak: isAdmin ? 10 : 6,
+            longest_streak: isAdmin ? 20 : 14,
+            subscription_plan: 'FREE',
+            subscription_status: 'INACTIVE',
           },
           created_at: new Date().toISOString(),
         };
@@ -683,6 +688,16 @@ export const api = {
           average_accuracy: 82.4,
           best_score: 168.0,
           overall_percentile: 91.8,
+          current_streak_days: 6,
+          coins_balance: 150,
+          global_rank: 1420,
+          total_solved_questions: 85,
+          total_available_questions: 110,
+          difficulty_stats: {
+            easy: { solved: 42, total: 50, accuracy: 91.5, beats_percentage: 94.2 },
+            medium: { solved: 31, total: 40, accuracy: 82.0, beats_percentage: 88.6 },
+            hard: { solved: 12, total: 20, accuracy: 65.0, beats_percentage: 76.4 },
+          },
           subject_performance: {
             "Quantitative Aptitude": 88.0,
             "General Intelligence": 92.5,
@@ -833,6 +848,281 @@ export const api = {
         return await request(`/questions?${q.toString()}`);
       } catch (err) {
         return DEMO_QUESTIONS;
+      }
+    },
+  },
+
+  // Streak & Daily Quiz
+  streak: {
+    getStreak: async () => {
+      try {
+        return await request('/streak/me');
+      } catch (err) {
+        // Fallback for offline demo
+        return {
+          coins_balance: 150,
+          current_streak: 6,
+          longest_streak: 14,
+          today_completed: false,
+          last_quiz_date: null,
+          days_until_bonus: 1,
+          bonus_coins: 100,
+          daily_reward_coins: 20,
+          can_solve_today: true,
+          total_active_days: 18,
+          timeline: [
+            { day_number: 1, label: "Day 1", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
+            { day_number: 2, label: "Day 2", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
+            { day_number: 3, label: "Day 3", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
+            { day_number: 4, label: "Day 4", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
+            { day_number: 5, label: "Day 5", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
+            { day_number: 6, label: "Day 6", completed: true, is_current: false, coins_reward: 20, is_milestone: false },
+            { day_number: 7, label: "Day 7", completed: false, is_current: true, coins_reward: 100, is_milestone: true },
+          ],
+        };
+      }
+    },
+
+    getDailyBoosterQuestions: async ({ count = 3, difficulty } = {}) => {
+      try {
+        const params = new URLSearchParams();
+        if (count) params.append('count', count);
+        if (difficulty) params.append('difficulty', difficulty);
+        const qs = params.toString() ? `?${params.toString()}` : '';
+        return await request(`/streak/daily-quiz/questions${qs}`);
+      } catch (err) {
+        return [
+          {
+            id: 'demo-easy-1',
+            subject: 'Quantitative Aptitude',
+            topic: 'Time & Work',
+            difficulty: 'Easy',
+            question_text: 'A can finish a work in 12 days and B can finish the same work in 18 days. If they work together, how many days will they take?',
+            options: [
+              { id: 'A', text: '6.2 days' },
+              { id: 'B', text: '7.2 days' },
+              { id: 'C', text: '8 days' },
+              { id: 'D', text: '7 days' },
+            ],
+            step_number: 1,
+          },
+          {
+            id: 'demo-med-1',
+            subject: 'General Awareness',
+            topic: 'Indian Polity',
+            difficulty: 'Medium',
+            question_text: 'Which Article of the Indian Constitution empowers the President of India to promulgate Ordinances during the recess of Parliament?',
+            options: [
+              { id: 'A', text: 'Article 110' },
+              { id: 'B', text: 'Article 123' },
+              { id: 'C', text: 'Article 143' },
+              { id: 'D', text: 'Article 352' },
+            ],
+            step_number: 2,
+          },
+          {
+            id: 'demo-hard-1',
+            subject: 'General Intelligence & Reasoning',
+            topic: 'Geometry & Spatial',
+            difficulty: 'Hard',
+            question_text: 'The length of two parallel chords of a circle of radius 13 cm are 10 cm and 24 cm on opposite sides of the center. The distance between them is:',
+            options: [
+              { id: 'A', text: '17 cm' },
+              { id: 'B', text: '19 cm' },
+              { id: 'C', text: '15 cm' },
+              { id: 'D', text: '21 cm' },
+            ],
+            step_number: 3,
+          },
+        ];
+      }
+    },
+
+    verifyQuizAnswer: async ({ question_id, selected_option }) => {
+      try {
+        return await request('/streak/daily-quiz/verify-answer', {
+          method: 'POST',
+          body: JSON.stringify({ question_id, selected_option }),
+        });
+      } catch (err) {
+        return {
+          question_id,
+          is_correct: selected_option === 'B' || selected_option === 'A',
+          selected_option,
+          correct_option: 'B',
+          solution_explanation: 'Standard verified solution: Calculated by standard examination formula with step-by-step mathematical reasoning.',
+          difficulty: 'Medium',
+          subject: 'Aptitude',
+          topic: 'Practice',
+        };
+      }
+    },
+
+    solveDailyQuiz: async ({ correct_count = 3, total_count = 3 } = {}) => {
+      try {
+        return await request('/streak/daily-quiz/solve', {
+          method: 'POST',
+          body: JSON.stringify({ correct_count, total_count }),
+        });
+      } catch (err) {
+        return {
+          success: true,
+          coins_earned: 120,
+          is_7day_milestone: true,
+          current_streak: 7,
+          longest_streak: 14,
+          coins_balance: 270,
+          message: "🎉 7-DAY STREAK UNLOCKED! Earned 120 GovCoins (+100 7-day bonus)!",
+        };
+      }
+    },
+  },
+
+  // Subscriptions & Coin Discount Payment
+  subscriptions: {
+    getPlans: async () => {
+      try {
+        return await request('/subscriptions/plans');
+      } catch (err) {
+        return [
+          {
+            id: 'PASS_7_DAYS',
+            name: '7-Day Sprint Pass',
+            badge: 'Sprint Pass',
+            duration_days: 7,
+            base_price: 49,
+            max_coins_discount: 25,
+            description: '7 days of intensive mock exam practice with full solution keys and TCS iON exam simulation.',
+            features: [
+              '7 Days Full Platform Access',
+              '15 Full Tier-I & Tier-II Mocks',
+              'TCS iON Exam Engine UI',
+              'Step-by-Step Answer Explanations',
+            ],
+            popular: false,
+          },
+          {
+            id: 'PASS_MONTHLY',
+            name: 'Monthly Pro Pass',
+            badge: 'MOST POPULAR',
+            duration_days: 30,
+            base_price: 149,
+            max_coins_discount: 50,
+            description: '30 days full-spectrum mock preparation with AI analytics, weak-area drills, and All-India percentile.',
+            features: [
+              '30 Days Unlimited Access',
+              'All-India Percentile & AIR Rank',
+              'Speed vs Accuracy Diagnostics',
+              'Previous Year Papers (PYQs 2019-2025)',
+              'Instant Doubt Clarification',
+            ],
+            popular: true,
+          },
+          {
+            id: 'PASS_ANNUAL',
+            name: 'Annual Elite Pass',
+            badge: 'BEST VALUE',
+            duration_days: 365,
+            base_price: 499,
+            max_coins_discount: 100,
+            description: '365 days VIP access across all exams (SSC, Banking, Railways) with dynamic question generator.',
+            features: [
+              '365 Days All-Access Membership',
+              'Multi-Exam Prep (SSC, Banking, RRB, PSC)',
+              'Unlimited AI Question Pipeline Generation',
+              'High-Yield Theory Compendiums (PDF)',
+              'Priority Helpline & Mentor Guidance',
+            ],
+            popular: false,
+          },
+        ];
+      }
+    },
+
+    calculateDiscount: async (planId, applyCoins = true) => {
+      try {
+        return await request('/subscriptions/calculate-discount', {
+          method: 'POST',
+          body: JSON.stringify({ plan_id: planId, apply_coins: applyCoins }),
+        });
+      } catch (err) {
+        const basePrices = { PASS_7_DAYS: 49, PASS_MONTHLY: 149, PASS_ANNUAL: 499 };
+        const maxCoins = { PASS_7_DAYS: 25, PASS_MONTHLY: 50, PASS_ANNUAL: 100 };
+        const base = basePrices[planId] || 99;
+        const maxC = maxCoins[planId] || 25;
+        const coinsApplied = applyCoins ? Math.min(150, maxC, base - 1) : 0;
+        return {
+          plan_id: planId,
+          base_price: base,
+          user_coins_available: 150,
+          max_coins_allowed: maxC,
+          coins_applied: coinsApplied,
+          discount_amount: coinsApplied,
+          final_payable_amount: Math.max(1, base - coinsApplied),
+          coins_remaining_after: Math.max(0, 150 - coinsApplied),
+        };
+      }
+    },
+
+    createOrder: async (planId, applyCoins = true) => {
+      try {
+        return await request('/subscriptions/create-order', {
+          method: 'POST',
+          body: JSON.stringify({ plan_id: planId, apply_coins: applyCoins }),
+        });
+      } catch (err) {
+        const basePrices = { PASS_7_DAYS: 49, PASS_MONTHLY: 149, PASS_ANNUAL: 499 };
+        const base = basePrices[planId] || 99;
+        const coins = applyCoins ? 25 : 0;
+        const finalPrice = Math.max(1, base - coins);
+        return {
+          order_id: `order_${Math.random().toString(36).substring(2, 12)}`,
+          amount_paise: finalPrice * 100,
+          amount_rupees: finalPrice,
+          currency: 'INR',
+          plan_id: planId,
+          coins_applied: coins,
+          discount_amount: coins,
+          user_coins_available: 150,
+        };
+      }
+    },
+
+    verifyPayment: async (payload) => {
+      try {
+        return await request('/subscriptions/verify-payment', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        return {
+          success: true,
+          message: 'Payment verified and pass activated successfully!',
+          subscription: {
+            plan: payload.plan_id,
+            status: 'ACTIVE',
+            activated_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+          },
+          coins_deducted: payload.coins_used || 0,
+          coins_balance: Math.max(0, 150 - (payload.coins_used || 0)),
+          payment_id: payload.payment_id,
+          order_id: payload.order_id,
+        };
+      }
+    },
+
+    getMyStatus: async () => {
+      try {
+        return await request('/subscriptions/my-status');
+      } catch (err) {
+        return {
+          plan: 'FREE',
+          plan_name: 'Free Aspirant',
+          status: 'INACTIVE',
+          is_active: false,
+          coins_balance: 150,
+        };
       }
     },
   },

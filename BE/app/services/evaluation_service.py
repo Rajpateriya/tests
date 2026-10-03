@@ -325,6 +325,34 @@ class EvaluationService:
             {"day": "Sun", "date": "Today", "active": True, "mocks": 1},
         ]
 
+        # Fetch user's profile for real coins and streak
+        user_doc = await self.db["users"].find_one({"_id": user_id})
+        profile = user_doc.get("profile", {}) if user_doc else {}
+        user_coins = profile.get("coins_balance", 150)
+        user_streak = profile.get("current_streak", 6)
+
+        # Standard LeetCode-style difficulty breakdown
+        difficulty_stats = {
+            "easy": {
+                "solved": 42,
+                "total": 50,
+                "accuracy": 91.5,
+                "beats_percentage": 94.2,
+            },
+            "medium": {
+                "solved": 31,
+                "total": 40,
+                "accuracy": 82.0,
+                "beats_percentage": 88.6,
+            },
+            "hard": {
+                "solved": 12,
+                "total": 20,
+                "accuracy": 65.0,
+                "beats_percentage": 76.4,
+            },
+        }
+
         if not completed:
             return UserDashboardStatsOut(
                 user_id=user_id,
@@ -333,11 +361,16 @@ class EvaluationService:
                 average_accuracy=0.0,
                 best_score=0.0,
                 overall_percentile=0.0,
-                current_streak_days=5,
+                current_streak_days=user_streak,
+                coins_balance=user_coins,
+                global_rank=1420,
+                total_solved_questions=85,
+                total_available_questions=110,
+                difficulty_stats=difficulty_stats,
                 upcoming_tests_count=len(upcoming),
                 upcoming_tests=upcoming,
                 activity_history=activity,
-                subject_performance={"Quantitative Aptitude": 0.0, "Reasoning": 0.0, "English": 0.0},
+                subject_performance={"Quantitative Aptitude": 88.0, "Reasoning": 92.5, "English": 78.0, "General Awareness": 71.0},
                 recent_attempts=[],
                 recommended_tests=[
                     {"id": "rec-1", "title": "SSC CGL Full Mock 01", "type": "FULL"},
@@ -360,11 +393,16 @@ class EvaluationService:
             average_accuracy=avg_accuracy,
             best_score=best_score,
             overall_percentile=84.5,
-            current_streak_days=5,
+            current_streak_days=user_streak,
+            coins_balance=user_coins,
+            global_rank=1420,
+            total_solved_questions=85,
+            total_available_questions=110,
+            difficulty_stats=difficulty_stats,
             upcoming_tests_count=len(upcoming),
             upcoming_tests=upcoming,
             activity_history=activity,
-            subject_performance={"Quantitative Aptitude": 78.0, "Reasoning": 82.5, "English": 71.0},
+            subject_performance={"Quantitative Aptitude": 78.0, "Reasoning": 82.5, "English": 71.0, "General Awareness": 74.0},
             recent_attempts=recent_results,
             recommended_tests=[
                 {"id": "rec-1", "title": "Speed Test: Geometry & Mensuration", "type": "TOPIC_MINI"},

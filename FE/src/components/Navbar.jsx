@@ -29,10 +29,18 @@ import {
  */
 export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthModal }) => {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout, switchRole, isAdmin, subscription } = useAuth();
+  const { user, logout, switchRole, isAdmin, canSwitchRole, isPreviewingAsStudent, subscription } = useAuth();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const formatPlanTitle = (planId) => {
+    if (!planId || planId === 'FREE' || planId === 'NONE') return '';
+    if (planId === 'PASS_7_DAYS') return '7-Day Sprint Pass';
+    if (planId === 'PASS_MONTHLY') return 'Monthly Pro Pass';
+    if (planId === 'PASS_ANNUAL') return 'Annual Elite Pass';
+    return `${planId.replace(/_/g, ' ')} Pass`;
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -69,10 +77,26 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
   };
 
   return (
-    <nav
-      className="fixed top-3 sm:top-4 inset-x-0 mx-auto w-[94%] max-w-5xl z-50 flex items-center justify-between px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full border border-charcoal-200/80 dark:border-charcoal-800/80 bg-white/85 dark:bg-charcoal-900/85 backdrop-blur-md shadow-lg shadow-charcoal-950/5 transition-all"
-      aria-label="Main Navigation"
-    >
+    <>
+      {/* Admin Preview Mode Persistent Banner */}
+      {isPreviewingAsStudent && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-purple-800 via-indigo-850 to-purple-900 text-white text-[11px] py-1 px-4 text-center flex items-center justify-center gap-3 font-semibold shadow-md border-b border-purple-600/40">
+          <span>👁️ <strong>Admin Preview Mode:</strong> You are previewing the platform as a Candidate / Student</span>
+          <button
+            onClick={() => {
+              switchRole('admin');
+              setCurrentView('admin');
+            }}
+            className="px-2.5 py-0.5 rounded bg-white text-purple-950 font-extrabold text-[10px] hover:bg-purple-100 transition-colors shadow-xs"
+          >
+            Exit Preview (Back to Admin Studio) →
+          </button>
+        </div>
+      )}
+      <nav
+        className={`fixed ${isPreviewingAsStudent ? 'top-8 sm:top-9' : 'top-3 sm:top-4'} inset-x-0 mx-auto w-[94%] max-w-5xl z-50 flex items-center justify-between px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full border border-charcoal-200/80 dark:border-charcoal-800/80 bg-white/85 dark:bg-charcoal-900/85 backdrop-blur-md shadow-lg shadow-charcoal-950/5 transition-all`}
+        aria-label="Main Navigation"
+      >
       {/* 1. BRAND EMBLEM (Sleek, Compact) */}
       <div
         onClick={() => handleNavClick(user ? (isAdmin ? 'admin' : 'dashboard') : 'discovery')}
@@ -85,8 +109,14 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           <span className="font-extrabold text-sm sm:text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
             GovExam
           </span>
-          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 font-mono tracking-wider">
-            {isAdmin ? 'ADMIN' : 'PRO'}
+          <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full font-mono tracking-wider ${
+            !user
+              ? 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
+              : isAdmin
+              ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+              : 'bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800'
+          }`}>
+            {!user ? 'PRO' : isAdmin ? 'ADMIN' : 'STUDENT'}
           </span>
         </div>
       </div>
@@ -229,6 +259,19 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           </button>
         )}
 
+        {/* Student GovCoins Wallet Pill */}
+        {user && !isAdmin && (
+          <button
+            onClick={() => handleNavClick('subscription')}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-amber-900 bg-amber-100/90 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300 dark:border-amber-800 hover:bg-amber-200/80 transition-colors shadow-sm group"
+            title="Your GovCoins wallet: Redeem on subscription passes!"
+          >
+            <span className="text-xs group-hover:scale-110 transition-transform">🪙</span>
+            <span className="font-mono font-extrabold">{user?.profile?.coins_balance ?? 150}</span>
+            <span className="text-[10px] text-amber-750 dark:text-amber-400 font-semibold">Coins</span>
+          </button>
+        )}
+
         {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
@@ -274,59 +317,85 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             {userDropdownOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-lifted z-50 p-3 space-y-3 animate-fade-in text-xs">
                 {/* User Info Header */}
-                <div className="pb-2.5 border-b border-charcoal-150 dark:border-charcoal-800 space-y-0.5">
+                <div className="pb-2.5 border-b border-charcoal-150 dark:border-charcoal-800 space-y-1">
                   <div className="font-bold text-charcoal-900 dark:text-charcoal-100 truncate">
                     {user.full_name}
                   </div>
                   <div className="text-[11px] text-charcoal-500 truncate">{user.email}</div>
-                  <div className="pt-1 flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
-                      {user.role}
-                    </span>
-                    {subscription?.status === 'ACTIVE' && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
-                        {subscription.plan} PASS
+                  <div className="pt-1 flex flex-wrap items-center gap-1.5">
+                    {isAdmin ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/50 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                        <ShieldIcon size={11} />
+                        <span>Platform Administrator</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-100 dark:bg-institutional-950/50 text-institutional-800 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
+                        <UserIcon size={11} />
+                        <span>Student Aspirant</span>
+                      </span>
+                    )}
+
+                    {!isAdmin && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1 font-mono">
+                        🪙 {user?.profile?.coins_balance ?? 150} Coins
+                      </span>
+                    )}
+
+                    {/* Active Subscription Pass: Strictly for students only, NEVER for admin */}
+                    {!isAdmin && subscription?.status === 'ACTIVE' && subscription?.plan && subscription?.plan !== 'FREE' && subscription?.plan !== 'NONE' && (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                        <CrownIcon size={10} className="text-amber-500" />
+                        <span>{formatPlanTitle(subscription.plan)}</span>
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Quick Role Switcher (Aspirant vs Admin) for testing */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold text-charcoal-400 tracking-wider">
-                    Role Simulation
-                  </span>
-                  <div className="grid grid-cols-2 gap-1 bg-charcoal-100 dark:bg-charcoal-800 p-1 rounded-lg text-center font-bold text-[11px]">
-                    <button
-                      onClick={() => {
-                        switchRole('student');
-                        setCurrentView('dashboard');
-                        setUserDropdownOpen(false);
-                      }}
-                      className={`py-1 rounded-md transition-all ${
-                        !isAdmin
-                          ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                          : 'text-charcoal-500 hover:text-charcoal-900'
-                      }`}
-                    >
-                      Aspirant
-                    </button>
-                    <button
-                      onClick={() => {
-                        switchRole('admin');
-                        setCurrentView('admin');
-                        setUserDropdownOpen(false);
-                      }}
-                      className={`py-1 rounded-md transition-all ${
-                        isAdmin
-                          ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                          : 'text-charcoal-500 hover:text-charcoal-900'
-                      }`}
-                    >
-                      Admin
-                    </button>
+                {/* Role Switcher: Strictly ONLY visible if this account is a real Administrator! Never for regular students */}
+                {canSwitchRole && (
+                  <div className="space-y-1.5 p-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200/80 dark:border-charcoal-750">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold text-charcoal-500 dark:text-charcoal-400 tracking-wider">
+                        Admin Preview Mode
+                      </span>
+                      <span className="text-[9px] text-purple-600 dark:text-purple-400 font-bold uppercase">
+                        Superuser
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 bg-charcoal-200/60 dark:bg-charcoal-800 p-1 rounded-lg text-center font-bold text-[11px]">
+                      <button
+                        onClick={() => {
+                          switchRole('student');
+                          setCurrentView('dashboard');
+                          setUserDropdownOpen(false);
+                        }}
+                        className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1 ${
+                          !isAdmin
+                            ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-xs'
+                            : 'text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200'
+                        }`}
+                      >
+                        <UserIcon size={12} />
+                        <span>Student View</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          switchRole('admin');
+                          setCurrentView('admin');
+                          setUserDropdownOpen(false);
+                        }}
+                        className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1 ${
+                          isAdmin
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200'
+                        }`}
+                      >
+                        <ShieldIcon size={12} />
+                        <span>Admin Studio</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Navigation Shortcuts */}
                 <div className="space-y-1 pt-1 border-t border-charcoal-150 dark:border-charcoal-800">
@@ -495,5 +564,6 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
         </div>
       )}
     </nav>
+  </>
   );
 };

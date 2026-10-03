@@ -84,8 +84,13 @@ class UserDashboardStatsOut(BaseModel):
     best_score: float
     overall_percentile: float
     current_streak_days: int = 5
+    coins_balance: int = 150
+    global_rank: int = 1420
+    total_solved_questions: int = 85
+    total_available_questions: int = 100
     upcoming_tests_count: int = 3
     subject_performance: Dict[str, float]  # subject -> accuracy
+    difficulty_stats: Optional[Dict[str, Any]] = None  # easy/medium/hard breakdown
     recent_attempts: List[AttemptResultOut]
     recommended_tests: List[Dict[str, Any]]
     upcoming_tests: Optional[List[Dict[str, Any]]] = None
