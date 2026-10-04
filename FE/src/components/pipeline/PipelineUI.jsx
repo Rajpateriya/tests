@@ -135,7 +135,12 @@ export const DifficultyMix = ({ value, onChange, label = 'Difficulty mix' }) => 
 export const Dropzone = ({ files, onFiles, accept = '.pdf,application/pdf', label = 'Drop PDF files here', note }) => {
   const inputRef = useRef(null);
   const [over, setOver] = useState(false);
-  const pick = (list) => onFiles(Array.from(list || []).filter((f) => f.name.toLowerCase().endsWith('.pdf')));
+  // Adds to the current selection (skipping repeats) so files can be picked in several rounds.
+  const pick = (list) => {
+    const incoming = Array.from(list || []).filter((f) => f.name.toLowerCase().endsWith('.pdf'));
+    const same = (a, b) => a.name === b.name && a.size === b.size;
+    onFiles([...files, ...incoming.filter((f, i) => !files.some((x) => same(x, f)) && incoming.findIndex((y) => same(y, f)) === i)]);
+  };
 
   return (
     <div>
@@ -174,7 +179,7 @@ export const Dropzone = ({ files, onFiles, accept = '.pdf,application/pdf', labe
       {files.length > 0 && (
         <div className="pp-chips">
           {files.map((f) => (
-            <span className="chip" key={f.name}>
+            <span className="chip" key={`${f.name}-${f.size}`}>
               {f.name}
               <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{(f.size / 1024 / 1024).toFixed(1)} MB</span>
               <button type="button" title="Remove file" onClick={() => onFiles(files.filter((x) => x !== f))}>×</button>

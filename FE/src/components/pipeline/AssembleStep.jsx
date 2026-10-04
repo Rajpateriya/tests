@@ -231,15 +231,43 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
               </table>
             </div>
           )}
+          {result.substituted?.length > 0 && (
+            <>
+              <div className="pp-section-title" style={{ marginTop: '1rem' }}>
+                <span>Filled from another difficulty</span>
+              </div>
+              <Alert type="info">
+                Where a subtopic had no unused questions at the blueprint's difficulty, the nearest other difficulty of the same subtopic was used instead, so the quizzes keep their size and topics. Their difficulty mix is slightly different from the blueprint.
+              </Alert>
+              <div className="data-table-wrap" style={{ marginTop: '0.6rem' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Topic</th><th>Subtopic</th><th>Wanted</th><th>Used instead</th><th className="num">Questions</th></tr>
+                  </thead>
+                  <tbody>
+                    {result.substituted.map((s, i) => (
+                      <tr key={i}>
+                        <td className="muted">{s.topic}</td>
+                        <td>{s.subtopic}</td>
+                        <td><DifficultyBadge level={s.wanted} /></td>
+                        <td><DifficultyBadge level={s.used} /></td>
+                        <td className="num">{s.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
           {result.missing.length > 0 && (
             <>
               <div className="pp-section-title" style={{ marginTop: '1rem' }}>
-                <span>Short in the bank — generate more for these, then assemble again</span>
+                <span>Subtopics too short at every difficulty — generate more, then assemble again</span>
               </div>
               <div className="data-table-wrap">
                 <table className="data-table">
                   <thead>
-                    <tr><th>Sub-subject</th><th>Topic</th><th>Subtopic</th><th>Difficulty</th><th className="num">Needed / quiz</th><th className="num">Available</th></tr>
+                    <tr><th>Sub-subject</th><th>Topic</th><th>Subtopic</th><th className="num">Needed / quiz</th><th className="num">Unused left</th></tr>
                   </thead>
                   <tbody>
                     {result.missing.map((m, i) => (
@@ -247,7 +275,6 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
                         <td className="muted">{m.sub_subject || '—'}</td>
                         <td className="muted">{m.topic}</td>
                         <td>{m.subtopic}</td>
-                        <td><DifficultyBadge level={m.difficulty} /></td>
                         <td className="num">{m.needed_per_quiz}</td>
                         <td className="num zero">{m.available}</td>
                       </tr>

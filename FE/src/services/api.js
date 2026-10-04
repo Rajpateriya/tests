@@ -14,6 +14,13 @@ const getAuthHeaders = () => {
   };
 };
 
+// True when signed in against the real backend. The "Student/Admin" demo switch uses
+// a fake token starting with "demo" and is the only case that should see demo data.
+export const isRealSession = () => {
+  const token = localStorage.getItem('govexam_token');
+  return !!token && !token.startsWith('demo');
+};
+
 // Generic fetch wrapper
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
@@ -417,6 +424,7 @@ export const api = {
       try {
         return await request(`/tests/${testId}/start`, { method: 'POST' });
       } catch (err) {
+        if (isRealSession()) throw err; // real users see the real error, never a demo exam
         const test = DEMO_TESTS.find(t => t.id === testId) || DEMO_TESTS[0];
         const now = new Date();
         const expiry = new Date(now.getTime() + test.duration_minutes * 60 * 1000);
@@ -441,6 +449,7 @@ export const api = {
       try {
         return await request(`/attempts/${attemptId}/questions`);
       } catch (err) {
+        if (isRealSession()) throw err; // real users see the real error, never demo questions
         const initialPalette = {};
         DEMO_QUESTIONS.forEach((q, idx) => {
           initialPalette[q.id] = idx === 0 ? 'NOT_ANSWERED' : 'NOT_VISITED';
@@ -813,6 +822,14 @@ export const api = {
     },
 
     generate: (payload) => pipelineRequest('/generation/quiz', { method: 'POST', body: payload }),
+    // Existing GET /questions, in its paginated mode (`page` set): {items, total, page, page_size, pages}.
+    browseQuestions: (params) => {
+      const qs = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && String(value).trim() !== '') qs.append(key, value);
+      });
+      return pipelineRequest(`/questions?${qs.toString()}`);
+    },
     bank: (subject, targetExam) =>
       pipelineRequest(
         `/generation/bank/${encodeURIComponent(subject)}${targetExam ? `?target_exam=${encodeURIComponent(targetExam)}` : ''}`

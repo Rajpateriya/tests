@@ -116,6 +116,7 @@ export const UploadStep = ({ subject, taxonomyDoc, targetExam, onUploaded }) => 
               <thead>
                 <tr>
                   <th>File</th>
+                  {result.kind === 'theory' && <th>Topic</th>}
                   <th className="num">Stored</th>
                   <th className="num">Skipped</th>
                   <th className="num">Failed</th>
@@ -126,6 +127,7 @@ export const UploadStep = ({ subject, taxonomyDoc, targetExam, onUploaded }) => 
                 {result.per_file.map((f) => (
                   <tr key={f.source_pdf}>
                     <td>{f.source_pdf}</td>
+                    {result.kind === 'theory' && <td className="muted">{f.topic || '—'}</td>}
                     <td className="num">{f.chunks_ingested ?? f.questions_ingested}</td>
                     <td className="num">{f.chunks_duplicate ?? f.duplicates_skipped}</td>
                     <td className="num">{f.chunks_failed ?? f.questions_failed}</td>

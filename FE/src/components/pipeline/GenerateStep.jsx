@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { SparklesIcon } from '../Icons';
-import { Alert, Busy, DifficultyMix, Field, Section, Stats, StepCard } from './PipelineUI';
+import { Alert, Busy, DifficultyMix, Field, Section, Segmented, Stats, StepCard } from './PipelineUI';
 import { DEFAULT_MIX, LEVELS, errorText, mixTotal, topicsFor } from './pipelineUtils';
 
 const Split = ({ value, highlight }) => (
@@ -15,6 +15,8 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
   const [topic, setTopic] = useState('');
   const [perSubtopic, setPerSubtopic] = useState(10);
   const [mix, setMix] = useState(DEFAULT_MIX);
+  const [allowAi, setAllowAi] = useState(false);
+  const [styleNotes, setStyleNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState(null);
@@ -46,6 +48,8 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
         topic: topic || null,
         per_subtopic: perSubtopic,
         difficulty: mix,
+        allow_ai_knowledge: allowAi,
+        style_notes: styleNotes.trim() || null,
       });
       setResult(res);
       onGenerated();
@@ -98,6 +102,35 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
         <DifficultyMix value={mix} onChange={setMix} label="Split each subtopic's target by" />
       </Section>
 
+      <Section title="Source and style">
+        <div className="pp-grid cols-2">
+          <Field
+            label="When a subtopic has no theory"
+            hint={
+              allowAi
+                ? 'The AI writes from its own knowledge and the questions go straight into the bank, marked "AI knowledge". Nothing checks them against a source, so spot-check some.'
+                : 'Those subtopics are skipped. Upload theory for them to generate verified questions.'
+            }
+          >
+            <Segmented
+              value={allowAi ? 'ai' : 'skip'}
+              onChange={(v) => setAllowAi(v === 'ai')}
+              options={[{ value: 'skip', label: 'Skip them' }, { value: 'ai', label: 'Use AI knowledge' }]}
+            />
+          </Field>
+          <Field label="Exam style notes (optional)" hint={`Added to the built-in ${targetExam} style. e.g. "statement-based, application questions, avoid trivia".`}>
+            <textarea
+              className="form-input"
+              rows={3}
+              maxLength={500}
+              placeholder="Describe how this exam's questions look"
+              value={styleNotes}
+              onChange={(e) => setStyleNotes(e.target.value)}
+            />
+          </Field>
+        </div>
+      </Section>
+
       {busy && (
         <Alert type="info">Generating in batches of 10 per subtopic. Big runs can take several minutes — progress is printed in the server console.</Alert>
       )}
@@ -108,6 +141,13 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
             Saved {result.saved} new question{result.saved === 1 ? '' : 's'} across {result.subtopics} subtopic{result.subtopics === 1 ? '' : 's'}
             {result.shortfall ? ` — ${result.shortfall} still short. Run again, or upload more theory for those subtopics.` : '.'}
           </Alert>
+          {result.saved_from_ai_knowledge > 0 && (
+            <div style={{ marginTop: '0.6rem' }}>
+              <Alert type="warning">
+                {result.saved_from_ai_knowledge} of these were written from the AI's own knowledge (no theory) and are marked "AI knowledge" in the bank. They are not checked against any source.
+              </Alert>
+            </div>
+          )}
           {result.skipped_no_theory?.length > 0 && (
             <div style={{ marginTop: '0.6rem' }}>
               <Alert type="warning">
@@ -152,6 +192,7 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
                     <td>
                       {r.subtopic}
                       {r.skipped === 'no_theory' && <span className="badge badge-hard" style={{ marginLeft: 6 }}>no theory</span>}
+                      {r.source === 'ai_knowledge' && <span className="badge badge-medium" style={{ marginLeft: 6 }}>AI knowledge</span>}
                     </td>
                     <td><Split value={r.target} /></td>
                     <td><Split value={r.already_in_bank} /></td>

@@ -7,6 +7,7 @@ import { EXAMS, errorText } from '../components/pipeline/pipelineUtils';
 import { TaxonomyStep } from '../components/pipeline/TaxonomyStep';
 import { UploadStep } from '../components/pipeline/UploadStep';
 import { GenerateStep } from '../components/pipeline/GenerateStep';
+import { QuestionsStep } from '../components/pipeline/QuestionsStep';
 import { BlueprintStep } from '../components/pipeline/BlueprintStep';
 import { AssembleStep } from '../components/pipeline/AssembleStep';
 import { ReviewStep } from '../components/pipeline/ReviewStep';
@@ -15,6 +16,7 @@ const STEPS = [
   { id: 'structure', label: 'Structure', desc: 'Topics & subtopics' },
   { id: 'upload', label: 'Upload', desc: 'Theory & past papers' },
   { id: 'generate', label: 'Generate', desc: 'Fill the bank' },
+  { id: 'questions', label: 'Questions', desc: 'Browse the bank' },
   { id: 'blueprint', label: 'Blueprint', desc: 'Shape one quiz' },
   { id: 'assemble', label: 'Assemble', desc: 'Create tests' },
   { id: 'review', label: 'Review', desc: 'Flagged questions' },
@@ -218,6 +220,7 @@ export const AiPipelinePage = ({ onGoToMocks }) => {
           )}
           {step === 'upload' && <UploadStep {...props} onUploaded={loadDoc} />}
           {step === 'generate' && <GenerateStep {...props} onGenerated={() => {}} />}
+          {step === 'questions' && <QuestionsStep {...props} />}
           {step === 'blueprint' && <BlueprintStep {...props} />}
           {step === 'assemble' && <AssembleStep {...props} onAssembled={() => {}} onGoToMocks={onGoToMocks} />}
           {step === 'review' && <ReviewStep subject={subject} onChanged={() => {}} />}

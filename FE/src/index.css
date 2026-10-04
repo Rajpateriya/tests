@@ -1571,7 +1571,7 @@ input, select, textarea {
 
 .pp-stepper {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   padding: 1.1rem 1rem 1rem;
   background: var(--bg-secondary);
 }
@@ -2178,6 +2178,32 @@ input, select, textarea {
 .pp-option.correct {
   background: var(--success-bg);
   border-color: var(--success-border);
+}
+
+.pp-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pp-pager-info {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pp-pager-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.pp-pager-gap {
+  color: var(--text-muted);
+  padding: 0 0.2rem;
 }
 
 .pp-explain {

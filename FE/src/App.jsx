@@ -11,6 +11,7 @@ import { AdminStudioPage } from './pages/AdminStudioPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AiPipelinePage } from './pages/AiPipelinePage';
 import { Footer } from './components/Footer';
+import { api } from './services/api';
 
 /**
  * AppContent — Architecturally Guided View Router & State Orchestrator
@@ -43,6 +44,8 @@ function AppContent() {
   });
 
   const [activeAttempt, setActiveAttempt] = useState(null);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState('');
   const [lastCompletedAttemptId, setLastCompletedAttemptId] = useState(null);
   const [authModalState, setAuthModalState] = useState({ isOpen: false, initialTab: 'login' });
 
@@ -75,20 +78,49 @@ function AppContent() {
   }, [user, currentView]);
 
   // Start / Resume Mock Exam
-  const handleStartTest = (testOrAttempt) => {
+  const handleStartTest = async (input) => {
     if (!user) {
       handleOpenAuthModal('login');
       return;
     }
+    if (starting) return;
+    setStartError('');
 
-    const attemptData = {
-      attempt_id: testOrAttempt.attempt_id || `attempt-${Date.now()}`,
-      test_id: testOrAttempt.id || testOrAttempt.test_id,
-      test_title: testOrAttempt.title || testOrAttempt.test_title,
-      duration_minutes: testOrAttempt.duration_minutes || 60,
-    };
-    setActiveAttempt(attemptData);
-    setCurrentView('exam');
+    // Callers pass either a test/attempt object or just a test id string.
+    const testOrAttempt = typeof input === 'string' ? { id: input } : input;
+    if (!testOrAttempt || !(testOrAttempt.attempt_id || testOrAttempt.id || testOrAttempt.test_id)) {
+      setStartError('This test has no id, so it cannot be started.');
+      return;
+    }
+
+    // Resuming a session that already exists (e.g. "Resume Session Now"): go straight in.
+    if (testOrAttempt.attempt_id) {
+      setActiveAttempt({
+        attempt_id: testOrAttempt.attempt_id,
+        test_id: testOrAttempt.test_id || testOrAttempt.id,
+        test_title: testOrAttempt.test_title || testOrAttempt.title,
+        duration_minutes: testOrAttempt.duration_minutes || 60,
+      });
+      setCurrentView('exam');
+      return;
+    }
+
+    // New start: ask the backend to create the attempt (server-side timer + question set).
+    setStarting(true);
+    try {
+      const session = await api.tests.start(testOrAttempt.id || testOrAttempt.test_id);
+      setActiveAttempt({
+        attempt_id: session.attempt_id,
+        test_id: session.test_id,
+        test_title: session.test_title,
+        duration_minutes: session.duration_minutes,
+      });
+      setCurrentView('exam');
+    } catch (err) {
+      setStartError(err.message || 'Could not start this test.');
+    } finally {
+      setStarting(false);
+    }
   };
 
   // Test completed -> Route to Result Scorecard
@@ -100,6 +132,19 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 flex flex-col font-sans transition-colors duration-200">
+      {/* Start-test failure (shown instead of silently opening a demo exam) */}
+      {startError && (
+        <div className="fixed top-24 inset-x-0 z-50 flex justify-center px-4" role="alert">
+          <div className="max-w-lg w-full flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-lg">
+            <span className="flex-1">
+              <strong className="block">Could not start the test</strong>
+              {startError}
+            </span>
+            <button type="button" className="font-bold" onClick={() => setStartError('')} aria-label="Dismiss">✕</button>
+          </div>
+        </div>
+      )}
+
       {/* Floating Pill Navbar (Rendered on all pages EXCEPT fullscreen exam room) */}
       {currentView !== 'exam' && (
         <Navbar

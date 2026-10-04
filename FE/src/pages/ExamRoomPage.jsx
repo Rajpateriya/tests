@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { api, DEMO_QUESTIONS } from '../services/api';
+import { api, DEMO_QUESTIONS, isRealSession } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import {
@@ -33,6 +33,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({}); // question_id -> option_id
@@ -63,8 +64,12 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
   const initExamSession = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const data = await api.attempts.getQuestions(attemptId);
+      if (isRealSession() && !data?.questions?.length) {
+        throw new Error('This test has no questions.');
+      }
       setQuestions(data.questions || DEMO_QUESTIONS);
       setRemainingSeconds(
         data.remaining_seconds || (attemptSession?.duration_minutes ? attemptSession.duration_minutes * 60 : 3600)
@@ -83,6 +88,11 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       setCurrentIndex(data.current_question_index || 0);
     } catch (err) {
       console.warn('Fallback loading active attempt questions:', err);
+      if (isRealSession()) {
+        // A real attempt must show its real questions or a real error — never demo ones.
+        setLoadError(err.message || 'Could not load the questions for this attempt.');
+        return;
+      }
       setQuestions(DEMO_QUESTIONS);
       const initialPalette = {};
       DEMO_QUESTIONS.forEach((q, idx) => {
@@ -345,6 +355,21 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
           <p className="text-xs text-charcoal-500">
             Verifying candidate token, questions encryption, and server-side timer...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 space-y-4 font-sans">
+        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-red-200 bg-white dark:bg-charcoal-900 p-6 shadow-subtle">
+          <h2 className="text-base font-bold text-charcoal-800 dark:text-charcoal-100">Could not load this test</h2>
+          <p className="text-sm text-charcoal-600 dark:text-charcoal-300">{loadError}</p>
+          <div className="flex justify-center gap-2 pt-1">
+            <button type="button" onClick={initExamSession} className="px-4 py-2 rounded-lg bg-charcoal-900 text-white text-xs font-bold">Try again</button>
+            <button type="button" onClick={onExit} className="px-4 py-2 rounded-lg border border-charcoal-300 text-xs font-bold text-charcoal-700 dark:text-charcoal-200">Back</button>
+          </div>
         </div>
       </div>
     );
