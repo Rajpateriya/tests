@@ -1269,8 +1269,14 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                 {(dashboard?.recent_attempts || []).length > 0 ? (
                   dashboard.recent_attempts.map((att) => (
                     <tr key={att.attempt_id} className="hover:bg-slate-50 dark:hover:bg-charcoal-800/40 transition-colors">
-                      <td className="py-3.5 pr-4 font-bold text-slate-900 dark:text-white max-w-xs truncate">
-                        {att.test_title}
+                      <td className="py-3.5 pr-4 max-w-xs">
+                        <div className="font-bold text-slate-900 dark:text-white truncate">{att.test_title}</div>
+                        {att.ended_reason === 'tab_switch' && (
+                          <div className="mt-0.5 text-[11px] font-medium text-rose-600 dark:text-rose-400 whitespace-normal">
+                            Ended early: you switched tabs{att.tab_switch_count ? ` ${att.tab_switch_count} times` : ' too many times'}.
+                            Only answers saved up to then were scored.
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-3 text-slate-600 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
                         {new Date(att.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -1282,9 +1288,15 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                         {att.accuracy_percentage?.toFixed(1)}%
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                          Qualified
-                        </span>
+                        {att.ended_reason === 'tab_switch' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+                            Ended: tab switching
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                            Qualified
+                          </span>
+                        )}
                       </td>
                       <td className="py-3.5 pl-3 text-right whitespace-nowrap">
                         <button

@@ -122,6 +122,13 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
         {/* ========================================================================= */}
         <section className="bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-8 shadow-subtle space-y-6">
         {/* Top Header Row */}
+        {scoreData?.ended_reason === 'tab_switch' && (
+          <div className="rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-4 py-2.5 text-xs sm:text-sm text-rose-800 dark:text-rose-200">
+            <strong>Test ended early:</strong> this attempt was ended automatically because you switched away from the exam
+            tab {scoreData?.tab_switch_count ? `${scoreData.tab_switch_count} times` : 'too many times'}. Only the answers saved
+            up to that point were scored.
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-charcoal-150 dark:border-charcoal-800">
           <div>
             <div className="flex items-center gap-2 mb-1.5">

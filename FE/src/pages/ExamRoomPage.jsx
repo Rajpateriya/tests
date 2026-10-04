@@ -19,6 +19,9 @@ import {
 } from '../components/Icons';
 
 // Palette tile colours: green = answered, red = not answered, purple = review, white = not visited.
+// Switching to another tab/window more than this many times ends the test.
+const MAX_TAB_SWITCHES = 2;
+
 // Same tile colours and legend as the landing-page exam preview.
 const TILE_STYLES = {
   ANSWERED: 'bg-emerald-600 text-white font-bold',
@@ -93,6 +96,16 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
   const timerRef = useRef(null);
   const syncTimerRef = useRef(null);
 
+  // Tab-switch rule: more than MAX_TAB_SWITCHES switches ends (submits) the test.
+  const tabCountRef = useRef(0);
+  const submittedRef = useRef(false);
+  const latestRef = useRef({}); // always the newest answers, so a submit from an event handler isn't stale
+  const [terminated, setTerminated] = useState(null); // result of a test ended for tab switching
+  const [submitError, setSubmitError] = useState(''); // set when a submit could not be saved
+  const lastReasonRef = useRef(undefined);
+  latestRef.current = { answers, timeSpent, paletteStates };
+  const tabStorageKey = `tab-switches-${attemptId}`;
+
   // 1. Initialize attempt data
   useEffect(() => {
     initExamSession();
@@ -126,6 +139,17 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       });
       setPaletteStates(initialPalette);
       setCurrentIndex(data.current_question_index || 0);
+
+      // Keep the tab-switch count across a page reload.
+      let savedSwitches = 0;
+      try {
+        savedSwitches = Number(sessionStorage.getItem(tabStorageKey)) || 0;
+      } catch {
+        // storage unavailable: start from 0
+      }
+      tabCountRef.current = savedSwitches;
+      setTabSwitchCount(savedSwitches);
+      if (savedSwitches > 0) setShowTabWarning(true);
     } catch (err) {
       console.warn('Fallback loading active attempt questions:', err);
       if (isRealSession()) {
@@ -199,18 +223,30 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }
   };
 
-  // 4. Anti-Cheat: Detect Tab Switch
+  // 4. Anti-Cheat: Detect Tab Switch. More than MAX_TAB_SWITCHES ends the test.
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden && !isPaused) {
-        setTabSwitchCount((prev) => prev + 1);
-        setShowTabWarning(true);
+      if (!document.hidden || isPaused || submittedRef.current) return;
+      tabCountRef.current += 1;
+      const count = tabCountRef.current;
+      try {
+        sessionStorage.setItem(tabStorageKey, String(count));
+      } catch {
+        // storage unavailable: the in-memory count still applies
       }
+      setTabSwitchCount(count);
+      setShowTabWarning(true);
+      if (count > MAX_TAB_SWITCHES) submitExam('tab_switch');
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isPaused]);
+  }, [isPaused, tabStorageKey]);
+
+  // Reloaded after already going over the limit: end it right away.
+  useEffect(() => {
+    if (!loading && !loadError && tabCountRef.current > MAX_TAB_SWITCHES) submitExam('tab_switch');
+  }, [loading]);
 
   // Format seconds to HH:MM:SS or MM:SS
   const formatTime = (secs) => {
@@ -358,20 +394,52 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     submitExam();
   };
 
-  const submitExam = async () => {
+  // `reason === 'tab_switch'`: the test is being ended for switching tabs too often, so show
+  // why before moving on to the result instead of jumping straight to it.
+  const submitExam = async (reason) => {
+    if (submittedRef.current) return; // one submit only (timer, button and tab rule can race)
+    submittedRef.current = true;
+    lastReasonRef.current = typeof reason === 'string' ? reason : undefined;
+    setSubmitError('');
     setSubmitting(true);
-    try {
-      const result = await api.attempts.submit(attemptId, {
-        answers,
-        time_spent_per_question: timeSpent,
-        palette_states: paletteStates,
-      });
+
+    const latest = latestRef.current;
+    const payload = {
+      answers: latest.answers,
+      time_spent_per_question: latest.timeSpent,
+      palette_states: latest.paletteStates,
+      tab_switch_count: tabCountRef.current,
+      ...(reason === 'tab_switch' ? { ended_reason: 'tab_switch' } : {}),
+    };
+
+    // Up to 3 tries (1s, then 2s apart) so a short network drop doesn't lose the submission.
+    let result = null;
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3 && !result; attempt += 1) {
+      try {
+        result = await api.attempts.submit(attemptId, payload);
+      } catch (err) {
+        lastError = err;
+        console.error(`Submission attempt ${attempt} failed:`, err);
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+    setSubmitting(false);
+
+    if (!result) {
+      // Not saved: keep everything on screen and let the student retry, instead of showing
+      // a result that does not exist.
+      submittedRef.current = false;
+      setShowSubmitModal(false);
+      setSubmitError(lastError?.message || 'Could not reach the server.');
+      return;
+    }
+
+    if (reason === 'tab_switch') {
+      setShowSubmitModal(false);
+      setTerminated(result);
+    } else {
       onTestCompleted(result);
-    } catch (err) {
-      console.error('Submission error:', err);
-      onTestCompleted({ attempt_id: attemptId });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -395,6 +463,55 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
           <p className="text-xs text-charcoal-500">
             Verifying candidate token, questions encryption, and server-side timer...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitError) {
+    return (
+      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-amber-200 dark:border-amber-900 bg-white dark:bg-charcoal-900 p-6 shadow-subtle">
+          <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center border border-amber-200 dark:border-amber-800">
+            <AlertTriangleIcon size={22} />
+          </div>
+          <h2 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">Your answers have not been saved yet</h2>
+          <p className="text-sm text-charcoal-600 dark:text-charcoal-300">
+            The submission could not be sent ({submitError}). Check your internet connection, keep this tab open, and try again.
+            Your answers are still here.
+          </p>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => submitExam(lastReasonRef.current)}
+            className="px-4 py-2 rounded-lg bg-institutional-600 hover:bg-institutional-700 disabled:opacity-60 text-white text-xs font-bold"
+          >
+            {submitting ? 'Submitting…' : 'Try again'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (terminated) {
+    return (
+      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-rose-200 dark:border-rose-900 bg-white dark:bg-charcoal-900 p-6 shadow-subtle">
+          <div className="w-12 h-12 mx-auto rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center border border-rose-200 dark:border-rose-800">
+            <AlertTriangleIcon size={22} />
+          </div>
+          <h2 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">Your test has ended</h2>
+          <p className="text-sm text-charcoal-600 dark:text-charcoal-300">
+            You switched away from the exam tab more than {MAX_TAB_SWITCHES} times, so the test was ended and the answers you had
+            saved so far were submitted.
+          </p>
+          <button
+            type="button"
+            onClick={() => onTestCompleted(terminated)}
+            className="px-4 py-2 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white text-xs font-bold"
+          >
+            View result
+          </button>
         </div>
       </div>
     );
@@ -499,7 +616,10 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
           <div className="flex items-center gap-2">
             <AlertTriangleIcon size={16} className="text-amber-600 shrink-0" />
             <span>
-              <strong>Integrity Notice:</strong> Tab switch detected ({tabSwitchCount} warning{tabSwitchCount > 1 ? 's' : ''}). Please stay in the exam tab during your timed session.
+              <strong>Integrity Notice:</strong> Tab switch detected ({tabSwitchCount} of {MAX_TAB_SWITCHES} allowed).{' '}
+              {tabSwitchCount >= MAX_TAB_SWITCHES
+                ? 'One more switch will end your test.'
+                : 'Please stay in the exam tab — switching more than twice ends your test.'}
             </span>
           </div>
           <button

@@ -500,6 +500,9 @@ export const api = {
           body: JSON.stringify(payload),
         });
       } catch (err) {
+        // A real submission must never be answered with an invented score: the caller
+        // has to know it failed so it can retry.
+        if (isRealSession()) throw err;
         // Calculate mock score
         const answers = payload.answers || {};
         let correct = 0;
