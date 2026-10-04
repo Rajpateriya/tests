@@ -18,6 +18,46 @@ import {
   MoonIcon,
 } from '../components/Icons';
 
+// Palette tile colours: green = answered, red = not answered, purple = review, white = not visited.
+// Same tile colours and legend as the landing-page exam preview.
+const TILE_STYLES = {
+  ANSWERED: 'bg-emerald-600 text-white font-bold',
+  NOT_ANSWERED: 'bg-rose-600 text-white font-bold',
+  MARKED_FOR_REVIEW: 'bg-purple-600 text-white font-bold',
+  ANSWERED_AND_MARKED_FOR_REVIEW: 'bg-purple-600 text-white font-bold',
+  NOT_VISITED: 'bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700',
+};
+const TILE_RING = {
+  ANSWERED: 'ring-emerald-400',
+  NOT_ANSWERED: 'ring-rose-400',
+  MARKED_FOR_REVIEW: 'ring-purple-400',
+  ANSWERED_AND_MARKED_FOR_REVIEW: 'ring-purple-400',
+  NOT_VISITED: 'ring-charcoal-400',
+};
+const tileClass = (state) => TILE_STYLES[state] || TILE_STYLES.NOT_VISITED;
+const tileRing = (state) => TILE_RING[state] || TILE_RING.NOT_VISITED;
+
+const PaletteLegend = () => (
+  <div className="grid grid-cols-2 gap-2 text-[10px] text-charcoal-600 dark:text-charcoal-400 py-3 border-b border-charcoal-200 dark:border-charcoal-700">
+    <div className="flex items-center gap-1.5">
+      <span className="w-3.5 h-3.5 rounded bg-emerald-600 text-white flex items-center justify-center font-bold text-[8px]">✓</span>
+      <span>Answered</span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="w-3.5 h-3.5 rounded bg-rose-600 text-white flex items-center justify-center font-bold text-[8px]">✕</span>
+      <span>Not Answered</span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="w-3.5 h-3.5 rounded bg-purple-600 text-white flex items-center justify-center font-bold text-[8px]">●</span>
+      <span>Review</span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="w-3.5 h-3.5 rounded bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300 flex items-center justify-center font-bold text-[8px]">-</span>
+      <span>Not Visited</span>
+    </div>
+  </div>
+);
+
 /**
  * ExamRoomPage — Focused, Distraction-Free Assessment Interface
  * Core UX:
@@ -376,11 +416,18 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
   }
 
   return (
-    <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 font-sans flex flex-col justify-between selection:bg-institutional-100">
+    <div className="relative min-h-screen overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero selection:bg-institutional-100">
+      {/* Same ambient glows as the landing page */}
+      <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
+      <div className="absolute top-[480px] -left-36 w-[550px] h-[550px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
+      <div className="absolute top-[900px] -right-36 w-[600px] h-[600px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
+
+      <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <section className="relative rounded-3xl p-5 sm:p-8 shadow-card space-y-6 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200/90 dark:border-charcoal-800/90 overflow-hidden bg-terminal-pattern">
       {/* ========================================================================= */}
       {/* 1. STICKY TOP BAR (Academic, Focused, Clear Timer)                         */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-30 bg-white dark:bg-charcoal-900 border-b border-charcoal-200 dark:border-charcoal-800 px-4 sm:px-6 py-3 flex items-center justify-between shadow-subtle">
+      <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
         {/* Left: Test Title & Section Indicator */}
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center justify-center w-8 h-8 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-mono font-bold text-xs">
@@ -448,7 +495,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
       {/* Tab Switch Alert Banner */}
       {showTabWarning && (
-        <div className="bg-amber-50 dark:bg-amber-950/60 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200">
+        <div className="relative z-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200">
           <div className="flex items-center gap-2">
             <AlertTriangleIcon size={16} className="text-amber-600 shrink-0" />
             <span>
@@ -467,46 +514,26 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       {/* ========================================================================= */}
       {/* 2. MAIN WORKSPACE: Question Area (Center) & Palette Sidebar (Desktop)     */}
       {/* ========================================================================= */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden max-w-7xl mx-auto w-full">
-        {/* Main Content Area: Distraction-Free Zone */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* Question Subheader Card */}
-            <div className="flex items-center justify-between pb-3 border-b border-charcoal-200 dark:border-charcoal-800">
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <span className="text-sm font-bold text-charcoal-900 dark:text-charcoal-100 font-mono">
-                  Question {currentIndex + 1} of {questions.length}
-                </span>
-
-                <span className="text-xs font-medium px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
-                  {currentQuestion?.difficulty || 'MEDIUM'}
-                </span>
-
-                <span className="text-xs text-charcoal-500 dark:text-charcoal-400">
-                  Topic: <strong>{currentQuestion?.topic || 'General'}</strong>
-                </span>
-              </div>
-
-              {/* Marking Scheme */}
-              <div className="flex items-center gap-2 text-xs font-mono font-semibold">
-                <span className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                  +2.00
-                </span>
-                <span className="text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
-                  -0.50
-                </span>
-              </div>
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Question area */}
+        <div className="lg:col-span-2 space-y-4">
+            {/* Subject line + marking scheme (same as the landing-page preview) */}
+            <div className="flex items-center justify-between text-xs font-semibold text-charcoal-500 pb-2 border-b border-charcoal-150 dark:border-charcoal-800">
+              <span>
+                {currentQuestion?.subject || 'General'} • {currentQuestion?.topic || 'General'}
+                {currentQuestion?.difficulty ? ` • ${currentQuestion.difficulty}` : ''}
+              </span>
+              <span className="text-institutional-600 dark:text-institutional-400 font-mono font-bold">
+                +2.00 / -0.50 Marks
+              </span>
             </div>
 
-            {/* Question Text Box (Large, Sustained Reading, 1.6 Line Height) */}
-            <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-6 sm:p-7 shadow-subtle">
-              <p className="text-question font-medium text-charcoal-900 dark:text-charcoal-100 whitespace-pre-line leading-[1.6]">
-                {currentQuestion?.question_text}
-              </p>
+            <div className="text-sm sm:text-base font-semibold text-charcoal-900 dark:text-charcoal-100 leading-question whitespace-pre-line">
+              <strong>Q{currentIndex + 1}.</strong> {currentQuestion?.question_text}
             </div>
 
-            {/* Answer Options: Clickable Block Rows (WCAG AA accessible) */}
-            <div className="space-y-3" role="radiogroup" aria-labelledby="question-options">
+            {/* Clickable Option Rows */}
+            <div className="space-y-2.5 pt-2" role="radiogroup" aria-label="Answer options">
               {currentQuestion?.options?.map((opt) => {
                 const isSelected = answers[currentQuestion.id] === opt.id;
                 return (
@@ -522,46 +549,68 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
                         handleSelectOption(opt.id);
                       }
                     }}
-                    className={`p-4 sm:p-4.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none ${
+                    className={`p-3.5 rounded-xl border text-xs sm:text-sm font-medium flex items-center justify-between cursor-pointer select-none transition-all duration-150 ${
                       isSelected
-                        ? 'border-institutional-600 bg-institutional-50/70 dark:bg-institutional-950/30 text-charcoal-950 dark:text-white shadow-sm ring-1 ring-institutional-600/30'
-                        : 'border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:bg-charcoal-50/50 dark:hover:bg-charcoal-850/30 text-charcoal-800 dark:text-charcoal-200'
+                        ? 'border-institutional-500 bg-institutional-50/70 dark:bg-institutional-950/40 text-institutional-900 dark:text-institutional-100 shadow-sm ring-1 ring-institutional-500'
+                        : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-800/60 text-charcoal-800 dark:text-charcoal-200 hover:border-charcoal-300 dark:hover:border-charcoal-600'
                     }`}
                   >
-                    <div className="flex items-center gap-3.5 pr-2">
-                      {/* Customized Radio Button */}
-                      <div
-                        className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
                           isSelected
-                            ? 'border-institutional-600 bg-institutional-600 text-white dark:border-institutional-500 dark:bg-institutional-500'
-                            : 'border-charcoal-400 dark:border-charcoal-600 bg-white dark:bg-charcoal-800'
+                            ? 'bg-institutional-600 text-white'
+                            : 'bg-white dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-600 text-charcoal-700 dark:text-charcoal-300'
                         }`}
                       >
-                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-
-                      {/* Option Letter Tag */}
-                      <span className="font-mono font-bold text-xs text-charcoal-500 dark:text-charcoal-400">
-                        {opt.id}.
+                        {opt.id}
                       </span>
-
-                      {/* Option Content Text */}
-                      <span className="text-sm sm:text-base font-normal leading-relaxed">
-                        {opt.text}
-                      </span>
+                      <span>{opt.text}</span>
                     </div>
-
-                    {isSelected && (
-                      <span className="text-xs font-bold text-institutional-700 dark:text-institutional-400 shrink-0">
-                        Selected
-                      </span>
-                    )}
+                    {isSelected && <CheckIcon size={16} className="text-institutional-600 dark:text-institutional-400" />}
                   </div>
                 );
               })}
             </div>
 
-            {/* Mobile Palette Toggle Bar (Native App Feel Drawer Trigger) */}
+            {/* Action bar (same buttons as the landing-page preview, plus Previous / Save & Next) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={handleToggleMarkForReview}
+                  className="px-3 py-1.5 rounded-lg border border-purple-300 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 text-xs font-bold hover:bg-purple-100 transition-colors"
+                >
+                  {isCurrentMarkedForReview ? 'Marked for Review' : 'Mark for Review'}
+                </button>
+                <button
+                  onClick={handleClearResponse}
+                  disabled={!answers[currentQuestion?.id]}
+                  className="px-3 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 text-xs font-semibold hover:bg-charcoal-100 dark:hover:bg-charcoal-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Clear Response
+                </button>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={goToPrevQuestion}
+                  disabled={currentIndex === 0}
+                  className="px-3 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 text-xs font-semibold hover:bg-charcoal-100 dark:hover:bg-charcoal-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                >
+                  <ChevronLeftIcon size={14} />
+                  <span>Previous</span>
+                </button>
+                <button
+                  onClick={handleSaveAndNext}
+                  className="px-4 py-1.5 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <span>{currentIndex === questions.length - 1 ? 'Save Response' : 'Save & Next'}</span>
+                  <ChevronRightIcon size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile palette trigger */}
             <div className="lg:hidden pt-2">
               <button
                 onClick={() => setShowMobileDrawer(true)}
@@ -575,100 +624,52 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
               </button>
             </div>
           </div>
-        </main>
 
         {/* ========================================================================= */}
         {/* DESKTOP SIDEBAR: Question Navigation Palette (Anti-AI Minimalist Design)   */}
         {/* ========================================================================= */}
-        <aside className="hidden lg:flex w-80 border-l border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 flex-col justify-between shrink-0">
-          <div className="p-5 space-y-4 overflow-y-auto">
+        <aside className="hidden lg:flex p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-800 flex-col justify-between space-y-4 self-start">
+          <div>
             {/* Palette Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
-              <span className="text-xs font-bold uppercase tracking-wider text-charcoal-600 dark:text-charcoal-400">
-                Question Palette
-              </span>
-              <span className="text-xs font-mono font-semibold text-charcoal-500">
-                {questions.length} Questions
-              </span>
+            <div className="flex items-center justify-between pb-3 border-b border-charcoal-200 dark:border-charcoal-700 text-xs font-bold uppercase tracking-wider text-charcoal-700 dark:text-charcoal-300">
+              <span>Question Palette</span>
+              <span className="text-[11px] font-mono text-institutional-600">Q {currentIndex + 1} of {questions.length}</span>
             </div>
 
-            {/* Color-Coded State Legend Grid */}
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold">
-              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700">
-                <span className="w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] bg-emerald-600 text-white font-bold">
-                  {counts.answered}
-                </span>
-                <span className="text-charcoal-700 dark:text-charcoal-300">Answered</span>
-              </div>
+            {/* State Legend */}
+            <PaletteLegend />
 
-              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700">
-                <span className="w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] bg-white dark:bg-charcoal-800 border border-charcoal-400 text-charcoal-800 dark:text-charcoal-200 font-bold">
-                  {counts.notAnswered}
-                </span>
-                <span className="text-charcoal-700 dark:text-charcoal-300">Unanswered</span>
-              </div>
+            {/* Question Tiles Grid */}
+            <div className="grid grid-cols-5 gap-1.5 pt-3 max-h-[420px] overflow-y-auto p-0.5">
+              {questions.map((q, idx) => {
+                const state = paletteStates[q.id] || 'NOT_VISITED';
+                const isCurrent = idx === currentIndex;
 
-              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700">
-                <span className="w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] bg-amber-500 text-white font-bold">
-                  {counts.markedReview}
-                </span>
-                <span className="text-charcoal-700 dark:text-charcoal-300">Review</span>
-              </div>
-
-              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-50 dark:bg-charcoal-800/60 border border-charcoal-200 dark:border-charcoal-700">
-                <span className="w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-400 font-bold">
-                  {counts.notVisited}
-                </span>
-                <span className="text-charcoal-700 dark:text-charcoal-300">Not Visited</span>
-              </div>
-            </div>
-
-            {/* Questions Numbers Grid */}
-            <div className="pt-2">
-              <div className="grid grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
-                {questions.map((q, idx) => {
-                  const state = paletteStates[q.id] || 'NOT_VISITED';
-                  const isCurrent = idx === currentIndex;
-
-                  let styleClass = 'bg-white dark:bg-charcoal-800 border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300';
-                  if (state === 'ANSWERED') {
-                    styleClass = 'bg-emerald-600 text-white border-emerald-600';
-                  } else if (state === 'NOT_ANSWERED') {
-                    styleClass = 'bg-white dark:bg-charcoal-800 border-charcoal-400 text-charcoal-800 dark:text-charcoal-200 font-semibold';
-                  } else if (state === 'MARKED_FOR_REVIEW') {
-                    styleClass = 'bg-amber-500 text-white border-amber-500';
-                  } else if (state === 'ANSWERED_AND_MARKED_FOR_REVIEW') {
-                    styleClass = 'bg-purple-600 text-white border-purple-600';
-                  }
-
-                  return (
-                    <button
-                      key={q.id}
-                      onClick={() => jumpToQuestion(idx)}
-                      className={`h-9 w-full rounded-md font-mono text-xs font-bold border transition-all flex items-center justify-center relative ${styleClass} ${
-                        isCurrent
-                          ? 'ring-2 ring-charcoal-900 dark:ring-white scale-105 shadow-sm'
-                          : 'hover:opacity-90'
-                      }`}
-                      aria-label={`Jump to Question ${idx + 1}`}
-                    >
-                      {idx + 1}
-                      {state === 'ANSWERED_AND_MARKED_FOR_REVIEW' && (
-                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-300" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => jumpToQuestion(idx)}
+                    className={`h-8 rounded flex items-center justify-center text-xs font-mono transition-transform hover:scale-105 select-none relative ${tileClass(state)} ${
+                      isCurrent ? `ring-2 ${tileRing(state)}` : ''
+                    }`}
+                    aria-label={`Jump to Question ${idx + 1}`}
+                  >
+                    {idx + 1}
+                    {state === 'ANSWERED_AND_MARKED_FOR_REVIEW' && (
+                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Sidebar Bottom: Candidate Profile Snippet */}
-          <div className="p-4 border-t border-charcoal-150 dark:border-charcoal-800 bg-charcoal-50/70 dark:bg-charcoal-850/50 flex items-center justify-between text-xs text-charcoal-500">
-            <span>Candidate: <strong>{user?.full_name?.split(' ')[0] || 'Aspirant'}</strong></span>
-            <span className="font-mono">TCS-iON Engine</span>
+          <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 text-center font-medium">
+            Candidate: <strong>{user?.full_name?.split(' ')[0] || 'Aspirant'}</strong> • {counts.answered}/{questions.length} answered
           </div>
         </aside>
+      </div>
+      </section>
       </div>
 
       {/* ========================================================================= */}
@@ -694,39 +695,20 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
             </div>
 
             {/* Mobile Legend */}
-            <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-100 dark:bg-charcoal-800">
-                <span className="w-4 h-4 rounded bg-emerald-600 text-white flex items-center justify-center font-mono text-[9px]">
-                  {counts.answered}
-                </span>
-                <span>Answered</span>
-              </div>
-              <div className="flex items-center gap-2 p-1.5 rounded bg-charcoal-100 dark:bg-charcoal-800">
-                <span className="w-4 h-4 rounded bg-amber-500 text-white flex items-center justify-center font-mono text-[9px]">
-                  {counts.markedReview}
-                </span>
-                <span>Review</span>
-              </div>
-            </div>
+            <PaletteLegend />
 
             {/* Mobile Numbers Grid */}
-            <div className="grid grid-cols-5 gap-2.5 py-2">
+            <div className="grid grid-cols-5 gap-2.5 p-1.5">
               {questions.map((q, idx) => {
                 const state = paletteStates[q.id] || 'NOT_VISITED';
                 const isCurrent = idx === currentIndex;
-
-                let styleClass = 'bg-white dark:bg-charcoal-800 border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300';
-                if (state === 'ANSWERED') styleClass = 'bg-emerald-600 text-white border-emerald-600';
-                else if (state === 'NOT_ANSWERED') styleClass = 'bg-white dark:bg-charcoal-800 border-charcoal-400 text-charcoal-900 font-bold';
-                else if (state === 'MARKED_FOR_REVIEW') styleClass = 'bg-amber-500 text-white border-amber-500';
-                else if (state === 'ANSWERED_AND_MARKED_FOR_REVIEW') styleClass = 'bg-purple-600 text-white border-purple-600';
 
                 return (
                   <button
                     key={q.id}
                     onClick={() => jumpToQuestion(idx)}
-                    className={`h-11 rounded-lg font-mono text-sm font-bold border flex items-center justify-center ${styleClass} ${
-                      isCurrent ? 'ring-2 ring-charcoal-900 dark:ring-white scale-105' : ''
+                    className={`h-10 rounded flex items-center justify-center text-sm font-mono select-none ${tileClass(state)} ${
+                      isCurrent ? `ring-2 ${tileRing(state)}` : ''
                     }`}
                   >
                     {idx + 1}
@@ -737,59 +719,6 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
           </div>
         </div>
       )}
-
-      {/* ========================================================================= */}
-      {/* 4. FOOTER ACTIONS (Previous, Next, Mark for Review Toggle, Clear Response) */}
-      {/* ========================================================================= */}
-      <footer className="sticky bottom-0 z-20 bg-white dark:bg-charcoal-900 border-t border-charcoal-200 dark:border-charcoal-800 px-4 sm:px-6 py-3.5 shadow-subtle">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          {/* Left Actions: Review Toggle & Clear */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleToggleMarkForReview}
-              className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                isCurrentMarkedForReview
-                  ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800'
-                  : 'bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border-charcoal-300 dark:border-charcoal-700 hover:bg-charcoal-50'
-              }`}
-            >
-              <FlagIcon size={14} className={isCurrentMarkedForReview ? 'text-amber-600' : 'text-charcoal-500'} />
-              <span className="hidden sm:inline">
-                {isCurrentMarkedForReview ? 'Marked for Review' : 'Mark for Review'}
-              </span>
-              <span className="sm:hidden">Review</span>
-            </button>
-
-            <button
-              onClick={handleClearResponse}
-              disabled={!answers[currentQuestion?.id]}
-              className="px-3 py-2 rounded-lg text-xs font-semibold text-charcoal-500 hover:text-charcoal-800 dark:hover:text-charcoal-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              Clear
-            </button>
-          </div>
-
-          {/* Right Actions: Previous & Save and Next */}
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={goToPrevQuestion}
-              disabled={currentIndex === 0}
-              className="inline-flex items-center gap-1 px-3 sm:px-4 py-2 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-700/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeftIcon size={16} />
-              <span className="hidden sm:inline">Previous</span>
-            </button>
-
-            <button
-              onClick={handleSaveAndNext}
-              className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 dark:bg-institutional-700 dark:hover:bg-institutional-600 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-institutional-500 shadow-sm"
-            >
-              <span>{currentIndex === questions.length - 1 ? 'Save Response' : 'Save & Next'}</span>
-              <ChevronRightIcon size={16} />
-            </button>
-          </div>
-        </div>
-      </footer>
 
       {/* ========================================================================= */}
       {/* 5. MODAL: PAUSE EXAMINATION OVERLAY                                       */}
