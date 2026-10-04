@@ -117,6 +117,9 @@ async def upload_theory_pdf(
     `sub_subject` is optional but recommended (a chapter is one branch). It
     must be one of the subject's sub-subjects. If left empty for a subject
     that has sub-subjects, the LLM picks one per chunk from the list.
+
+    The LLM decides ONE topic per PDF (reusing an existing topic when the PDF is
+    about it); per-chunk tagging then only chooses subtopics.
     """
     _check_pdfs(files)
     taxonomy = TaxonomyService(db)
@@ -223,6 +226,8 @@ async def generate_questions(
         topic=req.topic,
         per_subtopic=req.per_subtopic,
         difficulty=req.difficulty.model_dump(),
+        allow_ai_knowledge=req.allow_ai_knowledge,
+        style_notes=req.style_notes,
     )
     return APIResponse(
         success=True,

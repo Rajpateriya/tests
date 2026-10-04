@@ -5,7 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.exceptions import NotFoundException
 from app.models.question import Difficulty, OptionItem
 from app.repositories.question_repo import QuestionRepository
-from app.schemas.question import QuestionCreate, QuestionFilterParams, QuestionOut
+from app.schemas.question import QuestionCreate, QuestionFilterParams, QuestionOut, QuestionPage
 
 
 class QuestionService:
@@ -25,14 +25,38 @@ class QuestionService:
         limit: int = 20,
     ) -> List[QuestionOut]:
         items = await self.repo.find_filtered(
-            subject=params.subject,
-            topic=params.topic,
-            difficulty=params.difficulty.value if params.difficulty else None,
-            search=params.search,
-            skip=skip,
-            limit=limit,
+            skip=skip, limit=limit, **self._filters(params)
         )
         return [self._to_question_out(item) for item in items]
+
+    async def list_page(
+        self, params: QuestionFilterParams, page: int = 1, page_size: int = 20
+    ) -> QuestionPage:
+        """One page (newest first) plus the totals a pagination control needs."""
+        filters = self._filters(params)
+        total = await self.repo.count_filtered(**filters)
+        pages = max(1, -(-total // page_size))
+        page = min(max(page, 1), pages)
+        items = await self.repo.find_filtered(
+            skip=(page - 1) * page_size, limit=page_size, newest_first=True, **filters
+        )
+        return QuestionPage(
+            items=[self._to_question_out(item) for item in items],
+            total=total, page=page, page_size=page_size, pages=pages,
+        )
+
+    @staticmethod
+    def _filters(params: QuestionFilterParams) -> Dict[str, Any]:
+        return {
+            "subject": params.subject,
+            "topic": params.topic,
+            "difficulty": params.difficulty.value if params.difficulty else None,
+            "search": params.search,
+            "sub_subject": params.sub_subject,
+            "subtopic": params.subtopic,
+            "target_exam": params.target_exam,
+            "source": params.source,
+        }
 
     async def create_question(self, req: QuestionCreate) -> QuestionOut:
         q_id = str(uuid.uuid4())
@@ -103,4 +127,10 @@ class QuestionService:
             correct_option=doc["correct_option"],
             solution_explanation=doc["solution_explanation"],
             created_at=doc["created_at"],
+            sub_subject=doc.get("sub_subject"),
+            subtopic=doc.get("subtopic"),
+            target_exam=doc.get("target_exam"),
+            source=doc.get("source"),
+            grounded=doc.get("grounded"),
+            used_in_tests=doc.get("used_in_tests"),
         )

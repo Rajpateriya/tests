@@ -41,6 +41,22 @@ class QuestionOut(BaseModel):
     correct_option: str
     solution_explanation: str
     created_at: datetime
+    # Set on questions made by the AI pipeline; absent on seeded/imported ones.
+    sub_subject: Optional[str] = None
+    subtopic: Optional[str] = None
+    target_exam: Optional[str] = None
+    source: Optional[str] = None  # "theory" or "ai_knowledge"
+    grounded: Optional[bool] = None
+    used_in_tests: Optional[int] = None
+
+
+class QuestionPage(BaseModel):
+    """One page of the question bank, with totals for pagination controls."""
+    items: List[QuestionOut]
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 
 class QuestionFilterParams(BaseModel):
@@ -48,3 +64,7 @@ class QuestionFilterParams(BaseModel):
     topic: Optional[str] = None
     difficulty: Optional[Difficulty] = None
     search: Optional[str] = None
+    sub_subject: Optional[str] = None
+    subtopic: Optional[str] = None
+    target_exam: Optional[str] = None
+    source: Optional[str] = None  # "theory" or "ai_knowledge"

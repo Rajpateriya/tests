@@ -62,6 +62,17 @@ class QuestionGenerateRequest(BaseModel):
     difficulty: DifficultyMix = Field(
         default_factory=lambda: DifficultyMix(easy=30, medium=50, hard=20)
     )
+    allow_ai_knowledge: bool = Field(
+        default=False,
+        description="For subtopics with no uploaded theory, write questions from the model's own "
+                    "knowledge instead of skipping them. They are saved straight to the bank, "
+                    "marked source='ai_knowledge' (not checked against any source).",
+    )
+    style_notes: Optional[str] = Field(
+        default=None, max_length=500,
+        description="Optional extra description of the exam's question style, e.g. "
+                    "'statement-based, application questions, avoid trivia'.",
+    )
 
 
 class BlueprintPlanRequest(BaseModel):

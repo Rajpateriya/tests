@@ -45,20 +45,41 @@ from app.services.theory_retrieval_service import search_theory
 
 EXAM_STYLES: Dict[str, Dict[str, str]] = {
     "ssc cgl": {
-        "style": "Conceptual clarity, moderate difficulty, general knowledge + reasoning focus.",
+        "style": "Graduate-level competitive exam. Short, direct 4-option MCQs that can be solved "
+                 "in under a minute; conceptual clarity over trick wording; a mix of one-line "
+                 "factual, 'which of the following is correct/incorrect' and simple application questions.",
         "distractors": "Include commonly confused facts, near-correct options, typical student errors.",
     },
+    "ssc chsl": {
+        "style": "Class 10+2 level. Easier and more direct than CGL: standard textbook facts and "
+                 "definitions, simple one-step application, plain wording.",
+        "distractors": "Use plausible but clearly wrong options from the same chapter; avoid trick wording.",
+    },
     "upsc": {
-        "style": "Analytical, application-based, tests depth of understanding over rote recall.",
-        "distractors": "Include partially correct statements and closely related but wrong facts.",
+        "style": "Analytical and application-based; tests depth of understanding over rote recall. "
+                 "Use statement-based formats such as 'Consider the following statements... which is/are "
+                 "correct?', match-the-following and assertion–reason, where they suit the concept.",
+        "distractors": "Include partially correct statements and closely related but wrong facts so "
+                       "that elimination, not recall alone, is needed.",
+    },
+    "rrb ntpc": {
+        "style": "Class 10/12 level, speed-solvable. Direct factual and simple application questions "
+                 "with unambiguous wording.",
+        "distractors": "Include close numerical values and commonly confused terms.",
     },
     "rrb": {
         "style": "Speed-solvable, moderate difficulty, direct factual/application questions.",
         "distractors": "Include close numerical values and commonly confused terms.",
     },
     "nda": {
-        "style": "Fundamentals-focused, moderate difficulty, clear single-concept questions.",
+        "style": "Class 11–12 fundamentals; clear single-concept questions that check understanding "
+                 "of principles, with some numerical or reasoning application.",
         "distractors": "Include basic conceptual errors and similar-looking options.",
+    },
+    "ibps po": {
+        "style": "Banking-exam pattern: quick, precise questions testing core concepts and "
+                 "application under time pressure; moderate to high difficulty at the upper end.",
+        "distractors": "Include close values, common calculation slips and similar-sounding terms.",
     },
 }
 DEFAULT_STYLE = {
@@ -67,7 +88,7 @@ DEFAULT_STYLE = {
 }
 
 DIFFICULTY_GUIDE = """DIFFICULTY DEFINITIONS:
-- easy: direct recall of a single fact from the THEORY FACTS
+- easy: direct recall of a single fact{where}
 - medium: understanding or application — explain, compare, or apply one fact
 - hard: multi-step reasoning, combining two or more facts, or statement/assertion–reason analysis"""
 
@@ -120,8 +141,13 @@ def _build_quiz_prompt(
     style_context: str,
     avoid_questions: List[str],
     facts_reused: bool,
+    ai_knowledge: bool = False,
+    style_notes: Optional[str] = None,
 ) -> str:
     exam_style = EXAM_STYLES.get(target_exam.strip().lower(), DEFAULT_STYLE)
+    style_text = exam_style["style"]
+    if style_notes and style_notes.strip():
+        style_text += f"\nADDITIONAL STYLE NOTES FROM THE ADMIN (follow these): {style_notes.strip()}"
     count = sum(split.values())
     split_text = ", ".join(f"{split[level]} {level}" for level in LEVELS if split[level] > 0)
 
@@ -148,6 +174,27 @@ def _build_quiz_prompt(
         )
     sub_subject_line = f"- Sub-subject: {sub_subject}\n" if sub_subject else ""
 
+    if ai_knowledge:
+        source_section = (
+            "SOURCE: no study material was provided for this subtopic, so write from well-established "
+            f"knowledge of {subject} at the level this examination expects. Use only facts that are "
+            "standard, widely accepted and that you are certain of. Prefer concepts, definitions, "
+            "principles and reasoning over obscure numbers, dates, names or statistics; if you are "
+            "not sure of a detail, do not use it. Every question must have exactly one "
+            "unambiguously correct option."
+        )
+        explanation_rule = "explanation: the fact or reasoning that makes the correct answer right"
+        verifiable_rule = "Every question must have exactly one correct option that any subject expert would agree with"
+    else:
+        source_section = (
+            "THEORY FACTS (ground every question in these facts — do not introduce facts,\n"
+            "numbers, or claims that are not supported here or by well-established basic\n"
+            "knowledge; if the facts don't cover something, keep the question simpler\n"
+            f"rather than inventing detail):\n---\n{theory_context}\n---"
+        )
+        explanation_rule = "explanation: why the correct answer is right, grounded in the THEORY FACTS above"
+        verifiable_rule = "Every question must be answerable and verifiable using the THEORY FACTS section above"
+
     return f"""Generate EXACTLY {count} multiple choice questions for the {target_exam} examination:
 {split_text}.
 
@@ -157,20 +204,14 @@ SPECIFICATION:
 - Subtopic: {subtopic}
 
 EXAM STYLE:
-{exam_style['style']}
+{style_text}
 
 DISTRACTOR RULES:
 {exam_style['distractors']}
 
-{DIFFICULTY_GUIDE}
+{DIFFICULTY_GUIDE.format(where="" if ai_knowledge else " from the THEORY FACTS")}
 
-THEORY FACTS (ground every question in these facts — do not introduce facts,
-numbers, or claims that are not supported here or by well-established basic
-knowledge; if the facts don't cover something, keep the question simpler
-rather than inventing detail):
----
-{theory_context}
----
+{source_section}
 
 {style_section}
 
@@ -182,9 +223,9 @@ REQUIREMENTS PER QUESTION:
 1. question_text: clear, unambiguous, specifically about {subtopic}
 2. options: exactly 4 plain strings (no "A)" style prefixes)
 3. correct_option: "A", "B", "C", or "D", matching the option's position
-4. explanation: why the correct answer is right, grounded in the THEORY FACTS above
+4. {explanation_rule}
 5. difficulty: "easy", "medium" or "hard" — exactly {split_text} across the batch
-6. Every question must be answerable and verifiable using the THEORY FACTS section above
+6. {verifiable_rule}
 7. No "All of the above" / "None of the above" options
 8. Each question must test a DIFFERENT fact or ask it a different way — vary the
    format across the batch: direct concept, statement-based (which is
@@ -209,7 +250,13 @@ class QuizGenerationService:
         topic: Optional[str] = None,
         per_subtopic: int = 10,
         difficulty: Optional[Dict[str, int]] = None,
+        allow_ai_knowledge: bool = False,
+        style_notes: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """`allow_ai_knowledge`: for a subtopic with no uploaded theory, write the
+        questions from the model's own knowledge instead of skipping it. Those
+        questions are saved straight to the bank, marked source="ai_knowledge" and
+        grounded=False — nothing can verify them against a source text."""
         mix = difficulty or dict(DEFAULT_MIX)
         taxonomy = await self.taxonomy_service.get_doc(subject)
         if not taxonomy or not taxonomy.get("tree"):
@@ -240,14 +287,17 @@ class QuizGenerationService:
 
         target = split_by_mix(per_subtopic, mix)
         totals = {"already_in_bank": 0, "generated": 0, "saved": 0, "flagged_for_review": 0,
-                  "duplicates_rejected": 0, "shortfall": 0}
+                  "duplicates_rejected": 0, "shortfall": 0, "saved_from_ai_knowledge": 0}
         per_subtopic_results: List[Dict[str, Any]] = []
 
         for entry in entries:
             for subtopic in entry["subtopics"]:
                 result = await self._fill_subtopic(
-                    target_exam, subject, entry.get("sub_subject"), entry["topic"], subtopic, target
+                    target_exam, subject, entry.get("sub_subject"), entry["topic"], subtopic, target,
+                    allow_ai_knowledge=allow_ai_knowledge, style_notes=style_notes,
                 )
+                if result["source"] == "ai_knowledge":
+                    totals["saved_from_ai_knowledge"] += result["saved"]
                 totals["already_in_bank"] += sum(result["already_in_bank"].values())
                 totals["generated"] += result["generated"]
                 totals["saved"] += result["saved"]
@@ -282,6 +332,8 @@ class QuizGenerationService:
         topic: str,
         subtopic: str,
         target: Dict[str, int],
+        allow_ai_knowledge: bool = False,
+        style_notes: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Bring one subtopic's bank (for this exam) up to `target` per difficulty."""
         existing_hashes, existing_embeddings, existing_counts = await self._load_existing(
@@ -304,6 +356,7 @@ class QuizGenerationService:
             "malformed": 0,
             "calls": 0,
             "skipped": None,
+            "source": "theory",
         }
         if sum(gap.values()) == 0:
             result["shortfall"] = dict(gap)
@@ -315,7 +368,8 @@ class QuizGenerationService:
         probe = await search_theory(
             self.db, subject, sub_subject=sub_subject, topic=topic, subtopic=subtopic
         )
-        if not probe:
+        ai_only = not probe
+        if ai_only and not allow_ai_knowledge:
             result["skipped"] = "no_theory"
             result["shortfall"] = dict(gap)
             logger.warning(
@@ -325,6 +379,12 @@ class QuizGenerationService:
             )
             print(f"SKIP {subtopic} [{target_exam}]: no theory for {subject}/{sub_subject}/{topic}\n")
             return result
+        if ai_only:
+            result["source"] = "ai_knowledge"
+            logger.warning(
+                f"{subject}/{sub_subject}/{topic}/{subtopic}: no theory — generating from the "
+                f"model's own knowledge (allowed by the admin); saved as source=ai_knowledge."
+            )
 
         style_examples = await self.pyq_repo.sample(
             subject=subject, target_exam=target_exam, sub_subject=sub_subject,
@@ -343,7 +403,7 @@ class QuizGenerationService:
 
             # Re-retrieved every call: usage counts rise after each call, so
             # later calls in a big run are fed different (least-used) facts.
-            theory_chunks = await search_theory(
+            theory_chunks = [] if ai_only else await search_theory(
                 self.db, subject, sub_subject=sub_subject, topic=topic, subtopic=subtopic
             )
             theory_context = "\n\n".join(chunk["text"] for chunk in theory_chunks)
@@ -357,6 +417,8 @@ class QuizGenerationService:
                 theory_context, style_context,
                 avoid_questions=rejected_texts[-10:],
                 facts_reused=facts_reused or result["calls"] > calls_needed,
+                ai_knowledge=ai_only,
+                style_notes=style_notes,
             )
             try:
                 response: GeneratedQuizResponse = await llm_client.generate(prompt, GeneratedQuizResponse)
@@ -393,7 +455,12 @@ class QuizGenerationService:
                     rejected_texts.append(q.question_text)
                     continue
 
-                grounded, score = self._check_groundedness(ground_emb, theory_embeddings)
+                if ai_only:
+                    # No source text exists to check against: store as a normal bank
+                    # question but mark it so it is never mistaken for a verified one.
+                    grounded, score = False, None
+                else:
+                    grounded, score = self._check_groundedness(ground_emb, theory_embeddings)
                 doc = {
                     "_id": uuid4().hex,
                     "subject": subject,
@@ -413,12 +480,13 @@ class QuizGenerationService:
                     "question_embedding": dedup_emb,
                     "grounded": grounded,
                     "groundedness_score": score,
+                    "source": "ai_knowledge" if ai_only else "theory",
                     "target_exam": target_exam,
                     "used_in_tests": 0,
                     "created_at": datetime.now(timezone.utc),
                 }
 
-                if grounded:
+                if grounded or ai_only:
                     await self.question_repo.insert(doc)
                     result["saved"] += 1
                 else:
@@ -433,7 +501,7 @@ class QuizGenerationService:
                 result["accepted"][level] += 1
                 accepted_this_call += 1
 
-            if accepted_this_call:
+            if accepted_this_call and theory_chunks:
                 await self.theory_repo.increment_usage([chunk["_id"] for chunk in theory_chunks])
 
         result["shortfall"] = dict(gap)

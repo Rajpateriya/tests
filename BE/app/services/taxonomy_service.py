@@ -85,8 +85,16 @@ def build_taxonomy_prompt_section(
 
     if not entries:
         parts.append(
-            "No topics exist yet for this subject — freely assign concise, "
-            "descriptive topics and subtopics based on the content."
+            "No topics exist yet for this subject. Create them from the content:\n"
+            "- TOPIC = the chapter-level or unit-level area the content belongs to. "
+            "It must NOT simply repeat the subject's name, and must not be too broad "
+            "or too narrow.\n"
+            "- SUBTOPIC = one specific concept, rule, method or idea inside that topic. "
+            "Never use the chapter title, a worked example, activity, experiment or "
+            "exercise name, or generic labels like \"Summary\", \"Exercises\", "
+            "\"Introduction\" or \"Practice\"; file such material under the concept "
+            "it illustrates.\n"
+            "- Use the same topic and subtopic names for excerpts about the same concept."
         )
         return "\n\n".join(parts)
 
@@ -101,10 +109,59 @@ def build_taxonomy_prompt_section(
         lines.append(f"- Topic: {entry['topic']} | Subtopics: {subtopics}")
 
     parts.append(
-        "EXISTING TOPIC/SUBTOPIC LIST (prefer these — copy the exact spelling if the\n"
-        "content matches one of them):\n" + "\n".join(lines) + "\n\n"
-        "RULE: If the content reasonably matches one of the topics/subtopics above,\n"
-        "you MUST copy it exactly. Only write a new topic/subtopic if nothing above fits."
+        "EXISTING TOPIC/SUBTOPIC LIST:\n" + "\n".join(lines) + "\n\n"
+        "HOW TO TAG EACH EXCERPT:\n"
+        "1. Read the excerpt and decide what concept it actually teaches or tests.\n"
+        "2. If an existing subtopic above is genuinely about that concept, copy its\n"
+        "   topic and subtopic EXACTLY. Being merely in the same general area is NOT\n"
+        "   enough — do not force a fit.\n"
+        "3. If no existing subtopic is genuinely about it, write a NEW specific subtopic\n"
+        "   (a concept name — never a generic label like \"Summary\" or \"Exercises\"),\n"
+        "   placed under the existing topic it belongs to.\n"
+        "4. Only write a new topic if the excerpt belongs to none of the existing topics."
+    )
+    return "\n\n".join(parts)
+
+
+def subtopics_under(tree: List[Dict[str, Any]], sub_subject: Optional[str], topic: str) -> List[str]:
+    """Subtopics already stored under `topic`; `sub_subject=None` means any branch."""
+    seen: List[str] = []
+    for entry in tree:
+        if not _same(entry["topic"], topic):
+            continue
+        if sub_subject is not None and not _same(entry.get("sub_subject"), sub_subject):
+            continue
+        for name in entry["subtopics"]:
+            if not any(_same(name, other) for other in seen):
+                seen.append(name)
+    return seen
+
+
+def build_fixed_topic_section(
+    topic: str, existing_subtopics: List[str], pick_from: Optional[List[str]] = None
+) -> str:
+    """Tagging-prompt fragment when the whole PDF already has ONE topic: the LLM
+    only chooses (or creates) the subtopic for each excerpt."""
+    parts: List[str] = []
+    if pick_from:
+        parts.append(
+            "SUB-SUBJECTS — set \"sub_subject\" to EXACTLY one of these names, "
+            f"never anything else: {', '.join(pick_from)}"
+        )
+    known = ", ".join(existing_subtopics) if existing_subtopics else "(none yet)"
+    parts.append(
+        f"Every excerpt belongs to the topic \"{topic}\". Set \"topic\" to exactly \"{topic}\" "
+        "for every excerpt.\n\n"
+        f"EXISTING SUBTOPICS under this topic: {known}\n\n"
+        "HOW TO CHOOSE THE SUBTOPIC FOR EACH EXCERPT:\n"
+        "1. Read the excerpt and decide what concept, rule, method or idea it teaches.\n"
+        "2. If an existing subtopic is genuinely about that concept, copy it EXACTLY.\n"
+        "   Being merely in the same general area is NOT enough.\n"
+        "3. Otherwise write a NEW specific subtopic naming that concept. Never use the\n"
+        "   chapter title, a worked example, activity, experiment or exercise name, or a\n"
+        "   generic label such as \"Summary\", \"Exercises\", \"Introduction\" or \"Practice\" —\n"
+        "   file such material under the concept it illustrates.\n"
+        "4. Do not create a second subtopic for a concept that already has one."
     )
     return "\n\n".join(parts)
 
