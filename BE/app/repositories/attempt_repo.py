@@ -16,6 +16,14 @@ class AttemptRepository(BaseRepository):
             "status": AttemptStatus.IN_PROGRESS.value,
         })
 
+    async def get_finished_attempt(self, user_id: str, test_id: str) -> Optional[Dict[str, Any]]:
+        """A completed (or abandoned) attempt by this user on this test, if any."""
+        return await self.find_one({
+            "user_id": user_id,
+            "test_id": test_id,
+            "status": {"$in": [AttemptStatus.COMPLETED.value, AttemptStatus.ABANDONED.value]},
+        })
+
     async def get_any_active_attempt_for_user(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Check if user currently has ANY active test running (prevent multiple tests simultaneously)."""
         return await self.find_one({

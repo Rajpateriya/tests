@@ -66,6 +66,14 @@ class ExamEngineService:
                     total_questions=len(existing_attempt.get("palette_states", {})),
                 )
 
+        # Each mock can be taken only once per user: a finished attempt (not an in-progress
+        # one, which resumes above) closes the test for that user.
+        finished_attempt = await self.attempt_repo.get_finished_attempt(user_id, test_id)
+        if finished_attempt:
+            raise ConflictException(
+                "You have already attempted this test. Each mock test can be taken only once."
+            )
+
         # Check if user has an active test on ANOTHER test (prevent cheating / multi-test)
         other_active = await self.attempt_repo.get_any_active_attempt_for_user(user_id)
         if other_active:

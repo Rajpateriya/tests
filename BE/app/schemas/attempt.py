@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 from app.models.attempt import AttemptStatus, PaletteStatus
@@ -57,3 +57,6 @@ class AttemptSubmitRequest(BaseModel):
     answers: Optional[Dict[str, str]] = None
     time_spent_per_question: Optional[Dict[str, int]] = None
     palette_states: Optional[Dict[str, PaletteStatus]] = None
+    tab_switch_count: Optional[int] = Field(default=None, ge=0)
+    # Set to "tab_switch" when the exam room ended the test for switching tabs too often.
+    ended_reason: Optional[Literal["tab_switch"]] = None

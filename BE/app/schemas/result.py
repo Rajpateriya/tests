@@ -38,6 +38,8 @@ class AttemptResultOut(BaseModel):
     total_time_taken_seconds: int
     start_time: datetime
     end_time: Optional[datetime] = None
+    tab_switch_count: Optional[int] = None
+    ended_reason: Optional[str] = None  # "tab_switch" when the test was ended for switching tabs too often
 
 
 class TopicAccuracy(BaseModel):

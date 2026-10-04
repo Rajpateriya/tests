@@ -131,6 +131,12 @@ class EvaluationService:
             "detailed_answers": detailed_answers,
             "updated_at": now,
         }
+        # Why/how the attempt ended: the final tab-switch count (the 8-second sync may lag
+        # behind it) and, when the exam room ended the test for tab switching, the reason.
+        if req and req.tab_switch_count is not None:
+            update_data["tab_switch_count"] = max(req.tab_switch_count, attempt.get("tab_switch_count") or 0)
+        if req and req.ended_reason:
+            update_data["ended_reason"] = req.ended_reason
 
         # Save evaluated results to MongoDB
         await self.attempt_repo.update(attempt_id, update_data)
@@ -432,4 +438,6 @@ class EvaluationService:
             total_time_taken_seconds=int(doc.get("total_time_taken_seconds", 0)),
             start_time=doc["start_time"],
             end_time=doc.get("end_time"),
+            tab_switch_count=doc.get("tab_switch_count"),
+            ended_reason=doc.get("ended_reason"),
         )
