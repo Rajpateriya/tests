@@ -26,7 +26,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Razorpay Payment Gateway
+    RAZORPAY_KEY_ID: str = "rzp_test_prepmagnet2026"
+    RAZORPAY_KEY_SECRET: str = "rzp_secret_prepmagnet2026"
+    RAZORPAY_WEBHOOK_SECRET: str = "rzp_webhook_secret_2026"
+
     # CORS
+
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:8000",

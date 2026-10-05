@@ -16,6 +16,24 @@ class UserRegisterRequest(BaseModel):
 class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str
+    remember_me: bool = False
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    email: EmailStr
+    message: str
+    reset_code: Optional[str] = None
+    reset_token: Optional[str] = None
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    reset_code: str
+    new_password: str = Field(min_length=6, max_length=100)
 
 
 class TokenResponse(BaseModel):
@@ -41,3 +59,26 @@ class UserProfileUpdate(BaseModel):
     preferred_subjects: Optional[List[str]] = None
     phone_number: Optional[str] = None
     avatar_url: Optional[str] = None
+
+
+class UserAdminUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+    target_exams: Optional[List[str]] = None
+    preferred_subjects: Optional[List[str]] = None
+    phone_number: Optional[str] = None
+    avatar_url: Optional[str] = None
+    coins_balance: Optional[int] = None
+    subscription_plan: Optional[str] = None
+    subscription_status: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=6, max_length=100)
+
+
+class PaginatedUsersResponse(BaseModel):
+    items: List[UserResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

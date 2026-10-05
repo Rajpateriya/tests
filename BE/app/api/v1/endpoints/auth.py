@@ -4,7 +4,15 @@ from app.api.v1.deps import get_current_user
 from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.schemas.common import APIResponse
-from app.schemas.user import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse
+from app.schemas.user import (
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    ResetPasswordRequest,
+    TokenResponse,
+    UserLoginRequest,
+    UserRegisterRequest,
+    UserResponse,
+)
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"], dependencies=[Depends(check_rate_limit)])
@@ -40,6 +48,36 @@ async def login(
             "tokens": result["token"].model_dump(),
             "user": result["user"].model_dump(),
         },
+    )
+
+
+@router.post("/forgot-password", response_model=APIResponse[ForgotPasswordResponse])
+async def forgot_password(
+    req: ForgotPasswordRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Initiate password recovery by generating a secure 6-digit verification code."""
+    auth_service = AuthService(db)
+    res = await auth_service.forgot_password(req.email)
+    return APIResponse(
+        success=True,
+        message=res.message,
+        data=res,
+    )
+
+
+@router.post("/reset-password", response_model=APIResponse[dict])
+async def reset_password(
+    req: ResetPasswordRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Reset user password using the 6-digit verification code."""
+    auth_service = AuthService(db)
+    res = await auth_service.reset_password(req)
+    return APIResponse(
+        success=True,
+        message=res["message"],
+        data=res,
     )
 
 

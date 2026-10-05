@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
@@ -24,6 +24,8 @@ class UserProfile(BaseModel):
     subscription_plan: Optional[str] = "FREE"
     subscription_status: Optional[str] = "INACTIVE"
     subscription_expires_at: Optional[datetime] = None
+    enrolled_courses: List[Dict[str, Any]] = Field(default_factory=list)
+    typing_stats: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class UserInDB(BaseModel):

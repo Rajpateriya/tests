@@ -9,7 +9,8 @@ from app.db.redis import redis_manager
 from app.models.test import TestType
 from app.schemas.common import APIResponse
 from app.schemas.test import TestCreate, TestDetailOut
-from app.schemas.user import UserResponse
+from app.schemas.user import PaginatedUsersResponse, UserAdminUpdate, UserResponse
+from app.services.auth_service import AuthService
 from app.services.test_service import TestService
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"], dependencies=[Depends(check_rate_limit)])
@@ -122,3 +123,80 @@ async def check_health(
             },
         },
     )
+
+
+# --- User Management Operations ---
+@router.get("/users", response_model=APIResponse[PaginatedUsersResponse])
+async def list_users(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Page size (default 10)"),
+    search: Optional[str] = Query(None, description="Search by email or full name"),
+    role: Optional[str] = Query(None, description="Filter by role: student | admin"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: Retrieve paginated user directory with search and filter capabilities."""
+    auth_service = AuthService(db)
+    result = await auth_service.get_users_paginated(
+        page=page,
+        page_size=page_size,
+        search=search,
+        role=role,
+        is_active=is_active,
+    )
+    return APIResponse(
+        success=True,
+        message=f"Retrieved {len(result.items)} users (Page {result.page} of {result.total_pages})",
+        data=result,
+    )
+
+
+@router.get("/users/{user_id}", response_model=APIResponse[UserResponse])
+async def get_user_detail(
+    user_id: str,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: Get detailed profile of a specific user."""
+    auth_service = AuthService(db)
+    user = await auth_service.admin_get_user(user_id)
+    return APIResponse(
+        success=True,
+        message="User profile retrieved",
+        data=user,
+    )
+
+
+@router.put("/users/{user_id}", response_model=APIResponse[UserResponse])
+async def update_user_profile(
+    user_id: str,
+    req: UserAdminUpdate,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: Edit user's profile, promote to admin, modify role/coins/subscription/status."""
+    auth_service = AuthService(db)
+    updated = await auth_service.admin_update_user(user_id, req, admin)
+    return APIResponse(
+        success=True,
+        message=f"User '{updated.full_name}' updated successfully",
+        data=updated,
+    )
+
+
+@router.delete("/users/{user_id}", response_model=APIResponse[dict])
+async def delete_user(
+    user_id: str,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: Delete a user account."""
+    auth_service = AuthService(db)
+    await auth_service.admin_delete_user(user_id, admin)
+    return APIResponse(
+        success=True,
+        message="User deleted successfully",
+        data={"user_id": user_id},
+    )
+

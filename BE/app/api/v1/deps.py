@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -59,3 +59,35 @@ async def require_admin(
     if current_user.role != UserRole.ADMIN:
         raise ForbiddenException("Administrator privileges required for this action")
     return current_user
+
+
+async def get_optional_current_user(
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+) -> Optional[UserResponse]:
+    """Dependency that decodes JWT access token if present, returns None if unauthenticated."""
+    if not auth or not auth.credentials:
+        return None
+    try:
+        payload = decode_token(auth.credentials)
+        if payload.get("type") != "access":
+            return None
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        user_repo = UserRepository(db)
+        user = await user_repo.get_by_id(user_id)
+        if not user or not user.get("is_active", True):
+            return None
+        return UserResponse(
+            id=user["_id"],
+            email=user["email"],
+            full_name=user["full_name"],
+            role=UserRole(user.get("role", "student")),
+            is_active=user.get("is_active", True),
+            profile=user.get("profile", {}),
+            created_at=user["created_at"],
+        )
+    except Exception:
+        return None
+

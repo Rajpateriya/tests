@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user, get_optional_current_user
 from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.models.test import TestType
@@ -23,12 +23,13 @@ async def list_tests(
     target_exam: Optional[str] = Query(None, description="Filter by target exam (e.g. SSC CGL)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: Optional[UserResponse] = Depends(get_optional_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """
     Test Discovery Dashboard:
     List available mock tests with filters for Full Mocks, Subject-wise, or Topic-wise Mini Mocks.
+    Publicly accessible so unauthenticated candidates can discover tests.
     """
     service = TestService(db)
     params = TestFilterParams(
@@ -49,7 +50,7 @@ async def list_tests(
 @router.get("/{test_id}", response_model=APIResponse[TestDetailOut])
 async def get_test_details(
     test_id: str,
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: Optional[UserResponse] = Depends(get_optional_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Get metadata and configuration for a specific mock test."""
