@@ -318,72 +318,36 @@ export const DEMO_QUESTIONS = [
 export const api = {
   // Auth
   auth: {
-    login: async (email, password) => {
-      try {
-        return await request('/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-        });
-      } catch (err) {
-        // Fallback demo user
-        const isAdmin = email.includes('admin');
-        const demoUser = {
-          id: isAdmin ? 'demo-admin-id' : 'student-primary-id',
-          email: isAdmin ? 'admin@gmail.com' : 'student@gmail.com',
-          full_name: isAdmin ? 'Platform Administrator' : 'Alex Aspirant (Student)',
-          role: isAdmin ? 'admin' : 'student',
-          is_active: true,
-          profile: {
-            target_exams: ['SSC CGL', 'SSC CHSL'],
-            preferred_subjects: ['Quantitative Aptitude', 'General Intelligence & Reasoning'],
-            coins_balance: isAdmin ? 500 : 150,
-            current_streak: isAdmin ? 10 : 6,
-            longest_streak: isAdmin ? 20 : 14,
-            subscription_plan: 'FREE',
-            subscription_status: 'INACTIVE',
-          },
-          created_at: new Date().toISOString(),
-        };
-        const demoToken = {
-          access_token: 'demo-jwt-access-token',
-          refresh_token: 'demo-jwt-refresh-token',
-          token_type: 'bearer',
-          expires_in: 86400,
-        };
-        return { user: demoUser, tokens: demoToken };
-      }
+    login: async (email, password, remember_me = false) => {
+      return await request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, remember_me }),
+      });
     },
 
     register: async (payload) => {
-      try {
-        return await request('/auth/register', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-      } catch (err) {
-        return {
-          id: 'new-user-id',
-          email: payload.email,
-          full_name: payload.full_name,
-          role: payload.role || 'student',
-          is_active: true,
-          profile: {
-            target_exams: payload.target_exams || ['SSC CGL'],
-            preferred_subjects: payload.preferred_subjects || [],
-          },
-          created_at: new Date().toISOString(),
-        };
-      }
+      return await request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    forgotPassword: async (email) => {
+      return await request('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    },
+
+    resetPassword: async ({ email, reset_code, new_password }) => {
+      return await request('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email, reset_code, new_password }),
+      });
     },
 
     getMe: async () => {
-      try {
-        return await request('/auth/me');
-      } catch (err) {
-        const cached = localStorage.getItem('govexam_user');
-        if (cached) return JSON.parse(cached);
-        return null;
-      }
+      return await request('/auth/me');
     },
   },
 
@@ -761,30 +725,40 @@ export const api = {
   // Admin Studio
   admin: {
     getStats: async () => {
-      try {
-        return await request('/admin/stats');
-      } catch (err) {
-        return {
-          total_users: 1842,
-          total_questions_in_bank: 1250,
-          total_configured_tests: 38,
-          total_attempts: 9420,
-          completed_attempts: 8890,
-        };
-      }
+      return await request('/admin/stats');
     },
 
     getHealth: async () => {
-      try {
-        return await request('/admin/health');
-      } catch (err) {
-        return {
-          app: "MockExam Platform API",
-          environment: "development",
-          database: { status: "connected", is_mock: false },
-          cache: { status: "connected", is_fallback: false },
-        };
+      return await request('/admin/health');
+    },
+
+    getUsers: async ({ page = 1, page_size = 10, search = '', role = '', is_active = '' } = {}) => {
+      const q = new URLSearchParams();
+      if (page) q.append('page', page);
+      if (page_size) q.append('page_size', page_size);
+      if (search && search.trim()) q.append('search', search.trim());
+      if (role && role.trim()) q.append('role', role.trim());
+      if (is_active !== undefined && is_active !== null && is_active !== '') {
+        q.append('is_active', is_active);
       }
+      return await request(`/admin/users?${q.toString()}`);
+    },
+
+    getUser: async (userId) => {
+      return await request(`/admin/users/${userId}`);
+    },
+
+    updateUser: async (userId, payload) => {
+      return await request(`/admin/users/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    deleteUser: async (userId) => {
+      return await request(`/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
     },
 
     autoGenerateMock: async (params) => {
@@ -1162,4 +1136,58 @@ export const api = {
       }
     },
   },
+
+  // Exam-Oriented Courses & Razorpay Enrollment
+  courses: {
+    list: async (targetExam) => {
+      const q = targetExam && targetExam !== 'All' ? `?target_exam=${encodeURIComponent(targetExam)}` : '';
+      return await request(`/courses${q}`);
+    },
+
+    getDetail: async (courseId) => {
+      return await request(`/courses/${courseId}`);
+    },
+
+    createOrder: async (courseId, applyCoins = true) => {
+      return await request(`/courses/${courseId}/create-order`, {
+        method: 'POST',
+        body: JSON.stringify({ apply_coins: applyCoins }),
+      });
+    },
+
+    verifyPayment: async (courseId, payload) => {
+      return await request(`/courses/${courseId}/verify-payment`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    getMyEnrollments: async () => {
+      return await request('/courses/my-enrollments');
+    },
+  },
+
+  // Typing Master Mock Test Engine
+  typing: {
+    listPassages: async (examCategory) => {
+      const q = examCategory && examCategory !== 'All' ? `?exam_category=${encodeURIComponent(examCategory)}` : '';
+      return await request(`/typing/passages${q}`);
+    },
+
+    getPassage: async (passageId) => {
+      return await request(`/typing/passages/${passageId}`);
+    },
+
+    submitAttempt: async (payload) => {
+      return await request('/typing/submit', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    getMyHistory: async () => {
+      return await request('/typing/my-history');
+    },
+  },
 };
+

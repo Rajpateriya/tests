@@ -136,10 +136,6 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
   };
 
   const handleTestCardClick = (test) => {
-    if (!user && onOpenAuthModal) {
-      onOpenAuthModal();
-      return;
-    }
     setModalTest(test);
   };
 
@@ -1789,6 +1785,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
         isOpen={!!modalTest}
         onClose={() => setModalTest(null)}
         onStartExam={(test) => onStartTest(test)}
+        onOpenAuthModal={onOpenAuthModal}
       />
     </div>
   );

@@ -25,6 +25,7 @@ import {
   CheckIcon,
   CameraIcon,
 } from '../components/Icons';
+import { TestRulesModal } from '../components/TestRulesModal';
 
 /**
  * Competitive Mock Test Platform — Student Profile & Daily Practice Arena
@@ -130,6 +131,17 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
   const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
 
+  // Enrolled Courses, Explore Courses & Typing Master States
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [exploreCourses, setExploreCourses] = useState([]);
+  const [typingStats, setTypingStats] = useState(null);
+  const [activeCourseModal, setActiveCourseModal] = useState(null);
+  const [dashboardRulesModalTest, setDashboardRulesModalTest] = useState(null);
+  const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
+  const [activeQuizQuestionIdx, setActiveQuizQuestionIdx] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [showExplanation, setShowExplanation] = useState(true);
+
   // Single Daily Question Challenge State
   const [dailyQuestion, setDailyQuestion] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -178,6 +190,20 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
       // Check if user already solved today
       if (streakRes?.today_completed) {
         setIsDailyCompleted(true);
+      }
+
+      // Load enrolled courses, explore courses, and typing master history
+      try {
+        const [enrolledRes, exploreRes, typingRes] = await Promise.all([
+          api.courses.getMyEnrollments(),
+          api.courses.list(),
+          api.typing.getMyHistory(),
+        ]);
+        setEnrolledCourses(enrolledRes || []);
+        setExploreCourses(exploreRes || []);
+        setTypingStats(typingRes || null);
+      } catch (courseErr) {
+        console.warn('Courses and typing load fallback:', courseErr);
       }
 
       // Load today's single practice challenge question
@@ -441,18 +467,18 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                     <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400">GovCoins</span>
                   </div>
                   <div className="text-[10px] text-amber-800/80 dark:text-amber-300/80 font-medium">
-                    = ₹{coinsBalance} off any pass
+                    = ₹{coinsBalance} off exam courses
                   </div>
                 </div>
               </div>
 
-              {/* Redeem for Pass CTA */}
+              {/* Redeem for Course CTA */}
               <button
-                onClick={() => onNavigate && onNavigate('subscription')}
+                onClick={() => onNavigate && onNavigate('courses')}
                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-extrabold rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
-                <CrownIcon size={14} />
-                <span>Redeem Coins for Pass</span>
+                <SparklesIcon size={14} />
+                <span>Explore & Redeem on Courses</span>
                 <ArrowRightIcon size={12} />
               </button>
             </div>
@@ -622,11 +648,11 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 <button
-                  onClick={() => onNavigate && onNavigate('subscription')}
+                  onClick={() => onNavigate && onNavigate('courses')}
                   className="px-5 py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <CrownIcon size={14} />
-                  <span>Use Coins on Subscription Pass</span>
+                  <SparklesIcon size={14} />
+                  <span>Redeem Coins on Exam Courses</span>
                 </button>
                 <button
                   onClick={() => handleStartFreePractice('Medium')}
@@ -1320,6 +1346,240 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
           </div>
         </section>
 
+        {/* ROW 5.5: MY ENROLLED COURSES & SUBJECT-WISE QUIZZES */}
+        <section className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200 dark:border-charcoal-800">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  My Enrolled Courses & Subject Quizzes
+                </h3>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                  {enrolledCourses.length} Active
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                Practice exam-focused subject quizzes with detailed question derivations and shortcut formulas.
+              </p>
+            </div>
+
+            <button
+              onClick={() => onNavigate && onNavigate('courses')}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+            >
+              <SparklesIcon size={14} />
+              <span>Browse All Courses</span>
+            </button>
+          </div>
+
+          {enrolledCourses.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {enrolledCourses.map((course) => (
+                <div
+                  key={course.id || course.course_id}
+                  className="p-5 rounded-2xl border border-slate-200 dark:border-charcoal-800 bg-slate-50/50 dark:bg-charcoal-800/40 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                        Enrolled
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {course.enrolled_at ? new Date(course.enrolled_at).toLocaleDateString() : 'Active'}
+                      </span>
+                    </div>
+
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white line-clamp-1">
+                      {course.course_title || course.title}
+                    </h4>
+
+                    {course.tagline && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                        {course.tagline}
+                      </p>
+                    )}
+
+                    {/* Subjects included */}
+                    {course.subjects && course.subjects.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {course.subjects.slice(0, 3).map((sub, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="text-[10px] font-medium px-2 py-0.5 rounded bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 text-slate-700 dark:text-slate-300"
+                          >
+                            {typeof sub === 'string' ? sub : sub.subject_name || 'Subject'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-200 dark:border-charcoal-700 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <BookOpenIcon size={14} className="text-blue-500" />
+                      <span>{course.total_quizzes || (course.quizzes ? course.quizzes.length : 4)} Quizzes</span>
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        setActiveCourseModal(course);
+                        setSelectedQuizIdx(0);
+                        setActiveQuizQuestionIdx(0);
+                        setSelectedAnswers({});
+                        setShowExplanation(true);
+                      }}
+                      className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Practice Quizzes</span>
+                      <ArrowRightIcon size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 rounded-2xl bg-slate-50 dark:bg-charcoal-850 border border-slate-200 dark:border-charcoal-800 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto text-xl">
+                📚
+              </div>
+              <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                No exam courses enrolled yet
+              </h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Explore our full syllabus exam courses with subject-wise quizzes, detailed step-by-step explanations, and coupon discounts!
+              </p>
+              <button
+                onClick={() => onNavigate && onNavigate('courses')}
+                className="px-5 py-2 text-xs font-extrabold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm cursor-pointer"
+              >
+                Explore Courses & Plans →
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* ROW 5.6: EXPLORE MORE COURSES TO ENROLL */}
+        <section className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200 dark:border-charcoal-800">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                Explore More Exam Courses
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                Unlock subject-wise practice with in-depth explanations. Use your GovCoins for instant discount.
+              </p>
+            </div>
+
+            <button
+              onClick={() => onNavigate && onNavigate('courses')}
+              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>View All Plans & Prices</span>
+              <ArrowRightIcon size={12} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {exploreCourses.slice(0, 3).map((c) => (
+              <div
+                key={c.id}
+                className="p-5 rounded-2xl border border-slate-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-800/30 hover:border-blue-400 transition-all flex flex-col justify-between space-y-4 group"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                      {c.target_exam}
+                    </span>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500 text-white">
+                      {c.discount_percent}% OFF
+                    </span>
+                  </div>
+
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    {c.title}
+                  </h4>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                    {c.description}
+                  </p>
+
+                  <div className="flex items-baseline gap-2 pt-1">
+                    <span className="text-lg font-black text-slate-900 dark:text-white font-mono">
+                      ₹{c.discounted_price}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-400 line-through font-mono">
+                      ₹{c.original_price}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-200 dark:border-charcoal-700 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">
+                    {c.total_quizzes} Quizzes Included
+                  </span>
+
+                  <button
+                    onClick={() => onNavigate && onNavigate('courses')}
+                    className="px-3 py-1.5 text-xs font-extrabold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Enroll Now</span>
+                    <ArrowRightIcon size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ROW 5.7: TYPING MASTER PERFORMANCE WIDGET */}
+        <section className="bg-gradient-to-r from-blue-900 via-indigo-900 to-charcoal-900 rounded-3xl p-6 sm:p-7 text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-blue-200 text-xs font-bold border border-white/15">
+              <span>⌨️ Government Exam Typing Master</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight">
+              Typing Speed & Accuracy Benchmark
+            </h3>
+            <p className="text-xs sm:text-sm text-blue-200/90 leading-relaxed">
+              Test your finger velocity and error correction against official cutoffs for SSC CGL DEST (27 WPM), SSC CHSL (35 WPM), and RRB NTPC (30 WPM).
+            </p>
+
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10 text-center">
+                <div className="text-[10px] text-blue-200 uppercase font-semibold">Best Speed</div>
+                <div className="text-xl font-black font-mono mt-0.5 text-emerald-400">
+                  {typingStats?.best_wpm ? `${typingStats.best_wpm} WPM` : '--'}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10 text-center">
+                <div className="text-[10px] text-blue-200 uppercase font-semibold">Average Speed</div>
+                <div className="text-xl font-black font-mono mt-0.5 text-blue-300">
+                  {typingStats?.average_wpm ? `${typingStats.average_wpm} WPM` : '--'}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10 text-center">
+                <div className="text-[10px] text-blue-200 uppercase font-semibold">Tests Taken</div>
+                <div className="text-xl font-black font-mono mt-0.5 text-white">
+                  {typingStats?.total_tests ?? 0}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="shrink-0 text-center space-y-2">
+            <button
+              onClick={() => onNavigate && onNavigate('typing')}
+              className="py-3 px-6 rounded-2xl bg-white hover:bg-blue-50 text-blue-950 font-black text-sm shadow-lg transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+            >
+              <span>Launch Typing Master</span>
+              <ArrowRightIcon size={16} />
+            </button>
+            <div className="text-[10px] text-blue-200">Instant qualification report with correction diagnostics</div>
+          </div>
+        </section>
+
         {/* ROW 6: AVAILABLE MOCK TESTS LIBRARY & SPEED DRILLS */}
         <section className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200 dark:border-charcoal-800">
@@ -1385,7 +1645,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                     <span>📝 {test.total_questions} Qs</span>
                   </div>
                   <button
-                    onClick={() => onStartTest(test.id)}
+                    onClick={() => setDashboardRulesModalTest(test)}
                     className="px-3.5 py-1.5 text-xs font-extrabold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <PlayIcon size={12} />
@@ -1396,6 +1656,252 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
             ))}
           </div>
         </section>
+
+        {/* Active Enrolled Course Subject Quizzes & Explanations Modal */}
+        {activeCourseModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-750 w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="p-5 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between bg-slate-50/50 dark:bg-charcoal-950/40">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-lg">
+                    📖
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        {activeCourseModal.target_exam || activeCourseModal.exam || 'Exam Course'}
+                      </span>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                        <CheckCircleIcon size={12} />
+                        Enrolled & Active
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5 line-clamp-1">
+                      {activeCourseModal.title || activeCourseModal.course_title}
+                    </h3>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setActiveCourseModal(null)}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-charcoal-800 transition-colors cursor-pointer text-lg font-bold"
+                  title="Close"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Subject Tabs */}
+              {activeCourseModal.quizzes && activeCourseModal.quizzes.length > 0 ? (
+                <>
+                  <div className="px-5 py-3 border-b border-slate-200 dark:border-charcoal-800 flex items-center gap-2 overflow-x-auto bg-white dark:bg-charcoal-900">
+                    <span className="text-xs font-bold text-slate-500 mr-2 shrink-0">Subject Quizzes:</span>
+                    {activeCourseModal.quizzes.map((quiz, idx) => (
+                      <button
+                        key={quiz.id || idx}
+                        onClick={() => {
+                          setSelectedQuizIdx(idx);
+                          setActiveQuizQuestionIdx(0);
+                          setSelectedAnswers({});
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
+                          selectedQuizIdx === idx
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-slate-100 dark:bg-charcoal-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-charcoal-700'
+                        }`}
+                      >
+                        <span>{quiz.subject || quiz.title}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          selectedQuizIdx === idx
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-200 dark:bg-charcoal-700 text-slate-500 dark:text-slate-400'
+                        }`}>
+                          {(quiz.questions || []).length} Qs
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Active Quiz Content Area */}
+                  {(() => {
+                    const currentQuiz = activeCourseModal.quizzes[selectedQuizIdx] || activeCourseModal.quizzes[0];
+                    const questions = currentQuiz?.questions || [];
+                    const currentQ = questions[activeQuizQuestionIdx];
+
+                    if (!currentQ) {
+                      return (
+                        <div className="p-12 text-center text-slate-500">
+                          No questions available for this subject quiz.
+                        </div>
+                      );
+                    }
+
+                    const selectedOpt = selectedAnswers[activeQuizQuestionIdx];
+                    const isAnswered = selectedOpt !== undefined;
+
+                    return (
+                      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        {/* Quiz info banner & question indicator */}
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-900">
+                              {currentQuiz.subject || currentQuiz.title}
+                            </span>
+                            {currentQ.topic && (
+                              <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-charcoal-800 px-2.5 py-1 rounded-lg">
+                                Topic: {currentQ.topic}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Question navigation dots / counter */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 mr-2">
+                              Question {activeQuizQuestionIdx + 1} of {questions.length}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {questions.map((_, qIdx) => (
+                                <button
+                                  key={qIdx}
+                                  onClick={() => setActiveQuizQuestionIdx(qIdx)}
+                                  className={`w-6 h-6 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    activeQuizQuestionIdx === qIdx
+                                      ? 'bg-blue-600 text-white'
+                                      : selectedAnswers[qIdx] !== undefined
+                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                        : 'bg-slate-100 dark:bg-charcoal-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200'
+                                  }`}
+                                >
+                                  {qIdx + 1}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Question Card */}
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-charcoal-850 border border-slate-200 dark:border-charcoal-800 space-y-4">
+                          <p className="text-base font-bold text-slate-900 dark:text-white leading-relaxed">
+                            {currentQ.question_text}
+                          </p>
+
+                          {/* Options */}
+                          <div className="space-y-2.5 pt-2">
+                            {currentQ.options.map((opt, optIdx) => {
+                              const isChosen = selectedOpt === optIdx;
+                              const isCorrect = optIdx === currentQ.correct_answer_index;
+                              let btnStyle = 'border-slate-200 dark:border-charcoal-750 bg-white dark:bg-charcoal-800 text-slate-800 dark:text-slate-200 hover:border-blue-400';
+
+                              if (isAnswered) {
+                                if (isCorrect) {
+                                  btnStyle = 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 font-bold';
+                                } else if (isChosen && !isCorrect) {
+                                  btnStyle = 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 line-through';
+                                } else {
+                                  btnStyle = 'border-slate-200 dark:border-charcoal-800 bg-white/50 dark:bg-charcoal-800/40 text-slate-400 opacity-60';
+                                }
+                              }
+
+                              return (
+                                <button
+                                  key={optIdx}
+                                  onClick={() => {
+                                    setSelectedAnswers(prev => ({ ...prev, [activeQuizQuestionIdx]: optIdx }));
+                                  }}
+                                  className={`w-full p-3.5 rounded-xl border text-left text-sm transition-all flex items-center justify-between cursor-pointer ${btnStyle}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center ${
+                                      isAnswered && isCorrect
+                                        ? 'bg-emerald-600 text-white'
+                                        : isAnswered && isChosen && !isCorrect
+                                          ? 'bg-rose-600 text-white'
+                                          : 'bg-slate-200 dark:bg-charcoal-700 text-slate-700 dark:text-slate-300'
+                                    }`}>
+                                      {String.fromCharCode(65 + optIdx)}
+                                    </span>
+                                    <span>{opt}</span>
+                                  </div>
+                                  {isAnswered && isCorrect && (
+                                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                      <CheckCircleIcon size={14} /> Correct
+                                    </span>
+                                  )}
+                                  {isAnswered && isChosen && !isCorrect && (
+                                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                                      <XCircleIcon size={14} /> Incorrect
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Detailed Step-by-Step Explanation */}
+                        {(isAnswered || showExplanation) && (
+                          <div className="p-5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                                <SparklesIcon size={14} />
+                                Official Step-by-Step Solution & Explanation
+                              </span>
+                              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                Correct: Option {String.fromCharCode(65 + currentQ.correct_answer_index)} ({currentQ.options[currentQ.correct_answer_index]})
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line font-mono bg-white/60 dark:bg-charcoal-900/60 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                              {currentQ.explanation}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Modal Footer Controls */}
+                        <div className="pt-2 flex items-center justify-between">
+                          <button
+                            onClick={() => setActiveQuizQuestionIdx(Math.max(0, activeQuizQuestionIdx - 1))}
+                            disabled={activeQuizQuestionIdx === 0}
+                            className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-charcoal-700 hover:bg-slate-100 dark:hover:bg-charcoal-800 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300"
+                          >
+                            <ChevronLeftIcon size={14} />
+                            <span>Previous Question</span>
+                          </button>
+
+                          <div className="text-xs text-slate-500 font-medium">
+                            Select an option to test your understanding
+                          </div>
+
+                          <button
+                            onClick={() => setActiveQuizQuestionIdx(Math.min(questions.length - 1, activeQuizQuestionIdx + 1))}
+                            disabled={activeQuizQuestionIdx === questions.length - 1}
+                            className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                          >
+                            <span>Next Question</span>
+                            <ChevronRightIcon size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : (
+                <div className="p-12 text-center text-slate-500 space-y-2">
+                  <p className="font-bold">No quizzes available in this course currently.</p>
+                  <p className="text-xs">Quizzes are refreshed regularly according to the exam notification schedule.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Pre-Exam Instructions & Candidate Declaration Modal */}
+        <TestRulesModal
+          test={dashboardRulesModalTest}
+          isOpen={!!dashboardRulesModalTest}
+          onClose={() => setDashboardRulesModalTest(null)}
+          onStartExam={(test) => onStartTest(test.id || test)}
+        />
 
       </main>
     </div>

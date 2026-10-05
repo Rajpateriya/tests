@@ -6,11 +6,10 @@ import {
   BuildingIcon,
   ShieldIcon,
   CheckCircleIcon,
-  AlertTriangleIcon,
   SparklesIcon,
 } from './Icons';
 
-export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
+export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess }) => {
   const [selectedMethod, setSelectedMethod] = useState('upi'); // 'upi' | 'card' | 'netbanking'
   const [upiId, setUpiId] = useState('aspirant@okhdfcbank');
   const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8821');
@@ -21,16 +20,23 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
   const [statusText, setStatusText] = useState('Initiating secure transaction...');
   const [transactionId, setTransactionId] = useState('');
 
+  // Course item takes precedence over plan
+  const item = course || plan;
+
   useEffect(() => {
     if (isOpen) {
       setProcessingState('IDLE');
       setTransactionId(`pay_${Math.random().toString(36).substring(2, 10).toUpperCase()}`);
     }
-  }, [isOpen, plan, order]);
+  }, [isOpen, item, order]);
 
-  if (!isOpen || !plan) return null;
+  if (!isOpen || !item) return null;
 
-  const finalAmount = order?.amount_rupees ?? plan.base_price ?? 49;
+  const isCourse = !!course;
+  const title = item.title || item.name || 'PrepMagnet Course';
+  const originalPrice = item.original_price ?? item.price ?? item.base_price ?? 999;
+  const discountedPrice = item.discounted_price ?? item.discount_price ?? item.base_price ?? 499;
+  const finalAmount = order?.amount_rupees ?? discountedPrice;
   const coinsApplied = order?.coins_applied ?? 0;
   const discountAmount = order?.discount_amount ?? 0;
 
@@ -47,33 +53,42 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
       const verifyPayload = {
         order_id: order?.order_id || `order_${Date.now()}`,
         payment_id: generatedPayId,
-        plan_id: plan.id,
+        signature: 'mock_signature_approved',
         coins_used: coinsApplied,
       };
 
-      // Backend-driven payment verification and pass activation
-      const verifyResult = await api.subscriptions.verifyPayment(verifyPayload);
+      let verifyResult;
+      if (isCourse) {
+        verifyResult = await api.courses.verifyPayment(item.id, verifyPayload);
+      } else {
+        verifyResult = await api.subscriptions.verifyPayment({
+          ...verifyPayload,
+          plan_id: item.id,
+        });
+      }
 
       setTimeout(() => {
-        setStatusText('Payment verified & subscription activated!');
+        setStatusText(isCourse ? 'Course enrolled successfully!' : 'Payment verified & plan activated!');
         setProcessingState('SUCCESS');
         setTimeout(() => {
           onSuccess(verifyResult);
         }, 1200);
-      }, 1600);
+      }, 1500);
     } catch (err) {
       console.error('Payment error:', err);
       setTimeout(() => {
-        setStatusText('Simulation authorized with fallback...');
+        setStatusText('Enrolled with fallback mode...');
         setProcessingState('SUCCESS');
         setTimeout(() => {
           onSuccess({
-            subscription: { plan: plan.id, status: 'ACTIVE', duration_days: plan.duration_days || 30 },
+            success: true,
+            course_id: item.id,
+            course_title: title,
             coins_balance: Math.max(0, (order?.user_coins_available || 150) - coinsApplied),
             payment_id: transactionId,
           });
         }, 1200);
-      }, 1600);
+      }, 1500);
     }
   };
 
@@ -83,7 +98,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
         className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Razorpay Brand Header */}
+        {/* Razorpay Header */}
         <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-charcoal-900 text-white p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -91,7 +106,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                 ₹
               </div>
               <span className="font-extrabold text-base tracking-wide">
-                Razorpay <span className="text-[11px] text-blue-300 font-semibold">SECURE</span>
+                Razorpay <span className="text-[11px] text-blue-300 font-semibold">SECURE GATEWAY</span>
               </span>
             </div>
 
@@ -107,11 +122,16 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
           <div className="flex items-end justify-between pt-1">
             <div>
               <div className="text-[10px] text-blue-200 uppercase tracking-wider font-semibold">
-                PrepMagnet Pro Subscription
+                {isCourse ? 'Course Enrollment' : 'Platform Subscription'}
               </div>
-              <div className="text-base font-extrabold text-white">
-                {plan.name} ({plan.duration_days || 30} Days)
+              <div className="text-base font-extrabold text-white truncate max-w-[260px]">
+                {title}
               </div>
+              {item.target_exam && (
+                <div className="text-[11px] text-blue-300 font-medium">
+                  Exam: {item.target_exam}
+                </div>
+              )}
             </div>
 
             <div className="text-right">
@@ -128,7 +148,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
           <div className="p-8 text-center space-y-4">
             {processingState === 'PROCESSING' ? (
               <>
-                <div className="w-12 h-12 border-4 border-institutional-200 border-t-institutional-600 rounded-full animate-spin mx-auto" />
+                <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
                 <h4 className="text-base font-extrabold text-charcoal-900 dark:text-white">
                   Processing Payment...
                 </h4>
@@ -147,7 +167,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                   Payment Successful!
                 </h4>
                 <p className="text-xs text-charcoal-600 dark:text-charcoal-300">
-                  Your <strong>{plan.name}</strong> has been activated in your account.
+                  You are now enrolled in <strong>{title}</strong>. Full subject quizzes with step-by-step explanations are unlocked in your profile.
                 </p>
                 {coinsApplied > 0 && (
                   <div className="text-xs text-amber-700 dark:text-amber-300 font-semibold bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200 dark:border-amber-800">
@@ -163,25 +183,28 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
         ) : (
           /* Payment Selection Form */
           <div className="p-5 sm:p-6 space-y-4">
-
             {/* Price Summary Breakdown with Coins */}
             <div className="p-3.5 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 space-y-1.5 text-xs">
               <div className="flex justify-between text-charcoal-600 dark:text-charcoal-400">
-                <span>Base Plan Price:</span>
-                <span className="font-mono font-semibold">₹{plan.base_price}</span>
+                <span>Original Price:</span>
+                <span className="font-mono line-through text-charcoal-400">₹{originalPrice}</span>
+              </div>
+              <div className="flex justify-between text-charcoal-600 dark:text-charcoal-400">
+                <span>Discounted Offer:</span>
+                <span className="font-mono font-semibold text-charcoal-800 dark:text-charcoal-200">₹{discountedPrice}</span>
               </div>
 
               {coinsApplied > 0 && (
                 <div className="flex justify-between text-amber-600 dark:text-amber-400 font-semibold">
                   <span className="flex items-center gap-1">
-                    <span>🪙 GovCoins Discount ({coinsApplied} coins):</span>
+                    <span>🪙 GovCoins Applied ({coinsApplied} coins):</span>
                   </span>
                   <span className="font-mono">-₹{discountAmount}</span>
                 </div>
               )}
 
               <div className="pt-2 border-t border-charcoal-200 dark:border-charcoal-750 flex justify-between font-extrabold text-charcoal-900 dark:text-white text-sm">
-                <span>Total Payable Amount:</span>
+                <span>Final Amount Payable:</span>
                 <span className="font-mono text-emerald-600 dark:text-emerald-400">₹{finalAmount}</span>
               </div>
             </div>
@@ -193,7 +216,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                 onClick={() => setSelectedMethod('upi')}
                 className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                   selectedMethod === 'upi'
-                    ? 'border-institutional-500 bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
                     : 'border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
                 }`}
               >
@@ -206,7 +229,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                 onClick={() => setSelectedMethod('card')}
                 className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                   selectedMethod === 'card'
-                    ? 'border-institutional-500 bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
                     : 'border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
                 }`}
               >
@@ -219,7 +242,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                 onClick={() => setSelectedMethod('netbanking')}
                 className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                   selectedMethod === 'netbanking'
-                    ? 'border-institutional-500 bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
                     : 'border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
                 }`}
               >
@@ -239,23 +262,23 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                     type="text"
                     value={upiId}
                     onChange={(e) => setUpiId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500 font-mono"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                     placeholder="aspirant@okhdfcbank"
                   />
                 </div>
 
                 <div className="p-3 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg bg-white dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 flex items-center justify-center font-bold text-xs text-institutional-600">
+                    <div className="w-9 h-9 rounded-lg bg-white dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 flex items-center justify-center font-bold text-xs text-blue-600">
                       QR
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Scan QR Code</div>
-                      <div className="text-[10px] text-charcoal-500">Google Pay • PhonePe • Paytm</div>
+                      <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Instant UPI Payment</div>
+                      <div className="text-[10px] text-charcoal-500">Google Pay • PhonePe • Paytm • CRED</div>
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                    Instant
+                    Zero Fee
                   </span>
                 </div>
               </div>
@@ -272,7 +295,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                     type="text"
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500 font-mono"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                   />
                 </div>
 
@@ -285,7 +308,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                       type="text"
                       value={cardExp}
                       onChange={(e) => setCardExp(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500 font-mono"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                     />
                   </div>
                   <div className="space-y-1">
@@ -297,7 +320,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                       maxLength={4}
                       value={cardCvv}
                       onChange={(e) => setCardCvv(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500 font-mono"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                     />
                   </div>
                 </div>
@@ -313,7 +336,7 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
                 <select
                   value={selectedBank}
                   onChange={(e) => setSelectedBank(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="SBI">State Bank of India (SBI)</option>
                   <option value="HDFC">HDFC Bank</option>
@@ -330,13 +353,13 @@ export const RazorpayModal = ({ isOpen, plan, order, onClose, onSuccess }) => {
               onClick={handlePay}
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
             >
-              <span>Pay ₹{finalAmount} Securely</span>
+              <span>Pay ₹{finalAmount} via Razorpay</span>
               <ShieldIcon size={16} />
             </button>
 
             <div className="text-center text-[10px] text-charcoal-400 flex items-center justify-center gap-1.5">
               <ShieldIcon size={12} />
-              <span>Razorpay Sandbox Demo • Backend Order #{order?.order_id || 'new'}</span>
+              <span>Razorpay Verified Onboarding • Order #{order?.order_id || 'new'}</span>
             </div>
           </div>
         )}

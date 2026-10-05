@@ -9,6 +9,8 @@ import { ResultScorecardPage } from './pages/ResultScorecardPage';
 import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { AdminStudioPage } from './pages/AdminStudioPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
+import { CoursesPage } from './pages/CoursesPage';
+import { TypingMasterPage } from './pages/TypingMasterPage';
 import { AiPipelinePage } from './pages/AiPipelinePage';
 import { Footer } from './components/Footer';
 import { api } from './services/api';
@@ -77,9 +79,21 @@ function AppContent() {
     }
   }, [user, currentView]);
 
+  const [pendingTestToStart, setPendingTestToStart] = useState(null);
+
+  // Resume starting test if candidate logged in after clicking start
+  useEffect(() => {
+    if (user && pendingTestToStart) {
+      const target = pendingTestToStart;
+      setPendingTestToStart(null);
+      handleStartTest(target);
+    }
+  }, [user, pendingTestToStart]);
+
   // Start / Resume Mock Exam
   const handleStartTest = async (input) => {
     if (!user) {
+      setPendingTestToStart(input);
       handleOpenAuthModal('login');
       return;
     }
@@ -198,17 +212,25 @@ function AppContent() {
           />
         )}
 
-        {/* 5. Subscription & Passes Page */}
-        {currentView === 'subscription' && (
-          <SubscriptionPage onGoToMocks={() => setCurrentView('discovery')} />
+        {/* 5. Exam-Oriented Courses & Quizzes Page */}
+        {(currentView === 'courses' || currentView === 'subscription') && (
+          <CoursesPage
+            onNavigateToDashboard={() => setCurrentView('dashboard')}
+            onNavigateToQuiz={() => setCurrentView('discovery')}
+          />
         )}
 
-        {/* 6. Admin Studio Page (Admin only) */}
+        {/* 6. Typing Master Mock Engine */}
+        {currentView === 'typing' && (
+          <TypingMasterPage />
+        )}
+
+        {/* 7. Admin Studio Page (Admin only) */}
         {currentView === 'admin' && (
           <AdminStudioPage onTestCreated={() => setCurrentView('discovery')} />
         )}
 
-        {/* 7. AI Question Pipeline (Admin only) */}
+        {/* 8. AI Question Pipeline (Admin only) */}
         {currentView === 'pipeline' && (
           <AiPipelinePage onGoToMocks={() => setCurrentView('discovery')} />
         )}

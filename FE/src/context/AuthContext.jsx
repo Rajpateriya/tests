@@ -113,11 +113,11 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, refreshProfile]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = false) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.auth.login(email, password);
+      const res = await api.auth.login(email, password, rememberMe);
       const loggedUser = res.user;
       const accessToken = res.tokens?.access_token || 'demo-jwt-access-token';
       const isAdminAccount = loggedUser.role === 'admin' || loggedUser.email === 'admin@gmail.com';
@@ -130,6 +130,12 @@ export const AuthProvider = ({ children }) => {
       setToken(accessToken);
       localStorage.setItem('govexam_token', accessToken);
       localStorage.setItem('govexam_user', JSON.stringify(loggedUser));
+
+      if (rememberMe) {
+        localStorage.setItem('govexam_remember_email', email);
+      } else {
+        localStorage.removeItem('govexam_remember_email');
+      }
 
       if (isAdminAccount) {
         // Admin: clear student pass completely

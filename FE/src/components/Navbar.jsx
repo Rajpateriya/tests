@@ -137,14 +137,24 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               Mock Tests
             </button>
             <button
-              onClick={() => handleNavClick('subscription')}
+              onClick={() => handleNavClick('courses')}
               className={`px-3 py-1.5 rounded-full transition-colors ${
-                currentView === 'subscription'
+                currentView === 'courses'
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
               }`}
             >
-              Passes & Pricing
+              Courses & Quizzes
+            </button>
+            <button
+              onClick={() => handleNavClick('typing')}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors ${
+                currentView === 'typing'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+              }`}
+            >
+              <span>⌨️ Typing Master</span>
             </button>
             <button
               onClick={handleContactClick}
@@ -183,15 +193,26 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             </button>
 
             <button
-              onClick={() => handleNavClick('subscription')}
+              onClick={() => handleNavClick('courses')}
               className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${
-                currentView === 'subscription'
+                currentView === 'courses'
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
               }`}
             >
-              <CrownIcon size={14} className="text-amber-500" />
-              <span>Passes</span>
+              <SparklesIcon size={14} className="text-amber-500" />
+              <span>Courses</span>
+            </button>
+
+            <button
+              onClick={() => handleNavClick('typing')}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${
+                currentView === 'typing'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+              }`}
+            >
+              <span>⌨️ Typing Master</span>
             </button>
 
             <button
@@ -232,15 +253,26 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             </button>
 
             <button
-              onClick={() => handleNavClick('discovery')}
+              onClick={() => handleNavClick('courses')}
               className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${
-                currentView === 'discovery'
+                currentView === 'courses'
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
               }`}
             >
-              <BookOpenIcon size={14} />
-              <span>Test Catalog</span>
+              <SparklesIcon size={14} />
+              <span>Courses</span>
+            </button>
+
+            <button
+              onClick={() => handleNavClick('typing')}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${
+                currentView === 'typing'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+              }`}
+            >
+              <span>⌨️ Typing Master</span>
             </button>
           </>
         )}
@@ -262,9 +294,9 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
         {/* Student GovCoins Wallet Pill */}
         {user && !isAdmin && (
           <button
-            onClick={() => handleNavClick('subscription')}
+            onClick={() => handleNavClick('courses')}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-amber-900 bg-amber-100/90 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300 dark:border-amber-800 hover:bg-amber-200/80 transition-colors shadow-sm group"
-            title="Your GovCoins wallet: Redeem on subscription passes!"
+            title="Your GovCoins wallet: Redeem for instant discount on exam courses!"
           >
             <span className="text-xs group-hover:scale-110 transition-transform">🪙</span>
             <span className="font-mono font-extrabold">{user?.profile?.coins_balance ?? 150}</span>
@@ -427,16 +459,25 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                         }}
                         className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
                       >
-                        Performance Portfolio
+                        Performance Dashboard
                       </button>
                       <button
                         onClick={() => {
-                          handleNavClick('subscription');
+                          handleNavClick('courses');
                           setUserDropdownOpen(false);
                         }}
                         className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
                       >
-                        Passes & Subscriptions
+                        Courses & Quizzes
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleNavClick('typing');
+                          setUserDropdownOpen(false);
+                        }}
+                        className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
+                      >
+                        Typing Master Mock Test
                       </button>
                     </>
                   ) : (
@@ -508,10 +549,16 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                 Mock Tests Library
               </button>
               <button
-                onClick={() => handleNavClick('subscription')}
+                onClick={() => handleNavClick('courses')}
                 className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
               >
-                Passes & Pricing
+                Courses & Quizzes
+              </button>
+              <button
+                onClick={() => handleNavClick('typing')}
+                className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
+              >
+                ⌨️ Typing Master Mock Test
               </button>
               <button
                 onClick={handleContactClick}
@@ -555,10 +602,16 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                 Test Library
               </button>
               <button
-                onClick={() => handleNavClick('subscription')}
+                onClick={() => handleNavClick('courses')}
                 className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
               >
-                Passes
+                Courses & Quizzes
+              </button>
+              <button
+                onClick={() => handleNavClick('typing')}
+                className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
+              >
+                ⌨️ Typing Master
               </button>
               <button
                 onClick={handleContactClick}
@@ -582,10 +635,16 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                 AI Pipeline
               </button>
               <button
-                onClick={() => handleNavClick('discovery')}
+                onClick={() => handleNavClick('courses')}
                 className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
               >
-                Test Catalog
+                Courses
+              </button>
+              <button
+                onClick={() => handleNavClick('typing')}
+                className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
+              >
+                ⌨️ Typing Master
               </button>
             </>
           )}
