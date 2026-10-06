@@ -99,7 +99,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
       >
       {/* 1. BRAND EMBLEM (Sleek, Compact) */}
       <div
-        onClick={() => handleNavClick(user ? (isAdmin ? 'admin' : 'dashboard') : 'discovery')}
+        onClick={() => handleNavClick('discovery')}
         className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
       >
         <div className="w-8 h-8 rounded-full bg-institutional-600 text-white flex items-center justify-center font-bold text-xs shadow-sm group-hover:scale-105 transition-transform">
