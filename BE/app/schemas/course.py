@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from app.models.course import CourseSubjectQuiz
 
 
@@ -25,6 +26,53 @@ class CourseSummaryOut(BaseModel):
 
 class CourseDetailOut(CourseSummaryOut):
     quizzes: List[CourseSubjectQuiz]
+
+
+class CourseAdminOut(CourseDetailOut):
+    """Admin view of a course: also shows if it is active/published, and who made it and when."""
+    is_active: bool = True
+    is_published: bool = True  # false = draft: invisible to users until published
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class CourseCreateRequest(BaseModel):
+    """Admin: create a course. `test_ids` are existing generated tests; each one becomes a
+    quiz in the course (the quiz id is the test id)."""
+    title: str = Field(min_length=3, max_length=150)
+    description: str = Field(default="", max_length=4000)
+    target_exam: str = Field(min_length=2, max_length=60)
+    original_price: float = Field(gt=0)
+    discounted_price: float = Field(gt=0)
+    test_ids: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _price_order(self):
+        if self.discounted_price > self.original_price:
+            raise ValueError("discounted_price cannot be higher than original_price")
+        return self
+
+
+class CourseUpdateRequest(BaseModel):
+    """Admin: change a course. Fields left out stay as they are."""
+    title: Optional[str] = Field(default=None, min_length=3, max_length=150)
+    description: Optional[str] = Field(default=None, max_length=4000)
+    target_exam: Optional[str] = Field(default=None, min_length=2, max_length=60)
+    original_price: Optional[float] = Field(default=None, gt=0)
+    discounted_price: Optional[float] = Field(default=None, gt=0)
+    test_ids: Optional[List[str]] = None  # the full list of tagged tests (embedded built-in quizzes are kept)
+    is_active: Optional[bool] = None  # false archives the course (hidden from the catalogue)
+    is_published: Optional[bool] = None  # true makes a draft course visible to users
+
+
+class EnrolledUserOut(BaseModel):
+    user_id: str
+    full_name: str
+    email: str
+    enrolled_at: Optional[str] = None
+    amount_paid: Optional[float] = None
+    status: str = "ACTIVE"
 
 
 class CourseCreateOrderRequest(BaseModel):

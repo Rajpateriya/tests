@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.api.v1.deps import require_admin
@@ -8,7 +8,7 @@ from app.db.mongodb import db_manager, get_db
 from app.db.redis import redis_manager
 from app.models.test import TestType
 from app.schemas.common import APIResponse
-from app.schemas.test import TestCreate, TestDetailOut
+from app.schemas.test import AdminTestDetailOut, TestCreate, TestDetailOut, TestQuestionOut, TestUpdate
 from app.schemas.user import PaginatedUsersResponse, UserAdminUpdate, UserResponse
 from app.services.auth_service import AuthService
 from app.services.test_service import TestService
@@ -69,6 +69,56 @@ async def auto_generate_mock(
     )
 
 
+@router.get("/tests/{test_id}", response_model=APIResponse[AdminTestDetailOut])
+async def get_test_admin(
+    test_id: str,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: one test in full (inactive ones too), with the courses it is tagged to."""
+    test = await TestService(db).get_admin_test(test_id)
+    return APIResponse(success=True, message="Test retrieved", data=test)
+
+
+@router.get("/tests/{test_id}/questions", response_model=APIResponse[List[TestQuestionOut]])
+async def get_test_questions_admin(
+    test_id: str,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: the test's questions in order, with correct answers and explanations."""
+    questions = await TestService(db).list_questions_for_admin(test_id)
+    return APIResponse(success=True, message=f"{len(questions)} questions", data=questions)
+
+
+@router.put("/tests/{test_id}", response_model=APIResponse[AdminTestDetailOut])
+async def update_test_admin(
+    test_id: str,
+    req: TestUpdate,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: change a test's title, description, duration, marking or on/off state.
+
+    Courses that include the test are updated to match."""
+    test = await TestService(db).update_test(test_id, req)
+    return APIResponse(success=True, message="Test updated", data=test)
+
+
+@router.delete("/tests/{test_id}", response_model=APIResponse[dict])
+async def delete_test_admin(
+    test_id: str,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: delete a test and remove it from every course that included it.
+
+    A course left with no tests is switched back to draft. Students' finished results are kept.
+    Refused (409) while a student is in the middle of taking the test."""
+    result = await TestService(db).delete_test(test_id)
+    return APIResponse(success=True, message=f"Test '{result['title']}' deleted", data=result)
+
+
 @router.get("/stats", response_model=APIResponse[dict])
 async def get_platform_stats(
     admin: UserResponse = Depends(require_admin),
@@ -78,6 +128,7 @@ async def get_platform_stats(
     users_count = await db.users.count_documents({})
     questions_count = await db.questions.count_documents({})
     tests_count = await db.tests.count_documents({})
+    courses_count = await db.courses.count_documents({})
     attempts_count = await db.attempts.count_documents({})
     completed_attempts = await db.attempts.count_documents({"status": "COMPLETED"})
 
@@ -88,6 +139,7 @@ async def get_platform_stats(
             "total_users": users_count,
             "total_questions_in_bank": questions_count,
             "total_configured_tests": tests_count,
+            "total_courses": courses_count,
             "total_attempts": attempts_count,
             "completed_attempts": completed_attempts,
         },

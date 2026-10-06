@@ -9,6 +9,7 @@ from app.schemas.attempt import AttemptStartResponse
 from app.schemas.common import APIResponse
 from app.schemas.test import TestDetailOut, TestFilterParams, TestSummaryOut
 from app.schemas.user import UserResponse
+from app.services.course_service import CourseService
 from app.services.exam_engine_service import ExamEngineService
 from app.services.test_service import TestService
 
@@ -21,6 +22,7 @@ async def list_tests(
     subject: Optional[str] = Query(None, description="Filter by subject"),
     topic: Optional[str] = Query(None, description="Filter by topic"),
     target_exam: Optional[str] = Query(None, description="Filter by target exam (e.g. SSC CGL)"),
+    search: Optional[str] = Query(None, max_length=100, description="Search the title or subject"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     current_user: Optional[UserResponse] = Depends(get_optional_current_user),
@@ -37,6 +39,7 @@ async def list_tests(
         subject=subject,
         topic=topic,
         target_exam=target_exam,
+        search=search,
         is_active=True,
     )
     tests = await service.list_tests(params, skip=skip, limit=limit)
@@ -74,6 +77,9 @@ async def start_test(
     Starts the server-side timer, prepares the question palette, and initiates Redis state tracking.
     If the user has an existing active attempt on this test, resumes seamlessly.
     """
+    # A test that belongs to a course can only be started by enrolled users (or admins).
+    await CourseService(db).ensure_test_access(current_user, test_id)
+
     engine_service = ExamEngineService(db)
     attempt_session = await engine_service.start_attempt(current_user.id, test_id)
     return APIResponse(

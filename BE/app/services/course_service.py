@@ -1,18 +1,24 @@
 import hashlib
 import hmac
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.config import settings
-from app.core.exceptions import BadRequestException, NotFoundException
+from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
+from app.models.user import UserRole
 from app.repositories.course_repo import CourseRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.course import (
+    CourseAdminOut,
+    CourseCreateRequest,
     CourseDetailOut,
     CourseEnrollmentResponse,
     CourseOrderResponse,
     CourseSummaryOut,
+    CourseUpdateRequest,
+    EnrolledUserOut,
 )
 
 try:
@@ -86,10 +92,10 @@ class CourseService:
         return result
 
     async def get_course_detail(
-        self, course_id: str, user_id: Optional[str] = None
+        self, course_id: str, user_id: Optional[str] = None, include_unpublished: bool = False
     ) -> CourseDetailOut:
         course = await self.course_repo.get_by_id(course_id)
-        if not course:
+        if not course or (course.get("is_published") is False and not include_unpublished):
             raise NotFoundException(f"Course '{course_id}' not found")
 
         is_enrolled = False
@@ -134,7 +140,7 @@ class CourseService:
         self, user_id: str, course_id: str, apply_coins: bool = True
     ) -> CourseOrderResponse:
         course = await self.course_repo.get_by_id(course_id)
-        if not course:
+        if not course or course.get("is_published") is False:  # a draft cannot be bought
             raise NotFoundException(f"Course '{course_id}' not found")
 
         user = await self.user_repo.get_by_id(user_id)
@@ -217,7 +223,7 @@ class CourseService:
         coins_used: int = 0,
     ) -> CourseEnrollmentResponse:
         course = await self.course_repo.get_by_id(course_id)
-        if not course:
+        if not course or course.get("is_published") is False:  # a draft cannot be enrolled in
             raise NotFoundException(f"Course '{course_id}' not found")
 
         user = await self.user_repo.get_by_id(user_id)
@@ -302,6 +308,179 @@ class CourseService:
             coins_deducted=coins_used,
             coins_balance=new_coins,
         )
+
+    # ── Admin: create / edit courses, tag generated tests, see who enrolled ──
+
+    async def _quizzes_from_tests(self, test_ids: List[str]) -> List[Dict[str, Any]]:
+        """Turn generated tests into course `quizzes` entries. The quiz id IS the test id, and no
+        questions are copied in (so no answers leak): the quiz is taken as the real test."""
+        unique = list(dict.fromkeys(t.strip() for t in test_ids if t and t.strip()))
+        if not unique:
+            return []
+        docs = await self.db.tests.find({"_id": {"$in": unique}}).to_list(length=None)
+        by_id = {d["_id"]: d for d in docs}
+        missing = [t for t in unique if t not in by_id]
+        if missing:
+            raise BadRequestException(f"These tests do not exist: {', '.join(missing)}")
+        return [
+            {
+                "id": tid,
+                "title": by_id[tid].get("title", ""),
+                "subject": by_id[tid].get("subject") or "General",
+                "topic": by_id[tid].get("topic"),
+                "target_exam": by_id[tid].get("target_exam", ""),
+                "duration_minutes": int(by_id[tid].get("duration_minutes", 0)),
+                "total_questions": int(
+                    by_id[tid].get("total_questions") or len(by_id[tid].get("question_ids", []))
+                ),
+                "positive_marks": float(by_id[tid].get("positive_marks_per_q", 2.0)),
+                "negative_marks": float(by_id[tid].get("negative_marks_per_q", 0.5)),
+                "questions": [],
+            }
+            for tid in unique
+        ]
+
+    @staticmethod
+    def _subjects_of(quizzes: List[Dict[str, Any]]) -> List[str]:
+        return list(dict.fromkeys(q["subject"] for q in quizzes if q.get("subject")))
+
+    async def create_course(self, req: CourseCreateRequest, admin_id: str) -> CourseAdminOut:
+        quizzes = await self._quizzes_from_tests(req.test_ids)
+        now = datetime.now(timezone.utc)
+        doc = {
+            "_id": f"course-{uuid.uuid4().hex[:10]}",
+            "title": req.title.strip(),
+            "description": req.description.strip(),
+            "target_exam": req.target_exam.strip(),
+            "original_price": req.original_price,
+            "discounted_price": req.discounted_price,
+            "subjects": self._subjects_of(quizzes),
+            "quizzes": quizzes,
+            # Start from zero so the readers' fallbacks (4.9 rating, 3200 enrolled...) never show.
+            "rating": 0.0,
+            "reviews_count": 0,
+            "enrolled_count": 0,
+            "is_active": True,
+            "is_published": False,  # starts as a draft; invisible to users until published
+            "created_by": admin_id,
+            "created_at": now,
+            "updated_at": now,
+        }
+        await self.course_repo.insert(doc)
+        return await self._admin_out(doc)
+
+    async def update_course(self, course_id: str, req: CourseUpdateRequest) -> CourseAdminOut:
+        course = await self.course_repo.get_by_id(course_id)
+        if not course:
+            raise NotFoundException(f"Course '{course_id}' not found")
+
+        changes = req.model_dump(exclude_none=True)
+        for key in ("title", "description", "target_exam"):
+            if key in changes:
+                changes[key] = changes[key].strip()
+
+        original = changes.get("original_price", course.get("original_price"))
+        discounted = changes.get("discounted_price", course.get("discounted_price"))
+        if original and discounted and float(discounted) > float(original):
+            raise BadRequestException("discounted_price cannot be higher than original_price")
+
+        if "test_ids" in changes:
+            # `test_ids` is the full list of tagged tests. Quizzes that carry their own embedded
+            # questions (built-in courses) are kept as they are; only the test-backed ones change.
+            tagged = await self._quizzes_from_tests(changes.pop("test_ids"))
+            embedded = [q for q in course.get("quizzes", []) if q.get("questions")]
+            changes["quizzes"] = embedded + tagged
+            if course.get("created_by"):
+                changes["subjects"] = self._subjects_of(changes["quizzes"])
+            else:
+                # Built-in course: keep its subject list and add the new tests' subjects.
+                known = [s if isinstance(s, str) else s.get("subject_name", "General") for s in course.get("subjects", [])]
+                changes["subjects"] = list(dict.fromkeys(known + self._subjects_of(tagged)))
+
+        if changes.get("is_published") is True and not (changes.get("quizzes", course.get("quizzes"))):
+            raise BadRequestException("Tag at least one test to the course before publishing it.")
+
+        changes["updated_at"] = datetime.now(timezone.utc)
+        updated = await self.course_repo.update(course_id, changes)
+        return await self._admin_out(updated)
+
+    async def get_admin_course(self, course_id: str) -> CourseAdminOut:
+        """One course as the admin sees it: drafts and archived included, with creator and timestamps."""
+        course = await self.course_repo.get_by_id(course_id)
+        if not course:
+            raise NotFoundException(f"Course '{course_id}' not found")
+        return await self._admin_out(course)
+
+    async def list_all_for_admin(
+        self, search: Optional[str] = None, skip: int = 0, limit: int = 500
+    ) -> List[CourseAdminOut]:
+        query: Dict[str, Any] = {}
+        if search and search.strip():
+            rx = {"$regex": re.escape(search.strip()), "$options": "i"}
+            query["$or"] = [{"title": rx}, {"target_exam": rx}]
+        docs = (
+            await self.db.courses.find(query).sort([("created_at", -1), ("_id", 1)]).skip(skip).to_list(length=limit)
+        )
+        return [await self._admin_out(d) for d in docs]
+
+    async def list_enrollments(self, course_id: str) -> List[EnrolledUserOut]:
+        """Users enrolled in the course, newest first (read from each user's enrolled_courses)."""
+        if not await self.course_repo.get_by_id(course_id):
+            raise NotFoundException(f"Course '{course_id}' not found")
+        users = await self.db.users.find({"profile.enrolled_courses.course_id": course_id}).to_list(length=None)
+        rows = []
+        for user in users:
+            record = next(
+                (e for e in user.get("profile", {}).get("enrolled_courses", []) if e.get("course_id") == course_id),
+                {},
+            )
+            rows.append(
+                EnrolledUserOut(
+                    user_id=user["_id"],
+                    full_name=user.get("full_name", ""),
+                    email=user.get("email", ""),
+                    enrolled_at=record.get("enrolled_at"),
+                    amount_paid=record.get("amount_paid"),
+                    status=record.get("status", "ACTIVE"),
+                )
+            )
+        return sorted(rows, key=lambda r: r.enrolled_at or "", reverse=True)
+
+    async def _admin_out(self, course: Dict[str, Any]) -> CourseAdminOut:
+        detail = await self.get_course_detail(course["_id"], include_unpublished=True)
+        return CourseAdminOut(
+            **detail.model_dump(),
+            is_active=course.get("is_active", True),
+            is_published=course.get("is_published", True),
+            created_by=course.get("created_by"),
+            created_at=course.get("created_at"),
+            updated_at=course.get("updated_at"),
+        )
+
+    async def ensure_test_access(self, user: Any, test_id: str) -> None:
+        """A test that is a quiz of an active course may only be started by users enrolled in it.
+
+        Other tests stay public. Admins, and users who already have the test in progress
+        (resuming), are always allowed."""
+        # Only published courses lock their tests: tagging into a draft changes nothing for users.
+        courses = await self.db.courses.find(
+            {"quizzes.id": test_id, "is_active": {"$ne": False}, "is_published": {"$ne": False}}, {"title": 1}
+        ).to_list(length=50)
+        if not courses or user.role == UserRole.ADMIN:
+            return
+
+        if await self.db.attempts.find_one(
+            {"user_id": user.id, "test_id": test_id, "status": {"$in": ["IN_PROGRESS", "PAUSED"]}}
+        ):
+            return
+
+        record = await self.user_repo.get_by_id(user.id) or {}
+        enrolled = {e.get("course_id") for e in record.get("profile", {}).get("enrolled_courses", [])}
+        if any(c["_id"] in enrolled for c in courses):
+            return
+
+        title = courses[0].get("title", "a course")
+        raise ForbiddenException(f"This test is part of the course '{title}'. Enroll in the course to take it.")
 
     async def get_my_enrolled_courses(self, user_id: str) -> List[Dict[str, Any]]:
         user = await self.user_repo.get_by_id(user_id)

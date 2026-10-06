@@ -171,7 +171,9 @@ class EvaluationService:
             raise ExamStateException("Test has not been submitted yet")
 
         test = await self.test_repo.get_by_id(attempt["test_id"])
-        questions = await self.question_repo.get_by_ids(test.get("question_ids", []))
+        # The test may have been deleted by an admin since; the attempt still remembers its questions.
+        question_ids = test.get("question_ids", []) if test else list(attempt.get("palette_states", {}))
+        questions = await self.question_repo.get_by_ids(question_ids)
         q_map = {q["_id"]: q for q in questions}
 
         # Peer comparison: Rank & Percentile
