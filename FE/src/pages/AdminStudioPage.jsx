@@ -525,6 +525,7 @@ export const AdminStudioPage = () => {
       }
       setCourseModal(null);
       coursesLoaded.current = false; // the Mock Tests tab refetches its course tags next time
+      coursesTab.reload();
     } catch (err) {
       showToast('error', err.message);
     } finally {
@@ -902,8 +903,8 @@ export const AdminStudioPage = () => {
       {activeTab === 'users' && (
         <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 shadow-card space-y-6 animate-fade-in">
           {/* Header Controls: Search & Filters */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
-            <div>
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
+            <div className="max-w-xl">
               <h2 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white flex items-center gap-2">
                 <span>User Profiles & Role Directory</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 font-mono font-bold">
@@ -915,9 +916,9 @@ export const AdminStudioPage = () => {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full xl:w-auto shrink-0">
               {/* Search input */}
-              <div className="relative">
+              <div className="relative flex-1 sm:w-56 md:w-64">
                 <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
                 <input
                   type="text"
@@ -927,37 +928,56 @@ export const AdminStudioPage = () => {
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="pl-9 pr-3.5 py-2 text-xs rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-institutional-500 w-56 sm:w-64"
+                  className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-institutional-500"
                 />
               </div>
 
-              {/* Role filter */}
-              <select
-                value={roleFilter}
-                onChange={(e) => {
-                  setRoleFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none cursor-pointer"
-              >
-                <option value="">All Roles</option>
-                <option value="student">Student Aspirants</option>
-                <option value="admin">Administrators</option>
-              </select>
+              {/* Filters row: Role & Status stay grouped side-by-side */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Role filter */}
+                <select
+                  value={roleFilter}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer"
+                >
+                  <option value="">All Roles</option>
+                  <option value="student">Student Aspirants</option>
+                  <option value="admin">Administrators</option>
+                </select>
 
-              {/* Status filter */}
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none cursor-pointer"
-              >
-                <option value="">All Statuses</option>
-                <option value="active">Active Only</option>
-                <option value="inactive">Suspended Only</option>
-              </select>
+                {/* Status filter */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="active">Active Only</option>
+                  <option value="inactive">Suspended Only</option>
+                </select>
+
+                {(searchQuery || roleFilter || statusFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setRoleFilter('');
+                      setStatusFilter('');
+                      setCurrentPage(1);
+                    }}
+                    title="Reset filters"
+                    className="px-2.5 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-500 hover:text-charcoal-900 dark:hover:text-white transition-colors"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

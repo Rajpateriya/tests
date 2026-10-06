@@ -13,6 +13,7 @@ import {
   ChevronRightIcon,
   ArrowRightIcon,
   BookOpenIcon,
+  RefreshCwIcon,
 } from '../components/Icons';
 
 export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTest }) => {
@@ -64,38 +65,58 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTe
     }
   };
 
-  // Generated mock tests tagged to a course by an admin: course quizzes with no embedded questions
-  // (the quiz id is the test id, and the questions live in the test itself).
-  const [courseTests, setCourseTests] = useState({});
+  // Real-time dynamic course details map (courseId -> CourseDetailOut)
+  const [courseDetails, setCourseDetails] = useState({});
+  const [loadingDetails, setLoadingDetails] = useState({});
 
-  const loadCourseTests = async (courseId) => {
-    try {
-      const detail = await api.courses.getDetail(courseId);
-      const tests = (detail?.quizzes || []).filter((q) => !(q.questions && q.questions.length));
-      setCourseTests((prev) => ({ ...prev, [courseId]: tests }));
-    } catch {
-      setCourseTests((prev) => ({ ...prev, [courseId]: [] }));
+  const toggleExpandCourseQuizzes = async (courseId) => {
+    const nextState = !expandedQuizzes[courseId];
+    setExpandedQuizzes((prev) => ({
+      ...prev,
+      [courseId]: nextState,
+    }));
+
+    // If expanding, fetch fresh course detail dynamically to ensure real-time quizzes sync
+    if (nextState) {
+      setLoadingDetails((prev) => ({ ...prev, [courseId]: true }));
+      try {
+        const detail = await api.courses.getDetail(courseId);
+        if (detail) {
+          setCourseDetails((prev) => ({ ...prev, [courseId]: detail }));
+        }
+      } catch (err) {
+        console.error('Failed to load dynamic course detail:', err);
+      } finally {
+        setLoadingDetails((prev) => ({ ...prev, [courseId]: false }));
+      }
     }
   };
 
-  const toggleExpandCourseQuizzes = (courseId) => {
-    setExpandedQuizzes((prev) => ({
-      ...prev,
-      [courseId]: !prev[courseId],
-    }));
-    if (!courseTests[courseId]) loadCourseTests(courseId);
-  };
-
   const openQuizDetailModal = async (course, quiz) => {
-    // If course detail with questions not yet fetched, fetch it
+    // If the quiz already has populated questions, open preview immediately
+    if (quiz.questions && quiz.questions.length > 0) {
+      setPreviewQuiz({ ...quiz, courseTitle: course.title });
+      setActiveQuestionIndex(0);
+      setShowAnswerExplanation(true);
+      return;
+    }
+
+    // Fetch full course detail to retrieve the questions & solutions
     try {
-      const detail = await api.courses.getDetail(course.id);
-      const foundQuiz = detail?.quizzes?.find((q) => q.id === quiz.id || q.title === quiz.title) || quiz;
-      setPreviewQuiz({ ...foundQuiz, courseTitle: course.title });
+      const detail = courseDetails[course.id] || (await api.courses.getDetail(course.id));
+      if (detail && !courseDetails[course.id]) {
+        setCourseDetails((prev) => ({ ...prev, [course.id]: detail }));
+      }
+      const foundQuiz = detail?.quizzes?.find((q) => q.id === quiz.id || q.title === quiz.title);
+      if (foundQuiz && foundQuiz.questions && foundQuiz.questions.length > 0) {
+        setPreviewQuiz({ ...foundQuiz, courseTitle: course.title });
+      } else {
+        setPreviewQuiz({ ...quiz, courseTitle: course.title, questions: foundQuiz?.questions || [] });
+      }
       setActiveQuestionIndex(0);
       setShowAnswerExplanation(true);
     } catch (err) {
-      setPreviewQuiz({ ...quiz, courseTitle: course.title });
+      setPreviewQuiz({ ...quiz, courseTitle: course.title, questions: [] });
       setActiveQuestionIndex(0);
       setShowAnswerExplanation(true);
     }
@@ -241,16 +262,29 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTe
             ))}
           </div>
 
-          {/* Search Input */}
-          <div className="relative w-full md:w-72">
-            <SearchIcon size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search courses or subjects..."
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          {/* Search Input and Refresh Button */}
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative w-full md:w-72">
+              <SearchIcon size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search courses or subjects..."
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCourseDetails({});
+                fetchCourses();
+              }}
+              title="Refresh courses from server"
+              className="p-2 rounded-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 text-charcoal-600 dark:text-charcoal-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors shadow-sm shrink-0 flex items-center justify-center"
+            >
+              <RefreshCwIcon size={16} />
+            </button>
           </div>
         </div>
 
@@ -333,12 +367,16 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTe
                     </div>
                   </div>
 
-                  {/* Included Subjects List */}
+                  {/* Included Subjects List & Dynamic Quizzes Preview */}
                   <div className="space-y-2.5">
                     <div className="text-xs font-bold text-charcoal-800 dark:text-charcoal-200 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <BookOpenIcon size={14} className="text-blue-500" />
-                        <span>Subject Coverage & Quizzes ({course.total_quizzes} Quizzes Included)</span>
+                        <span>
+                          Subject Coverage & Quizzes (
+                          {(courseDetails[course.id]?.quizzes || course.quizzes || []).length || course.total_quizzes} Quizzes Included
+                          )
+                        </span>
                       </span>
 
                       <button
@@ -374,80 +412,117 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTe
                     </div>
                   </div>
 
-                  {/* Expandable Subject-wise Quizzes List with Detailed Answers Preview */}
-                  {isExpanded && (
-                    <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 space-y-3 animate-fade-in">
-                      <div className="text-xs font-extrabold text-blue-900 dark:text-blue-200 flex items-center justify-between">
-                        <span>Subject-Wise Quizzes (with step-by-step solutions)</span>
-                        <span className="text-[10px] bg-blue-200/70 dark:bg-blue-900 px-2 py-0.5 rounded text-blue-800 dark:text-blue-200">Instant Explanations</span>
-                      </div>
+                  {/* Dynamic Real-Time Quizzes & Mock Tests List */}
+                  {isExpanded && (() => {
+                    const activeQuizzes = courseDetails[course.id]?.quizzes || course.quizzes || [];
+                    const drills = activeQuizzes.filter((q) => q.questions && q.questions.length > 0);
+                    const mockTests = activeQuizzes.filter((q) => !(q.questions && q.questions.length > 0));
+                    const isFetching = loadingDetails[course.id] && !activeQuizzes.length;
 
-                      <div className="space-y-2">
-                        {course.subjects?.map((subName, idx) => (
-                          <div
-                            key={idx}
-                            className="p-3 rounded-xl bg-white dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between gap-3 text-xs"
-                          >
-                            <div>
-                              <div className="font-bold text-charcoal-900 dark:text-white">
-                                {subName} Mastery Drill
-                              </div>
-                              <div className="text-[10px] text-charcoal-500">
-                                Exam Oriented • Timed Quiz • Detailed Answer Key Included
-                              </div>
-                            </div>
+                    if (isFetching) {
+                      return (
+                        <div className="p-4 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 animate-pulse text-center text-xs text-charcoal-500">
+                          Loading latest quizzes & mock tests from database...
+                        </div>
+                      );
+                    }
 
-                            <button
-                              type="button"
-                              onClick={() => openQuizDetailModal(course, { id: `quiz-${idx}`, title: `${subName} Mastery Drill`, subject: subName })}
-                              className="px-2.5 py-1.5 rounded-lg bg-blue-600 text-white font-bold text-[11px] hover:bg-blue-700 transition-colors shrink-0"
-                            >
-                              Preview Answers
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    if (activeQuizzes.length === 0) {
+                      return (
+                        <div className="p-4 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center text-xs text-charcoal-500">
+                          No quizzes or mock tests currently assigned to this course.
+                        </div>
+                      );
+                    }
 
-                  {/* Full mock tests tagged to this course (real exam-room tests) */}
-                  {isExpanded && (courseTests[course.id] || []).length > 0 && (
-                    <div className="p-4 rounded-2xl bg-institutional-50/60 dark:bg-institutional-950/30 border border-institutional-200 dark:border-institutional-900/60 space-y-3 animate-fade-in">
-                      <div className="text-xs font-extrabold text-institutional-900 dark:text-institutional-200">
-                        Mock Tests in this Course ({courseTests[course.id].length})
-                      </div>
-
-                      <div className="space-y-2">
-                        {courseTests[course.id].map((t) => (
-                          <div
-                            key={t.id}
-                            className="p-3 rounded-xl bg-white dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 flex items-center justify-between gap-3 text-xs"
-                          >
-                            <div className="min-w-0">
-                              <div className="font-bold text-charcoal-900 dark:text-white truncate">{t.title}</div>
-                              <div className="text-[10px] text-charcoal-500 dark:text-charcoal-400">
-                                {t.total_questions} Questions • {t.duration_minutes} min • +{t.positive_marks} / -{t.negative_marks}
-                              </div>
-                            </div>
-
-                            {isEnrolled ? (
-                              <button
-                                type="button"
-                                onClick={() => onStartTest && onStartTest(t.id)}
-                                className="px-2.5 py-1.5 rounded-lg bg-institutional-600 text-white font-bold text-[11px] hover:bg-institutional-700 transition-colors shrink-0"
-                              >
-                                Start Test
-                              </button>
-                            ) : (
-                              <span className="text-[11px] font-semibold text-charcoal-500 dark:text-charcoal-400 shrink-0">
-                                Enroll to unlock
+                    return (
+                      <div className="space-y-3">
+                        {/* 1. Subject-wise Drills with Question-by-Question Explanations */}
+                        {drills.length > 0 && (
+                          <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 space-y-3 animate-fade-in">
+                            <div className="text-xs font-extrabold text-blue-900 dark:text-blue-200 flex items-center justify-between">
+                              <span>Subject-Wise Quizzes & Drills ({drills.length})</span>
+                              <span className="text-[10px] bg-blue-200/70 dark:bg-blue-900 px-2 py-0.5 rounded text-blue-800 dark:text-blue-200 font-semibold">
+                                Step-by-Step Solutions
                               </span>
-                            )}
+                            </div>
+
+                            <div className="space-y-2">
+                              {drills.map((quiz, idx) => (
+                                <div
+                                  key={quiz.id || idx}
+                                  className="p-3 rounded-xl bg-white dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between gap-3 text-xs"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-charcoal-900 dark:text-white truncate">
+                                      {quiz.title}
+                                    </div>
+                                    <div className="text-[10px] text-charcoal-500 dark:text-charcoal-400">
+                                      {quiz.subject} • {quiz.total_questions || quiz.questions?.length || 0} Questions • {quiz.duration_minutes || 15} min • Detailed Solutions Included
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => openQuizDetailModal(course, quiz)}
+                                    className="px-2.5 py-1.5 rounded-lg bg-blue-600 text-white font-bold text-[11px] hover:bg-blue-700 transition-colors shrink-0 shadow-sm"
+                                  >
+                                    Preview Answers
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
+                        )}
+
+                        {/* 2. Exam-Room Mock Tests */}
+                        {mockTests.length > 0 && (
+                          <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/60 space-y-3 animate-fade-in">
+                            <div className="text-xs font-extrabold text-indigo-900 dark:text-indigo-200 flex items-center justify-between">
+                              <span>Mock Tests in this Course ({mockTests.length})</span>
+                              <span className="text-[10px] bg-indigo-200/70 dark:bg-indigo-900 px-2 py-0.5 rounded text-indigo-800 dark:text-indigo-200 font-semibold">
+                                Full Exam Engine
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              {mockTests.map((t, idx) => (
+                                <div
+                                  key={t.id || idx}
+                                  className="p-3 rounded-xl bg-white dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between gap-3 text-xs"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-charcoal-900 dark:text-white truncate">{t.title}</div>
+                                    <div className="text-[10px] text-charcoal-500 dark:text-charcoal-400">
+                                      {t.subject || 'All Subjects'} • {t.total_questions} Questions • {t.duration_minutes} min • +{t.positive_marks} / -{t.negative_marks}
+                                    </div>
+                                  </div>
+
+                                  {isEnrolled ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => onStartTest && onStartTest(t.id)}
+                                      className="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-700 transition-colors shrink-0 shadow-sm"
+                                    >
+                                      Start Test
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartCheckout(course)}
+                                      className="px-2.5 py-1.5 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 font-semibold text-[11px] hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-600 shrink-0 transition-colors"
+                                    >
+                                      Enroll to Unlock
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Action Buttons: Enroll or Enrolled */}
                   <div className="pt-2">

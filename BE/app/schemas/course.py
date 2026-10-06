@@ -22,10 +22,11 @@ class CourseSummaryOut(BaseModel):
     features: List[str]
     total_quizzes: int
     is_enrolled: bool = False
+    quizzes: List[CourseSubjectQuiz] = Field(default_factory=list)
 
 
 class CourseDetailOut(CourseSummaryOut):
-    quizzes: List[CourseSubjectQuiz]
+    pass
 
 
 class CourseAdminOut(CourseDetailOut):

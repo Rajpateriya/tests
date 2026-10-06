@@ -87,6 +87,7 @@ class CourseService:
                     features=c.get("features", []),
                     total_quizzes=len(quizzes_list),
                     is_enrolled=c["_id"] in enrolled_ids,
+                    quizzes=quizzes_list,
                 )
             )
         return result

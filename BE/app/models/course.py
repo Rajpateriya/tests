@@ -22,11 +22,11 @@ class CourseQuizQuestion(BaseModel):
 class CourseSubjectQuiz(BaseModel):
     id: str
     title: str
-    subject: str
+    subject: str = "General"
     topic: Optional[str] = None
-    target_exam: str
+    target_exam: Optional[str] = ""
     duration_minutes: int = 15
-    total_questions: int
+    total_questions: int = 0
     positive_marks: float = 2.0
     negative_marks: float = 0.5
     questions: List[CourseQuizQuestion] = Field(default_factory=list)
