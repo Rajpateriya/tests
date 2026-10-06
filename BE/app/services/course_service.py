@@ -260,6 +260,8 @@ class CourseService:
             "course_id": course["_id"],
             "course_title": course_title,
             "target_exam": target_exam,
+            "tagline": course.get("tagline", ""),
+            "thumbnail_icon": course.get("thumbnail_icon", "SparklesIcon"),
             "enrolled_at": now.isoformat(),
             "amount_paid": amount_paid,
             "payment_id": payment_id,
@@ -307,6 +309,50 @@ class CourseService:
             payment_id=payment_id,
             amount_paid=amount_paid,
             coins_deducted=coins_used,
+            coins_balance=new_coins,
+        )
+
+    async def enroll_course_direct(self, user_id: str, course_id: str) -> CourseEnrollmentResponse:
+        """Directly enroll a user into a published course (for free courses, passes, or developer mode)."""
+        course = await self.course_repo.get_by_id(course_id)
+        if not course or course.get("is_published") is False:
+            raise NotFoundException(f"Course '{course_id}' not found")
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundException("User not found")
+
+        now = datetime.now(timezone.utc)
+        course_title = course.get("title") or course.get("course_title", "Exam Course")
+        target_exam = course.get("target_exam") or course.get("exam", "All Exams")
+        amount_paid = float(course.get("discounted_price") or course.get("discount_price") or 0.0)
+
+        enrollment_record = {
+            "course_id": course["_id"],
+            "course_title": course_title,
+            "target_exam": target_exam,
+            "tagline": course.get("tagline", ""),
+            "thumbnail_icon": course.get("thumbnail_icon", "SparklesIcon"),
+            "enrolled_at": now.isoformat(),
+            "amount_paid": amount_paid,
+            "payment_id": f"pay_direct_{uuid.uuid4().hex[:10]}",
+            "order_id": f"order_direct_{uuid.uuid4().hex[:10]}",
+            "status": "ACTIVE",
+        }
+        updated_user = await self.user_repo.add_enrolled_course(user_id, enrollment_record)
+        await self.db.courses.update_one(
+            {"_id": course["_id"]},
+            {"$inc": {"enrolled_count": 1}}
+        )
+        new_coins = updated_user.get("profile", {}).get("coins_balance", 0) if updated_user else 0
+        return CourseEnrollmentResponse(
+            success=True,
+            message=f"Successfully enrolled in '{course_title}'.",
+            course_id=course["_id"],
+            course_title=course_title,
+            enrolled_at=now.isoformat(),
+            payment_id=enrollment_record["payment_id"],
+            amount_paid=amount_paid,
+            coins_deducted=0,
             coins_balance=new_coins,
         )
 
@@ -491,23 +537,54 @@ class CourseService:
         if not enrolled_list:
             return []
 
-        course_ids = [e["course_id"] for e in enrolled_list]
+        normalized_list = []
+        for item in enrolled_list:
+            if hasattr(item, "model_dump"):
+                normalized_list.append(item.model_dump())
+            elif isinstance(item, dict):
+                normalized_list.append(item)
+
+        course_ids = [e.get("course_id") for e in normalized_list if e.get("course_id")]
         cursor = self.db.courses.find({"_id": {"$in": course_ids}})
         courses = await cursor.to_list(length=100)
         course_map = {c["_id"]: c for c in courses}
 
         result = []
-        for e in enrolled_list:
-            c = course_map.get(e["course_id"])
-            if c:
-                quizzes = c.get("quizzes", [])
-                result.append({
-                    **e,
-                    "id": e["course_id"],
-                    "tagline": c.get("tagline", ""),
-                    "thumbnail_icon": c.get("thumbnail_icon", "SparklesIcon"),
-                    "subjects": c.get("subjects", []),
-                    "total_quizzes": len(quizzes),
-                    "quizzes": quizzes,
-                })
+        for e in normalized_list:
+            cid = e.get("course_id")
+            if not cid:
+                continue
+            c = course_map.get(cid)
+            quizzes = c.get("quizzes", []) if c else []
+            subjects_raw = c.get("subjects", []) if c else []
+            subjects_list = [
+                s if isinstance(s, str) else s.get("subject_name", "General")
+                for s in subjects_raw
+            ]
+            title = (c.get("title") if c else None) or e.get("course_title") or "Course"
+            target_exam = (c.get("target_exam") if c else None) or e.get("target_exam") or "All Exams"
+            tagline = (c.get("tagline") if c else None) or e.get("tagline") or ""
+            description = (c.get("description") if c else None) or e.get("description") or ""
+            thumbnail_icon = (c.get("thumbnail_icon") if c else None) or e.get("thumbnail_icon") or "SparklesIcon"
+
+            result.append({
+                **e,
+                "id": cid,
+                "course_id": cid,
+                "title": title,
+                "course_title": title,
+                "target_exam": target_exam,
+                "tagline": tagline,
+                "description": description,
+                "thumbnail_icon": thumbnail_icon,
+                "subjects": subjects_list,
+                "total_quizzes": len(quizzes),
+                "quizzes": quizzes,
+                "status": e.get("status", "ACTIVE"),
+                "enrolled_at": e.get("enrolled_at"),
+                "amount_paid": e.get("amount_paid"),
+                "payment_id": e.get("payment_id"),
+                "order_id": e.get("order_id"),
+                "expires_at": e.get("expires_at"),
+            })
         return result

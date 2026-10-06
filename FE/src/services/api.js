@@ -1225,6 +1225,12 @@ export const api = {
     getMyEnrollments: async () => {
       return await request('/courses/my-enrollments');
     },
+
+    enroll: async (courseId) => {
+      return await request(`/courses/${courseId}/enroll`, {
+        method: 'POST',
+      });
+    },
   },
 
   // Typing Master Mock Test Engine

@@ -9,6 +9,22 @@ class UserRole(str, Enum):
     ADMIN = "admin"
 
 
+class EnrolledCourseItem(BaseModel):
+    course_id: str
+    course_title: str
+    target_exam: Optional[str] = None
+    tagline: Optional[str] = None
+    thumbnail_icon: Optional[str] = "SparklesIcon"
+    enrolled_at: Optional[str] = None
+    amount_paid: Optional[float] = 0.0
+    payment_id: Optional[str] = None
+    order_id: Optional[str] = None
+    status: str = "ACTIVE"
+    expires_at: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+
+
 class UserProfile(BaseModel):
     target_exams: List[str] = Field(default_factory=lambda: ["SSC CGL", "CHSL"])
     preferred_subjects: List[str] = Field(
@@ -24,7 +40,7 @@ class UserProfile(BaseModel):
     subscription_plan: Optional[str] = "FREE"
     subscription_status: Optional[str] = "INACTIVE"
     subscription_expires_at: Optional[datetime] = None
-    enrolled_courses: List[Dict[str, Any]] = Field(default_factory=list)
+    enrolled_courses: List[EnrolledCourseItem] = Field(default_factory=list)
     typing_stats: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 

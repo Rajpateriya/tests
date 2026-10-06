@@ -67,8 +67,30 @@ async def test_courses_and_enrollment_flow(client: AsyncClient):
     assert verify_data["success"] is True
     assert verify_data["course_id"] == course_id
 
-    # 6. Fetch user's enrolled courses
+    # 6. Fetch user's enrolled courses dynamically from DB
     enrollments_resp = await client.get("/api/v1/courses/my-enrollments", headers=student_headers)
     assert enrollments_resp.status_code == 200
     enrolled = enrollments_resp.json()["data"]
     assert any(c["id"] == course_id for c in enrolled)
+    enrolled_item = next(c for c in enrolled if c["id"] == course_id)
+    assert "quizzes" in enrolled_item
+    assert "subjects" in enrolled_item
+    assert "total_quizzes" in enrolled_item
+    assert "title" in enrolled_item
+
+    # 7. Verify user profile schema has structured enrolled_courses objects
+    me_resp = await client.get("/api/v1/auth/me", headers=student_headers)
+    assert me_resp.status_code == 200
+    user_profile = me_resp.json()["data"]["profile"]
+    assert "enrolled_courses" in user_profile
+    assert len(user_profile["enrolled_courses"]) >= 1
+    stored_course = next(c for c in user_profile["enrolled_courses"] if c["course_id"] == course_id)
+    assert stored_course["course_title"]
+    assert stored_course["status"] == "ACTIVE"
+
+    # 8. Test direct enrollment endpoint
+    direct_enroll_resp = await client.post(f"/api/v1/courses/{course_id}/enroll", headers=student_headers)
+    assert direct_enroll_resp.status_code == 200
+    direct_data = direct_enroll_resp.json()["data"]
+    assert direct_data["course_id"] == course_id
+    assert direct_data["success"] is True

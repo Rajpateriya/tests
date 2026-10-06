@@ -181,15 +181,18 @@ class UserRepository(BaseRepository):
             await self.collection.update_one({"_id": user_id}, {"$set": update_set})
         return await self.get_by_id(user_id)
 
-    async def add_enrolled_course(self, user_id: str, course_record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        # Remove any existing enrollment for this course to avoid duplicates, then append
+    async def add_enrolled_course(self, user_id: str, course_record: Any) -> Optional[Dict[str, Any]]:
+        record_dict = course_record.model_dump() if hasattr(course_record, "model_dump") else dict(course_record)
+        course_id = record_dict.get("course_id")
+        if course_id:
+            # Remove any existing enrollment for this course to avoid duplicates, then append
+            await self.collection.update_one(
+                {"_id": user_id},
+                {"$pull": {"profile.enrolled_courses": {"course_id": course_id}}}
+            )
         await self.collection.update_one(
             {"_id": user_id},
-            {"$pull": {"profile.enrolled_courses": {"course_id": course_record["course_id"]}}}
-        )
-        await self.collection.update_one(
-            {"_id": user_id},
-            {"$push": {"profile.enrolled_courses": course_record}}
+            {"$push": {"profile.enrolled_courses": record_dict}}
         )
         return await self.get_by_id(user_id)
 

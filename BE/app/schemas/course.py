@@ -110,3 +110,26 @@ class CourseEnrollmentResponse(BaseModel):
     amount_paid: float
     coins_deducted: int
     coins_balance: int
+
+
+class EnrolledCourseOut(BaseModel):
+    id: str
+    course_id: str
+    title: str
+    course_title: str
+    target_exam: str
+    tagline: str
+    description: Optional[str] = ""
+    thumbnail_icon: str = "SparklesIcon"
+    subjects: List[str] = Field(default_factory=list)
+    total_quizzes: int = 0
+    quizzes: List[CourseSubjectQuiz] = Field(default_factory=list)
+    enrolled_at: Optional[str] = None
+    amount_paid: Optional[float] = None
+    payment_id: Optional[str] = None
+    order_id: Optional[str] = None
+    status: str = "ACTIVE"
+    expires_at: Optional[str] = None
+
+    model_config = {"extra": "allow"}
+

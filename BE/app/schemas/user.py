@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
-from app.models.user import UserProfile, UserRole
+from app.models.user import EnrolledCourseItem, UserProfile, UserRole
 
 
 class UserRegisterRequest(BaseModel):

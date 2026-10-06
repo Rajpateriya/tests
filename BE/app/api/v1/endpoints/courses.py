@@ -16,6 +16,7 @@ from app.schemas.course import (
     CourseSummaryOut,
     CourseUpdateRequest,
     CourseVerifyPaymentRequest,
+    EnrolledCourseOut,
     EnrolledUserOut,
 )
 from app.schemas.user import UserResponse
@@ -72,7 +73,7 @@ async def list_courses(
     )
 
 
-@router.get("/my-enrollments", response_model=APIResponse[List[Dict[str, Any]]])
+@router.get("/my-enrollments", response_model=APIResponse[List[EnrolledCourseOut]])
 async def get_my_enrolled_courses(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -236,6 +237,22 @@ async def verify_course_payment(
         signature=req.signature,
         coins_used=req.coins_used,
     )
+    return APIResponse(
+        success=True,
+        message=result.message,
+        data=result,
+    )
+
+
+@router.post("/{course_id}/enroll", response_model=APIResponse[CourseEnrollmentResponse])
+async def enroll_course_direct(
+    course_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Directly enroll the authenticated student into the course."""
+    service = CourseService(db)
+    result = await service.enroll_course_direct(current_user.id, course_id)
     return APIResponse(
         success=True,
         message=result.message,

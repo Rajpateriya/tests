@@ -24,6 +24,7 @@ import {
   LayersIcon,
   AwardIcon,
   HelpCircleIcon,
+  RefreshCwIcon,
 } from '../components/Icons';
 import { TestRulesModal } from '../components/TestRulesModal';
 
@@ -61,8 +62,8 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
   const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
 
-  // Enrolled Courses, Explore Courses & Typing Master States
   const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [enrolledLoading, setEnrolledLoading] = useState(false);
   const [exploreCourses, setExploreCourses] = useState([]);
   const [typingStats, setTypingStats] = useState(null);
   const [activeCourseModal, setActiveCourseModal] = useState(null);
@@ -141,6 +142,24 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
       setLoading(false);
     }
   };
+
+  const fetchEnrolledCourses = async () => {
+    setEnrolledLoading(true);
+    try {
+      const res = await api.courses.getMyEnrollments();
+      setEnrolledCourses(res || []);
+    } catch (err) {
+      console.warn('Failed to refresh enrolled courses:', err);
+    } finally {
+      setEnrolledLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'courses') {
+      fetchEnrolledCourses();
+    }
+  }, [activeTab]);
 
   const loadDailyQuestion = async () => {
     setQuestionLoading(true);
@@ -1238,12 +1257,24 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                 </p>
               </div>
 
-              <button
-                onClick={() => onNavigate && onNavigate('courses')}
-                className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 transition-colors cursor-pointer self-start sm:self-auto"
-              >
-                Browse All Courses →
-              </button>
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  onClick={fetchEnrolledCourses}
+                  disabled={enrolledLoading}
+                  className="px-3 py-1.5 text-xs font-bold rounded-xl bg-charcoal-100 hover:bg-charcoal-200 dark:bg-charcoal-800 dark:hover:bg-charcoal-700 text-charcoal-700 dark:text-charcoal-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Refresh enrolled courses from database"
+                >
+                  <RefreshCwIcon size={13} className={enrolledLoading ? "animate-spin text-institutional-600" : ""} />
+                  <span>{enrolledLoading ? "Refreshing..." : "Refresh"}</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate && onNavigate('courses')}
+                  className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 transition-colors cursor-pointer"
+                >
+                  Browse All Courses →
+                </button>
+              </div>
             </div>
 
             {enrolledCourses.length > 0 ? (
@@ -1251,15 +1282,21 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                 {enrolledCourses.map((course) => (
                   <div
                     key={course.id || course.course_id}
-                    className="p-5 rounded-2xl border border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/50 dark:bg-charcoal-800/40 hover:border-institutional-400 transition-all flex flex-col justify-between space-y-4"
+                    className="p-5 rounded-2xl border border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/50 dark:bg-charcoal-800/40 hover:border-institutional-400 transition-all flex flex-col justify-between space-y-4 shadow-xs"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                          Active Pass
+                          {course.status || 'Active Pass'}
                         </span>
                         <span className="text-[11px] text-charcoal-400 font-mono">
                           {course.enrolled_at ? new Date(course.enrolled_at).toLocaleDateString() : 'Enrolled'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-institutional-500/10 text-institutional-600 dark:text-institutional-400 border border-institutional-500/20">
+                          {course.target_exam || 'Govt Exam'}
                         </span>
                       </div>
 
@@ -1268,7 +1305,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                       </h4>
 
                       {course.tagline && (
-                        <p className="text-xs text-charcoal-500 line-clamp-2">
+                        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2">
                           {course.tagline}
                         </p>
                       )}
@@ -1290,7 +1327,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                     <div className="pt-3 border-t border-charcoal-200 dark:border-charcoal-700 flex items-center justify-between">
                       <span className="text-xs font-semibold text-charcoal-500 flex items-center gap-1">
                         <BookOpenIcon size={13} className="text-institutional-600" />
-                        <span>{course.total_quizzes || 4} Quizzes</span>
+                        <span>{course.total_quizzes ?? (course.quizzes ? course.quizzes.length : 0)} Quizzes</span>
                       </span>
 
                       <button
@@ -1301,9 +1338,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                           setSelectedAnswers({});
                           setShowExplanation(true);
                         }}
-                        className="px-3 py-1.5 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white shadow-xs transition-all cursor-pointer"
+                        className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white shadow-xs transition-all cursor-pointer flex items-center gap-1"
                       >
-                        Practice Quizzes →
+                        <span>Practice Quizzes</span>
+                        <span>→</span>
                       </button>
                     </div>
                   </div>
@@ -1674,8 +1712,31 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
 
                   if (!currentQ) {
                     return (
-                      <div className="p-12 text-center text-charcoal-500">
-                        No questions available for this subject quiz.
+                      <div className="p-12 text-center text-charcoal-500 space-y-4">
+                        <div className="w-12 h-12 rounded-2xl bg-institutional-100 dark:bg-institutional-950 text-institutional-600 dark:text-institutional-400 mx-auto flex items-center justify-center font-bold text-xl">
+                          📝
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-charcoal-900 dark:text-white">
+                            {currentQuiz?.title || 'Course Mock Test'}
+                          </h4>
+                          <p className="text-xs text-charcoal-500 mt-1">
+                            {currentQuiz?.duration_minutes ? `${currentQuiz.duration_minutes} Minutes` : 'Timed Examination'}
+                            {currentQuiz?.total_questions ? ` • ${currentQuiz.total_questions} Questions` : ''}
+                          </p>
+                        </div>
+                        {onStartTest && currentQuiz?.id && (
+                          <button
+                            onClick={() => {
+                              setActiveCourseModal(null);
+                              onStartTest(currentQuiz.id);
+                            }}
+                            className="px-5 py-2 rounded-xl text-xs font-bold bg-institutional-600 hover:bg-institutional-700 text-white shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5"
+                          >
+                            <span>Launch Exam Simulator</span>
+                            <span>→</span>
+                          </button>
+                        )}
                       </div>
                     );
                   }
@@ -1718,9 +1779,14 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
 
                         {/* Options */}
                         <div className="space-y-2 pt-1">
-                          {currentQ.options.map((opt, optIdx) => {
+                          {currentQ.options && currentQ.options.map((opt, optIdx) => {
+                            const optId = typeof opt === 'object' && opt !== null && opt.id ? opt.id : String.fromCharCode(65 + optIdx);
+                            const optText = typeof opt === 'object' && opt !== null && opt.text ? opt.text : String(opt);
                             const isChosen = selectedOpt === optIdx;
-                            const isCorrect = optIdx === currentQ.correct_answer_index;
+                            const isCorrect = (
+                              (currentQ.correct_option && String(currentQ.correct_option).trim().toUpperCase() === String(optId).trim().toUpperCase()) ||
+                              (currentQ.correct_answer_index !== undefined && currentQ.correct_answer_index === optIdx)
+                            );
                             let btnStyle = 'border-charcoal-200 dark:border-charcoal-750 bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200';
 
                             if (isAnswered) {
@@ -1740,19 +1806,19 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                                 className={`w-full p-3 rounded-xl border text-left text-xs sm:text-sm transition-all flex items-center justify-between cursor-pointer ${btnStyle}`}
                               >
                                 <div className="flex items-center gap-3">
-                                  <span className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center ${
+                                  <span className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
                                     isAnswered && isCorrect
                                       ? 'bg-emerald-600 text-white'
                                       : isAnswered && isChosen && !isCorrect
                                       ? 'bg-rose-600 text-white'
                                       : 'bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-700 dark:text-charcoal-300'
                                   }`}>
-                                    {String.fromCharCode(65 + optIdx)}
+                                    {optId}
                                   </span>
-                                  <span>{opt}</span>
+                                  <span className="leading-snug">{optText}</span>
                                 </div>
                                 {isAnswered && isCorrect && (
-                                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0 ml-2">
                                     <CheckCircleIcon size={13} /> Correct
                                   </span>
                                 )}
@@ -1765,16 +1831,16 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
                       {/* Explanation */}
                       {(isAnswered || showExplanation) && (
                         <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 space-y-2">
-                          <div className="flex items-center justify-between text-xs font-bold">
+                          <div className="flex items-center justify-between text-xs font-bold flex-wrap gap-2">
                             <span className="uppercase text-blue-700 dark:text-blue-300 flex items-center gap-1">
                               <SparklesIcon size={13} /> Step-by-Step Derivation
                             </span>
                             <span className="text-emerald-600 dark:text-emerald-400">
-                              Correct: Option {String.fromCharCode(65 + currentQ.correct_answer_index)}
+                              Correct: Option {currentQ.correct_option || String.fromCharCode(65 + (currentQ.correct_answer_index ?? 0))}
                             </span>
                           </div>
                           <p className="text-xs text-charcoal-700 dark:text-charcoal-300 leading-relaxed font-sans whitespace-pre-line">
-                            {currentQ.explanation}
+                            {currentQ.solution_explanation || currentQ.explanation || 'Step-by-step solution derivation provided in course.'}
                           </p>
                         </div>
                       )}

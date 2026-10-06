@@ -253,6 +253,20 @@ async def seed_database(db: AsyncIOMotorDatabase) -> None:
                 "streak_history": ["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"],
                 "subscription_plan": "FREE",
                 "subscription_status": "INACTIVE",
+                "enrolled_courses": [
+                    {
+                        "course_id": "course-ssc-cgl-2026",
+                        "course_title": "SSC CGL 2026 Tier 1 & 2 Complete Mastery Batch",
+                        "target_exam": "SSC CGL",
+                        "tagline": "Full Syllabus Coverage + Topic Drills + PYQs",
+                        "thumbnail_icon": "SparklesIcon",
+                        "enrolled_at": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(),
+                        "amount_paid": 499.0,
+                        "payment_id": "pay_seed_alex_001",
+                        "order_id": "order_seed_alex_001",
+                        "status": "ACTIVE",
+                    }
+                ],
             },
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
@@ -261,16 +275,32 @@ async def seed_database(db: AsyncIOMotorDatabase) -> None:
         logger.info(f"Created default student user: {primary_student_email} (password: student123)")
     else:
         # Ensure password is student123 and role is student
+        existing_doc = await db.users.find_one({"email": primary_student_email})
+        existing_enrolled = (existing_doc.get("profile") or {}).get("enrolled_courses", []) if existing_doc else []
+        set_payload = {
+            "hashed_password": hash_password("student123"),
+            "role": "student",
+            "profile.current_streak": 6,
+            "profile.last_quiz_date": (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d"),
+        }
+        if not existing_enrolled:
+            set_payload["profile.enrolled_courses"] = [
+                {
+                    "course_id": "course-ssc-cgl-2026",
+                    "course_title": "SSC CGL 2026 Tier 1 & 2 Complete Mastery Batch",
+                    "target_exam": "SSC CGL",
+                    "tagline": "Full Syllabus Coverage + Topic Drills + PYQs",
+                    "thumbnail_icon": "SparklesIcon",
+                    "enrolled_at": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(),
+                    "amount_paid": 499.0,
+                    "payment_id": "pay_seed_alex_001",
+                    "order_id": "order_seed_alex_001",
+                    "status": "ACTIVE",
+                }
+            ]
         await db.users.update_one(
             {"email": primary_student_email},
-            {
-                "$set": {
-                    "hashed_password": hash_password("student123"),
-                    "role": "student",
-                    "profile.current_streak": 6,
-                    "profile.last_quiz_date": (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d"),
-                }
-            }
+            {"$set": set_payload}
         )
 
     # Legacy mock student
