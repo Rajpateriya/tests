@@ -67,14 +67,54 @@ const AdminSignIn = () => {
   );
 };
 
+// Address: /ai-pipeline/<step>?subject=<subject>&exam=<exam>, so a refresh or back keeps the step and subject.
+const readAddress = () => {
+  const stepId = window.location.pathname.split('/')[2];
+  const q = new URLSearchParams(window.location.search);
+  return {
+    step: STEPS.some((s) => s.id === stepId) ? stepId : 'structure',
+    subject: q.get('subject') || '',
+    exam: q.get('exam') || 'SSC CGL',
+  };
+};
+
 export const AiPipelinePage = ({ onGoToMocks }) => {
   const { user, token } = useAuth();
   const isRealAdmin = user?.role === 'admin' && !!token && !token.startsWith('demo');
 
-  const [step, setStep] = useState('structure');
+  const [boot] = useState(readAddress);
+  const [step, setStep] = useState(boot.step);
   const [subjects, setSubjects] = useState([]);
-  const [subject, setSubject] = useState('');
-  const [targetExam, setTargetExam] = useState('SSC CGL');
+  const [subject, setSubject] = useState(boot.subject);
+  const [targetExam, setTargetExam] = useState(boot.exam);
+
+  // Address bar follows the step (new history entry) and the subject/exam (replaces the entry).
+  const lastStep = React.useRef(null);
+  useEffect(() => {
+    const q = new URLSearchParams();
+    if (subject) q.set('subject', subject);
+    q.set('exam', targetExam);
+    const want = `/ai-pipeline/${step}?${q.toString()}`;
+    const have = window.location.pathname + window.location.search;
+    if (have !== want) {
+      const push = lastStep.current !== null && lastStep.current !== step;
+      window.history[push ? 'pushState' : 'replaceState'](null, '', want);
+    }
+    lastStep.current = step;
+  }, [step, subject, targetExam]);
+
+  // Back/forward: follow the address
+  useEffect(() => {
+    const onPop = () => {
+      if (!window.location.pathname.startsWith('/ai-pipeline/')) return;
+      const a = readAddress();
+      setStep(a.step);
+      setSubject(a.subject);
+      setTargetExam(a.exam);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [taxonomyDoc, setTaxonomyDoc] = useState(null);
   const [error, setError] = useState('');
   const [loadingSubjects, setLoadingSubjects] = useState(false);

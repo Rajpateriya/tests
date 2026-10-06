@@ -30,11 +30,35 @@ import { api } from './services/api';
  *    - Default Landing: 'admin' (Admin Studio & Operations).
  *    - Permitted: 'admin', 'pipeline', 'discovery', 'exam', 'results', 'subscription'.
  */
+// Each screen has its own address, so refresh, back/forward and shared links land on the right screen.
+// (Admin Studio adds its own tab and test in the address: /admin/courses, /admin/tests/<id>.)
+const VIEW_PATHS = {
+  discovery: '/',
+  dashboard: '/dashboard',
+  courses: '/courses',
+  subscription: '/subscription',
+  typing: '/typing',
+  admin: '/admin',
+  pipeline: '/ai-pipeline',
+  exam: '/exam',
+  results: '/results',
+};
+
+const viewFromPath = (pathname) => {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
+  if (path.startsWith('/ai-pipeline/')) return 'pipeline'; // /ai-pipeline/<step>?subject=...
+  return Object.keys(VIEW_PATHS).find((v) => VIEW_PATHS[v] === path) || null;
+};
+
 function AppContent() {
   const { user, isAdmin } = useAuth();
 
   // Dynamic default view based on initial auth state
   const [currentView, setCurrentView] = useState(() => {
+    // An address that names a screen wins. The exam and results screens need a live attempt, so they cannot be opened by address.
+    const fromUrl = viewFromPath(window.location.pathname);
+    if (fromUrl && fromUrl !== 'exam' && fromUrl !== 'results' && window.location.pathname !== '/') return fromUrl;
     const cachedUser = localStorage.getItem('govexam_user');
     if (!cachedUser) return 'discovery';
     try {
@@ -78,6 +102,24 @@ function AppContent() {
       }
     }
   }, [user, currentView]);
+
+  // Keep the address bar in step with the screen, and the screen in step with back/forward.
+  useEffect(() => {
+    if (viewFromPath(window.location.pathname) !== currentView) {
+      window.history.pushState(null, '', VIEW_PATHS[currentView] || '/');
+    }
+  }, [currentView]);
+
+  useEffect(() => {
+    const onPop = () => {
+      const v = viewFromPath(window.location.pathname);
+      // Going back into an exam or results screen that no longer exists falls back to the home screen.
+      if (v && v !== 'exam' && v !== 'results') setCurrentView(v);
+      else if (v === 'exam' || v === 'results') setCurrentView(user ? (isAdmin ? 'admin' : 'dashboard') : 'discovery');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [user, isAdmin]);
 
   const [pendingTestToStart, setPendingTestToStart] = useState(null);
 
@@ -217,6 +259,7 @@ function AppContent() {
           <CoursesPage
             onNavigateToDashboard={() => setCurrentView('dashboard')}
             onNavigateToQuiz={() => setCurrentView('discovery')}
+            onStartTest={handleStartTest}
           />
         )}
 
@@ -227,7 +270,7 @@ function AppContent() {
 
         {/* 7. Admin Studio Page (Admin only) */}
         {currentView === 'admin' && (
-          <AdminStudioPage onTestCreated={() => setCurrentView('discovery')} />
+          <AdminStudioPage />
         )}
 
         {/* 8. AI Question Pipeline (Admin only) */}

@@ -761,11 +761,71 @@ export const api = {
       });
     },
 
-    autoGenerateMock: async (params) => {
-      const q = new URLSearchParams(params);
-      return await request(`/admin/tests/auto-generate?${q.toString()}`, {
+    // Courses (admin): create a course, tag generated tests to it, edit, archive, see who enrolled
+    listCourses: async ({ search = '', skip = 0, limit = 500 } = {}) => {
+      const q = new URLSearchParams({ skip, limit });
+      if (search && search.trim()) q.append('search', search.trim());
+      return await request(`/courses/admin/all?${q.toString()}`);
+    },
+
+    // One course in full (drafts included): called each time a course is opened in Admin Studio
+    getCourse: async (courseId) => {
+      return await request(`/courses/admin/${courseId}`);
+    },
+
+    createCourse: async (payload) => {
+      return await request('/courses', {
         method: 'POST',
+        body: JSON.stringify(payload),
       });
+    },
+
+    updateCourse: async (courseId, payload) => {
+      return await request(`/courses/${courseId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    // Publish makes a draft course visible to users; unpublish takes it back to draft
+    publishCourse: async (courseId) => {
+      return await request(`/courses/${courseId}/publish`, { method: 'POST' });
+    },
+
+    unpublishCourse: async (courseId) => {
+      return await request(`/courses/${courseId}/unpublish`, { method: 'POST' });
+    },
+
+    getCourseEnrollments: async (courseId) => {
+      return await request(`/courses/${courseId}/enrollments`);
+    },
+
+    // Tests an admin can tag to a course: newest first, one page at a time, optional search
+    // over every test's title and subject (done on the server, not just on what is loaded).
+    listTests: async ({ search = '', skip = 0, limit = 20 } = {}) => {
+      const q = new URLSearchParams({ skip, limit });
+      if (search && search.trim()) q.append('search', search.trim());
+      return await request(`/tests?${q.toString()}`);
+    },
+
+    // One test in full (inactive too) with the courses it is in; its questions with answers; edit; delete
+    getTest: async (testId) => {
+      return await request(`/admin/tests/${testId}`);
+    },
+
+    getTestQuestions: async (testId) => {
+      return await request(`/admin/tests/${testId}/questions`);
+    },
+
+    updateTest: async (testId, payload) => {
+      return await request(`/admin/tests/${testId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    deleteTest: async (testId) => {
+      return await request(`/admin/tests/${testId}`, { method: 'DELETE' });
     },
 
     createTest: async (payload) => {

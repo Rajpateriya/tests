@@ -15,7 +15,7 @@ import {
   BookOpenIcon,
 } from '../components/Icons';
 
-export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard }) => {
+export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTest }) => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState('All');
@@ -64,11 +64,26 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard }) => {
     }
   };
 
+  // Generated mock tests tagged to a course by an admin: course quizzes with no embedded questions
+  // (the quiz id is the test id, and the questions live in the test itself).
+  const [courseTests, setCourseTests] = useState({});
+
+  const loadCourseTests = async (courseId) => {
+    try {
+      const detail = await api.courses.getDetail(courseId);
+      const tests = (detail?.quizzes || []).filter((q) => !(q.questions && q.questions.length));
+      setCourseTests((prev) => ({ ...prev, [courseId]: tests }));
+    } catch {
+      setCourseTests((prev) => ({ ...prev, [courseId]: [] }));
+    }
+  };
+
   const toggleExpandCourseQuizzes = (courseId) => {
     setExpandedQuizzes((prev) => ({
       ...prev,
       [courseId]: !prev[courseId],
     }));
+    if (!courseTests[courseId]) loadCourseTests(courseId);
   };
 
   const openQuizDetailModal = async (course, quiz) => {
@@ -389,6 +404,45 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard }) => {
                             >
                               Preview Answers
                             </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Full mock tests tagged to this course (real exam-room tests) */}
+                  {isExpanded && (courseTests[course.id] || []).length > 0 && (
+                    <div className="p-4 rounded-2xl bg-institutional-50/60 dark:bg-institutional-950/30 border border-institutional-200 dark:border-institutional-900/60 space-y-3 animate-fade-in">
+                      <div className="text-xs font-extrabold text-institutional-900 dark:text-institutional-200">
+                        Mock Tests in this Course ({courseTests[course.id].length})
+                      </div>
+
+                      <div className="space-y-2">
+                        {courseTests[course.id].map((t) => (
+                          <div
+                            key={t.id}
+                            className="p-3 rounded-xl bg-white dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 flex items-center justify-between gap-3 text-xs"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-bold text-charcoal-900 dark:text-white truncate">{t.title}</div>
+                              <div className="text-[10px] text-charcoal-500 dark:text-charcoal-400">
+                                {t.total_questions} Questions • {t.duration_minutes} min • +{t.positive_marks} / -{t.negative_marks}
+                              </div>
+                            </div>
+
+                            {isEnrolled ? (
+                              <button
+                                type="button"
+                                onClick={() => onStartTest && onStartTest(t.id)}
+                                className="px-2.5 py-1.5 rounded-lg bg-institutional-600 text-white font-bold text-[11px] hover:bg-institutional-700 transition-colors shrink-0"
+                              >
+                                Start Test
+                              </button>
+                            ) : (
+                              <span className="text-[11px] font-semibold text-charcoal-500 dark:text-charcoal-400 shrink-0">
+                                Enroll to unlock
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
