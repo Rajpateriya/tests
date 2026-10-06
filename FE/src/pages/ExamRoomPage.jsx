@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api, DEMO_QUESTIONS, isRealSession } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
@@ -9,6 +9,7 @@ import {
   ChevronRightIcon,
   HelpCircleIcon,
   CheckIcon,
+  CheckCircleIcon,
   PauseIcon,
   PlayIcon,
   XCircleIcon,
@@ -16,92 +17,67 @@ import {
   LayersIcon,
   SunIcon,
   MoonIcon,
+  RefreshCwIcon,
+  FileTextIcon,
+  ShieldIcon,
+  SparklesIcon,
+  UserIcon,
+  BookmarkIcon,
+  ClipboardCheckIcon,
+  LockIcon,
 } from '../components/Icons';
 
-// Palette tile colours: green = answered, red = not answered, purple = review, white = not visited.
-// Switching to another tab/window more than this many times ends the test.
+// Switching away from the tab more than this many times ends the exam
 const MAX_TAB_SWITCHES = 2;
 
-// Same tile colours and legend as the landing-page exam preview.
-const TILE_STYLES = {
-  ANSWERED: 'bg-emerald-600 text-white font-bold',
-  NOT_ANSWERED: 'bg-rose-600 text-white font-bold',
-  MARKED_FOR_REVIEW: 'bg-purple-600 text-white font-bold',
-  ANSWERED_AND_MARKED_FOR_REVIEW: 'bg-purple-600 text-white font-bold',
-  NOT_VISITED: 'bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700',
-};
-const TILE_RING = {
-  ANSWERED: 'ring-emerald-400',
-  NOT_ANSWERED: 'ring-rose-400',
-  MARKED_FOR_REVIEW: 'ring-purple-400',
-  ANSWERED_AND_MARKED_FOR_REVIEW: 'ring-purple-400',
-  NOT_VISITED: 'ring-charcoal-400',
-};
-const tileClass = (state) => TILE_STYLES[state] || TILE_STYLES.NOT_VISITED;
-const tileRing = (state) => TILE_RING[state] || TILE_RING.NOT_VISITED;
-
-const PaletteLegend = () => (
-  <div className="grid grid-cols-2 gap-2 text-[10px] text-charcoal-600 dark:text-charcoal-400 py-3 border-b border-charcoal-200 dark:border-charcoal-700">
-    <div className="flex items-center gap-1.5">
-      <span className="w-3.5 h-3.5 rounded bg-emerald-600 text-white flex items-center justify-center font-bold text-[8px]">✓</span>
-      <span>Answered</span>
-    </div>
-    <div className="flex items-center gap-1.5">
-      <span className="w-3.5 h-3.5 rounded bg-rose-600 text-white flex items-center justify-center font-bold text-[8px]">✕</span>
-      <span>Not Answered</span>
-    </div>
-    <div className="flex items-center gap-1.5">
-      <span className="w-3.5 h-3.5 rounded bg-purple-600 text-white flex items-center justify-center font-bold text-[8px]">●</span>
-      <span>Review</span>
-    </div>
-    <div className="flex items-center gap-1.5">
-      <span className="w-3.5 h-3.5 rounded bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300 flex items-center justify-center font-bold text-[8px]">-</span>
-      <span>Not Visited</span>
-    </div>
-  </div>
-);
-
 /**
- * ExamRoomPage — Focused, Distraction-Free Assessment Interface
- * Core UX:
- * - Unobtrusive sticky top bar with countdown timer, test title, Pause and Submit actions.
- * - Distraction-free question zone with 1.6 line-height and large readable question typography.
- * - Entire clickable option block rows with custom radio buttons and subtle selected states.
- * - Desktop sidebar palette + Mobile collapsible bottom drawer sheet.
- * - Palette state tracking: Answered (Green), Unattempted (Gray outline), Marked for Review (Amber/Purple).
- * - Full Pause / Resume session support and Submit confirmation modal.
- * - Heartbeat synchronization to prevent state loss on tab refresh.
+ * Standard TCS iON / TestAce Computer Based Test (CBT) Assessment Room
+ * Matches the official examination portal layout:
+ * 1. Top Header: Logo, Live Assessment status, Section Timers, Candidate Node & Info.
+ * 2. Sub-Header Toolbar: Section tabs, Marking scheme, Clock, Language dropdown, Q.Paper, Instructions, Font Zoom.
+ * 3. Left Question Pane: Direction/Data Interpretation box, Question statement, Option cards with radio checks.
+ * 4. Action Footer: Mark for Review & Next, Clear Response, Save & Previous, Save & Next.
+ * 5. Right Sidebar: Proctored webcam frame, Palette Legend, Interactive Question Grid, Attempt Rate, Submit Test.
+ * 6. Bottom Strip: Assessment Engine Licensing & Proctoring Status.
+ * 7. On-Submit Modal: TCS iON Candidate Audit Format Exam Submission Summary.
  */
 export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  // Core Data States
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({}); // question_id -> option_id
-  const [paletteStates, setPaletteStates] = useState({}); // question_id -> 'NOT_VISITED'|'NOT_ANSWERED'|'ANSWERED'|'MARKED_FOR_REVIEW'|'ANSWERED_AND_MARKED_FOR_REVIEW'
+  const [paletteStates, setPaletteStates] = useState({}); // question_id -> status
   const [timeSpent, setTimeSpent] = useState({}); // question_id -> seconds
   const [remainingSeconds, setRemainingSeconds] = useState(3600);
 
-  // Modals & States
+  // UI & Utility Controls
   const [isPaused, setIsPaused] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [isDeclared, setIsDeclared] = useState(false);
+  const [showQuestionPaperModal, setShowQuestionPaperModal] = useState(false);
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
+  const [fontZoom, setFontZoom] = useState('normal'); // 'sm' | 'normal' | 'lg'
+  const [selectedLanguage, setSelectedLanguage] = useState('English');
+
+  // Anti-Cheat & Tab Integrity
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [showTabWarning, setShowTabWarning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [terminated, setTerminated] = useState(null);
+  const [submitError, setSubmitError] = useState('');
 
   const attemptId = attemptSession?.attempt_id || 'demo-attempt';
   const timerRef = useRef(null);
   const syncTimerRef = useRef(null);
-
-  // Tab-switch rule: more than MAX_TAB_SWITCHES switches ends (submits) the test.
   const tabCountRef = useRef(0);
   const submittedRef = useRef(false);
-  const latestRef = useRef({}); // always the newest answers, so a submit from an event handler isn't stale
-  const [terminated, setTerminated] = useState(null); // result of a test ended for tab switching
-  const [submitError, setSubmitError] = useState(''); // set when a submit could not be saved
+  const latestRef = useRef({});
   const lastReasonRef = useRef(undefined);
   latestRef.current = { answers, timeSpent, paletteStates };
   const tabStorageKey = `tab-switches-${attemptId}`;
@@ -121,7 +97,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     try {
       const data = await api.attempts.getQuestions(attemptId);
       if (isRealSession() && !data?.questions?.length) {
-        throw new Error('This test has no questions.');
+        throw new Error('This examination has no questions.');
       }
       setQuestions(data.questions || DEMO_QUESTIONS);
       setRemainingSeconds(
@@ -130,7 +106,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       setAnswers(data.answers || {});
       setTimeSpent(data.time_spent_per_question || {});
 
-      // Setup initial palette
+      // Initialize palette
       const initialPalette = data.palette_states || {};
       (data.questions || DEMO_QUESTIONS).forEach((q, idx) => {
         if (!initialPalette[q.id]) {
@@ -140,12 +116,11 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       setPaletteStates(initialPalette);
       setCurrentIndex(data.current_question_index || 0);
 
-      // Keep the tab-switch count across a page reload.
       let savedSwitches = 0;
       try {
         savedSwitches = Number(sessionStorage.getItem(tabStorageKey)) || 0;
       } catch {
-        // storage unavailable: start from 0
+        // storage unavailable
       }
       tabCountRef.current = savedSwitches;
       setTabSwitchCount(savedSwitches);
@@ -153,8 +128,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     } catch (err) {
       console.warn('Fallback loading active attempt questions:', err);
       if (isRealSession()) {
-        // A real attempt must show its real questions or a real error — never demo ones.
-        setLoadError(err.message || 'Could not load the questions for this attempt.');
+        setLoadError(err.message || 'Could not load questions for this attempt.');
         return;
       }
       setQuestions(DEMO_QUESTIONS);
@@ -168,7 +142,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }
   };
 
-  // 2. Countdown Timer (pauses when isPaused is true)
+  // 2. Countdown Timer
   useEffect(() => {
     if (loading || isPaused) {
       clearInterval(timerRef.current);
@@ -185,7 +159,6 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
         return prev - 1;
       });
 
-      // Track active question dwell time
       const currentQ = questions[currentIndex];
       if (currentQ) {
         setTimeSpent((prev) => ({
@@ -198,7 +171,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     return () => clearInterval(timerRef.current);
   }, [loading, isPaused, currentIndex, questions]);
 
-  // 3. Periodic Background Sync (every 8 seconds)
+  // 3. Periodic Background Sync (every 8s)
   useEffect(() => {
     if (loading || isPaused) return;
 
@@ -219,11 +192,11 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
         tab_switch_count: tabSwitchCount,
       });
     } catch (err) {
-      // Background retry silently
+      // background silent retry
     }
   };
 
-  // 4. Anti-Cheat: Detect Tab Switch. More than MAX_TAB_SWITCHES ends the test.
+  // 4. Anti-Cheat: Detect Tab Switch
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden || isPaused || submittedRef.current) return;
@@ -232,7 +205,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       try {
         sessionStorage.setItem(tabStorageKey, String(count));
       } catch {
-        // storage unavailable: the in-memory count still applies
+        // memory fallback
       }
       setTabSwitchCount(count);
       setShowTabWarning(true);
@@ -243,12 +216,29 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isPaused, tabStorageKey]);
 
-  // Reloaded after already going over the limit: end it right away.
   useEffect(() => {
     if (!loading && !loadError && tabCountRef.current > MAX_TAB_SWITCHES) submitExam('tab_switch');
   }, [loading]);
 
-  // Format seconds to HH:MM:SS or MM:SS
+  // Esc key cancels submit modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showSubmitModal) {
+        setShowSubmitModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSubmitModal]);
+
+  // Reset declaration checkbox when submit modal opens
+  useEffect(() => {
+    if (showSubmitModal) {
+      setIsDeclared(false);
+    }
+  }, [showSubmitModal]);
+
+  // Time formatter
   const formatTime = (secs) => {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
@@ -257,9 +247,26 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
   };
 
-  const currentQuestion = questions[currentIndex] || questions[0];
+  // Sections decomposition
+  const sections = useMemo(() => {
+    if (!questions.length) return [];
+    const map = {};
+    questions.forEach((q, idx) => {
+      const s = q.subject || 'General Section';
+      if (!map[s]) map[s] = [];
+      map[s].push(idx);
+    });
+    return Object.keys(map).map((name) => ({
+      name,
+      indices: map[name],
+      count: map[name].length,
+    }));
+  }, [questions]);
 
-  // Option selection handler
+  const currentQuestion = questions[currentIndex] || questions[0];
+  const currentSection = sections.find((s) => s.indices.includes(currentIndex)) || sections[0];
+
+  // Option selection
   const handleSelectOption = (optionId) => {
     if (!currentQuestion || isPaused) return;
     setAnswers((prev) => ({
@@ -268,7 +275,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }));
   };
 
-  // Action: Clear Response
+  // Clear Response
   const handleClearResponse = () => {
     if (!currentQuestion || isPaused) return;
     setAnswers((prev) => {
@@ -283,7 +290,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }));
   };
 
-  // Action: Toggle Mark for Review
+  // Toggle Mark for Review
   const handleToggleMarkForReview = () => {
     if (!currentQuestion || isPaused) return;
     const isAnswered = !!answers[currentQuestion.id];
@@ -302,7 +309,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }));
   };
 
-  // Action: Save & Next
+  // Save & Next
   const handleSaveAndNext = () => {
     if (!currentQuestion || isPaused) return;
     const isAnswered = !!answers[currentQuestion.id];
@@ -312,6 +319,20 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     if (currentState === 'MARKED_FOR_REVIEW' || currentState === 'ANSWERED_AND_MARKED_FOR_REVIEW') {
       finalState = isAnswered ? 'ANSWERED_AND_MARKED_FOR_REVIEW' : 'MARKED_FOR_REVIEW';
     }
+
+    setPaletteStates((prev) => ({
+      ...prev,
+      [currentQuestion.id]: finalState,
+    }));
+
+    goToNextQuestion();
+  };
+
+  // Mark for Review & Next (Standard TCS iON behavior)
+  const handleMarkForReviewAndNext = () => {
+    if (!currentQuestion || isPaused) return;
+    const isAnswered = !!answers[currentQuestion.id];
+    const finalState = isAnswered ? 'ANSWERED_AND_MARKED_FOR_REVIEW' : 'MARKED_FOR_REVIEW';
 
     setPaletteStates((prev) => ({
       ...prev,
@@ -350,26 +371,123 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       }));
     }
     setCurrentIndex(idx);
-    setShowMobileDrawer(false); // Close mobile drawer when question chosen
+    setShowMobileDrawer(false);
   };
 
-  // Palette counts
-  const counts = {
-    answered: 0,
-    notAnswered: 0,
-    notVisited: 0,
-    markedReview: 0,
-  };
+  // Palette Counts
+  const counts = useMemo(() => {
+    let answered = 0;
+    let notAnswered = 0;
+    let notVisited = 0;
+    let markedReview = 0;
+    let ansAndMarkedReview = 0;
 
-  questions.forEach((q) => {
-    const state = paletteStates[q.id] || 'NOT_VISITED';
-    if (state === 'ANSWERED') counts.answered++;
-    else if (state === 'NOT_ANSWERED') counts.notAnswered++;
-    else if (state === 'MARKED_FOR_REVIEW' || state === 'ANSWERED_AND_MARKED_FOR_REVIEW') counts.markedReview++;
-    else counts.notVisited++;
-  });
+    questions.forEach((q) => {
+      const s = paletteStates[q.id] || 'NOT_VISITED';
+      if (s === 'ANSWERED') answered++;
+      else if (s === 'NOT_ANSWERED') notAnswered++;
+      else if (s === 'MARKED_FOR_REVIEW') markedReview++;
+      else if (s === 'ANSWERED_AND_MARKED_FOR_REVIEW') ansAndMarkedReview++;
+      else notVisited++;
+    });
 
-  // Pause Exam Action
+    return {
+      answered,
+      notAnswered,
+      notVisited,
+      markedReview,
+      ansAndMarkedReview,
+      totalMarked: markedReview + ansAndMarkedReview,
+    };
+  }, [questions, paletteStates]);
+
+  // Section Attempt Rate
+  const sectionStats = useMemo(() => {
+    if (!currentSection) return { answered: 0, total: 1, percent: 0 };
+    const secQuestions = currentSection.indices.map((i) => questions[i]);
+    const ansCount = secQuestions.filter(
+      (q) => paletteStates[q.id] === 'ANSWERED' || paletteStates[q.id] === 'ANSWERED_AND_MARKED_FOR_REVIEW'
+    ).length;
+    return {
+      answered: ansCount,
+      total: secQuestions.length,
+      percent: Math.round((ansCount / secQuestions.length) * 100),
+    };
+  }, [currentSection, questions, paletteStates]);
+
+  // Sectional Performance Matrix for Submission Modal (TCS iON Format)
+  const sectionalMatrix = useMemo(() => {
+    if (!sections.length) return [];
+    const dotColors = ['bg-blue-600', 'bg-slate-700', 'bg-emerald-600', 'bg-purple-600', 'bg-amber-600'];
+
+    return sections.map((sec, secIdx) => {
+      const secQuestions = sec.indices.map((i) => questions[i]);
+      let answered = 0;
+      let notAnswered = 0;
+      let markedReview = 0;
+      let ansAndMarked = 0;
+      let notVisited = 0;
+
+      secQuestions.forEach((q) => {
+        const s = paletteStates[q.id] || 'NOT_VISITED';
+        if (s === 'ANSWERED') answered++;
+        else if (s === 'NOT_ANSWERED') notAnswered++;
+        else if (s === 'MARKED_FOR_REVIEW') markedReview++;
+        else if (s === 'ANSWERED_AND_MARKED_FOR_REVIEW') ansAndMarked++;
+        else notVisited++;
+      });
+
+      return {
+        name: sec.name,
+        dotColor: dotColors[secIdx % dotColors.length],
+        total: sec.count,
+        answered,
+        notAnswered,
+        markedReview,
+        ansAndMarked,
+        notVisited,
+      };
+    });
+  }, [sections, questions, paletteStates]);
+
+  const matrixTotals = useMemo(() => {
+    const totals = {
+      total: questions.length,
+      answered: 0,
+      notAnswered: 0,
+      markedReview: 0,
+      ansAndMarked: 0,
+      notVisited: 0,
+    };
+
+    sectionalMatrix.forEach((m) => {
+      totals.answered += m.answered;
+      totals.notAnswered += m.notAnswered;
+      totals.markedReview += m.markedReview;
+      totals.ansAndMarked += m.ansAndMarked;
+      totals.notVisited += m.notVisited;
+    });
+
+    const netAttempted = totals.answered + totals.ansAndMarked;
+    const unattempted = totals.notAnswered + totals.notVisited;
+    const attemptedPercent = totals.total > 0 ? Math.round((netAttempted / totals.total) * 100) : 0;
+
+    return {
+      ...totals,
+      netAttempted,
+      unattempted,
+      attemptedPercent,
+    };
+  }, [sectionalMatrix, questions]);
+
+  // Pacing & Time for Submission Summary
+  const totalDurationMins = attemptSession?.duration_minutes || 60;
+  const totalDurationSecs = totalDurationMins * 60;
+  const timeElapsedSecs = Math.max(0, totalDurationSecs - remainingSeconds);
+  const elapsedFormatted = formatTime(timeElapsedSecs);
+  const remainingMinutes = Math.floor(remainingSeconds / 60);
+  const remainingSecsOnly = remainingSeconds % 60;
+
   const handlePauseExam = async () => {
     setIsPaused(true);
     try {
@@ -379,7 +497,6 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }
   };
 
-  // Resume Exam Action
   const handleResumeExam = async () => {
     setIsPaused(false);
     try {
@@ -389,15 +506,12 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }
   };
 
-  // Final Submit
   const handleAutoSubmit = () => {
     submitExam();
   };
 
-  // `reason === 'tab_switch'`: the test is being ended for switching tabs too often, so show
-  // why before moving on to the result instead of jumping straight to it.
   const submitExam = async (reason) => {
-    if (submittedRef.current) return; // one submit only (timer, button and tab rule can race)
+    if (submittedRef.current) return;
     submittedRef.current = true;
     lastReasonRef.current = typeof reason === 'string' ? reason : undefined;
     setSubmitError('');
@@ -412,7 +526,6 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       ...(reason === 'tab_switch' ? { ended_reason: 'tab_switch' } : {}),
     };
 
-    // Up to 3 tries (1s, then 2s apart) so a short network drop doesn't lose the submission.
     let result = null;
     let lastError = null;
     for (let attempt = 1; attempt <= 3 && !result; attempt += 1) {
@@ -427,11 +540,9 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     setSubmitting(false);
 
     if (!result) {
-      // Not saved: keep everything on screen and let the student retry, instead of showing
-      // a result that does not exist.
       submittedRef.current = false;
       setShowSubmitModal(false);
-      setSubmitError(lastError?.message || 'Could not reach the server.');
+      setSubmitError(lastError?.message || 'Could not connect to assessment server.');
       return;
     }
 
@@ -443,25 +554,46 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     }
   };
 
-  // Timer urgency states
-  const isTimerDanger = remainingSeconds < 60;
-  const isTimerWarning = remainingSeconds < 300 && !isTimerDanger;
-
+  const isTimerDanger = remainingSeconds < 300;
   const isCurrentMarkedForReview =
     paletteStates[currentQuestion?.id] === 'MARKED_FOR_REVIEW' ||
     paletteStates[currentQuestion?.id] === 'ANSWERED_AND_MARKED_FOR_REVIEW';
 
-  // Skeleton screen while initializing
+  // Tile Class & Badge Helper
+  const getTileClasses = (state, isCurrent) => {
+    let bg = 'bg-slate-100 dark:bg-charcoal-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-charcoal-700';
+
+    if (state === 'ANSWERED') {
+      bg = 'bg-emerald-600 text-white font-bold border border-emerald-700';
+    } else if (state === 'NOT_ANSWERED') {
+      bg = 'bg-rose-600 text-white font-bold border border-rose-700';
+    } else if (state === 'MARKED_FOR_REVIEW' || state === 'ANSWERED_AND_MARKED_FOR_REVIEW') {
+      bg = 'bg-slate-700 dark:bg-slate-600 text-white font-bold border border-slate-800';
+    }
+
+    if (isCurrent) {
+      return `${bg} ring-3 ring-blue-600 shadow-md scale-105 z-10`;
+    }
+    return bg;
+  };
+
+  // Font Size Stying
+  const getQuestionFontSize = () => {
+    if (fontZoom === 'sm') return 'text-xs sm:text-sm';
+    if (fontZoom === 'lg') return 'text-base sm:text-lg';
+    return 'text-sm sm:text-base';
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 space-y-4 font-sans">
-        <div className="w-12 h-12 rounded-full border-4 border-charcoal-200 border-t-charcoal-800 animate-spin" />
-        <div className="text-center space-y-1">
-          <h2 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">
-            Initializing Secure Exam Engine
+      <div className="min-h-screen bg-slate-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 space-y-4 font-sans text-center">
+        <div className="w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin" />
+        <div>
+          <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
+            Launching CBT Assessment Portal...
           </h2>
-          <p className="text-xs text-charcoal-500">
-            Verifying candidate token, questions encryption, and server-side timer...
+          <p className="text-xs text-slate-500 mt-1">
+            Synchronizing encrypted candidate terminal, section cutoffs, and proctored stream...
           </p>
         </div>
       </div>
@@ -470,23 +602,22 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
   if (submitError) {
     return (
-      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 font-sans">
-        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-amber-200 dark:border-amber-900 bg-white dark:bg-charcoal-900 p-6 shadow-subtle">
-          <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center border border-amber-200 dark:border-amber-800">
-            <AlertTriangleIcon size={22} />
+      <div className="min-h-screen bg-slate-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-charcoal-900 p-6 shadow-md">
+          <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center border border-amber-300">
+            <AlertTriangleIcon size={24} />
           </div>
-          <h2 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">Your answers have not been saved yet</h2>
-          <p className="text-sm text-charcoal-600 dark:text-charcoal-300">
-            The submission could not be sent ({submitError}). Check your internet connection, keep this tab open, and try again.
-            Your answers are still here.
+          <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Response Sync Interrupted</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-300">
+            {submitError}. Please maintain active connection. Your answers are preserved in local buffer.
           </p>
           <button
             type="button"
             disabled={submitting}
             onClick={() => submitExam(lastReasonRef.current)}
-            className="px-4 py-2 rounded-lg bg-institutional-600 hover:bg-institutional-700 disabled:opacity-60 text-white text-xs font-bold"
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold cursor-pointer"
           >
-            {submitting ? 'Submitting…' : 'Try again'}
+            {submitting ? 'Re-Submitting...' : 'Retry Submission Now'}
           </button>
         </div>
       </div>
@@ -495,22 +626,21 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
   if (terminated) {
     return (
-      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 font-sans">
-        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-rose-200 dark:border-rose-900 bg-white dark:bg-charcoal-900 p-6 shadow-subtle">
-          <div className="w-12 h-12 mx-auto rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center border border-rose-200 dark:border-rose-800">
-            <AlertTriangleIcon size={22} />
+      <div className="min-h-screen bg-slate-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-rose-300 dark:border-rose-900 bg-white dark:bg-charcoal-900 p-6 shadow-md">
+          <div className="w-12 h-12 mx-auto rounded-full bg-rose-50 dark:bg-rose-950 text-rose-600 flex items-center justify-center border border-rose-300">
+            <AlertTriangleIcon size={24} />
           </div>
-          <h2 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100">Your test has ended</h2>
-          <p className="text-sm text-charcoal-600 dark:text-charcoal-300">
-            You switched away from the exam tab more than {MAX_TAB_SWITCHES} times, so the test was ended and the answers you had
-            saved so far were submitted.
+          <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Examination Session Terminated</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-300">
+            Tab switch threshold exceeded ({MAX_TAB_SWITCHES} max allowed). In accordance with proctoring standards, all responses recorded up to this point have been locked and submitted.
           </p>
           <button
             type="button"
             onClick={() => onTestCompleted(terminated)}
-            className="px-4 py-2 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white text-xs font-bold"
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
           >
-            View result
+            View Official Scorecard →
           </button>
         </div>
       </div>
@@ -519,13 +649,13 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 space-y-4 font-sans">
-        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-red-200 bg-white dark:bg-charcoal-900 p-6 shadow-subtle">
-          <h2 className="text-base font-bold text-charcoal-800 dark:text-charcoal-100">Could not load this test</h2>
-          <p className="text-sm text-charcoal-600 dark:text-charcoal-300">{loadError}</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-charcoal-950 flex flex-col items-center justify-center p-6 space-y-4 font-sans">
+        <div className="max-w-md w-full text-center space-y-3 rounded-2xl border border-rose-200 bg-white dark:bg-charcoal-900 p-6 shadow-md">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">Unable to Load Assessment</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-300">{loadError}</p>
           <div className="flex justify-center gap-2 pt-1">
-            <button type="button" onClick={initExamSession} className="px-4 py-2 rounded-lg bg-charcoal-900 text-white text-xs font-bold">Try again</button>
-            <button type="button" onClick={onExit} className="px-4 py-2 rounded-lg border border-charcoal-300 text-xs font-bold text-charcoal-700 dark:text-charcoal-200">Back</button>
+            <button type="button" onClick={initExamSession} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold cursor-pointer">Retry</button>
+            <button type="button" onClick={onExit} className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Back to Dashboard</button>
           </div>
         </div>
       </div>
@@ -533,422 +663,1029 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero selection:bg-institutional-100">
-      {/* Same ambient glows as the landing page */}
-      <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
-      <div className="absolute top-[480px] -left-36 w-[550px] h-[550px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
-      <div className="absolute top-[900px] -right-36 w-[600px] h-[600px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
+    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-charcoal-950 text-slate-900 dark:text-slate-100 font-sans select-none">
+      {/* =========================================================================
+          1. TOP MAIN HEADER BAR (TCS iON CBT Assessment Portal Style)
+          ========================================================================= */}
+      <header className="bg-white dark:bg-charcoal-900 border-b border-slate-200 dark:border-charcoal-800 px-4 sm:px-6 py-2.5 shadow-xs sticky top-0 z-40">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          {/* Left: Brand Emblem + Exam Title */}
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Hex Logo Emblem */}
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
+              <ShieldIcon size={20} />
+            </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-      <section className="relative rounded-3xl p-5 sm:p-8 shadow-card space-y-6 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200/90 dark:border-charcoal-800/90 overflow-hidden bg-terminal-pattern">
-      {/* ========================================================================= */}
-      {/* 1. STICKY TOP BAR (Academic, Focused, Clear Timer)                         */}
-      {/* ========================================================================= */}
-      <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
-        {/* Left: Test Title & Section Indicator */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center justify-center w-8 h-8 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-mono font-bold text-xs">
-            TCS
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="font-extrabold text-blue-900 dark:text-blue-400 text-sm tracking-tight">TESTACE</span>
+                <span className="text-[10px] text-slate-400 font-mono">|</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">ONLINE EXAM PORTAL</span>
+              </div>
+              <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate max-w-sm sm:max-w-md mt-1">
+                {attemptSession?.test_title || 'SBI PO Prelims All-India Live Mock #04'}
+              </h1>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>LIVE ASSESSMENT SESSION</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100 truncate max-w-xs sm:max-w-md">
-              {attemptSession?.test_title || 'Mock Examination'}
-            </h1>
-            <div className="flex items-center gap-2 text-xs text-charcoal-500 dark:text-charcoal-400">
-              <span className="font-medium text-institutional-700 dark:text-institutional-400">
-                {currentQuestion?.subject || 'General Section'}
-              </span>
-              <span>•</span>
-              <span>Section 1 of 1</span>
+
+          {/* Center: Top Section Timers (Dynamic Multi-Section Pills) */}
+          <div className="hidden md:flex items-center gap-2 overflow-x-auto py-1">
+            {sections.map((sec) => {
+              const isActiveSec = sec.name === currentSection?.name;
+              return (
+                <div
+                  key={sec.name}
+                  onClick={() => jumpToQuestion(sec.indices[0])}
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isActiveSec
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-charcoal-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-charcoal-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span className="truncate max-w-[120px]">{sec.name}</span>
+                  <span className={`px-2 py-0.5 rounded font-mono text-[11px] font-bold ${
+                    isActiveSec ? 'bg-white/20 text-white' : 'bg-white dark:bg-charcoal-700 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {isActiveSec ? formatTime(remainingSeconds) : '20:00'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right: Quick Tools & Candidate Roll */}
+          <div className="flex items-center gap-2 sm:gap-3 self-end lg:self-auto shrink-0">
+            {/* View in: ENG */}
+            <span className="text-[11px] font-bold text-slate-500 hidden sm:inline">
+              View in: <strong className="text-slate-800 dark:text-slate-200">ENG</strong>
+            </span>
+
+            {/* Summary Modal Button */}
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-slate-100 dark:hover:bg-charcoal-750 text-slate-700 dark:text-slate-200 cursor-pointer"
+            >
+              Summary
+            </button>
+
+            {/* Instructions Button */}
+            <button
+              onClick={() => setShowInstructionsModal(true)}
+              className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-slate-100 dark:hover:bg-charcoal-750 text-slate-700 dark:text-slate-200 cursor-pointer"
+            >
+              Instructions
+            </button>
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-charcoal-800"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+            </button>
+
+            {/* Candidate Metadata Block */}
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-charcoal-700">
+              <div className="text-right leading-tight hidden sm:block">
+                <div className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[110px]">
+                  {user?.full_name || 'Aditya K.'}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  Roll: {user?.id ? '240' + String(user.id).slice(-5) : '24098132'}
+                </div>
+              </div>
+
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'A'}
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Center: Unobtrusive Countdown Timer */}
-        <div
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border font-mono text-sm sm:text-base font-bold transition-colors ${
-            isTimerDanger
-              ? 'bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 animate-pulse'
-              : isTimerWarning
-              ? 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300'
-              : 'bg-charcoal-100 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200'
-          }`}
-          aria-label={`Time remaining: ${formatTime(remainingSeconds)}`}
-        >
-          <ClockIcon size={16} />
-          <span>{formatTime(remainingSeconds)}</span>
-        </div>
-
-        {/* Right: Theme Toggle, Pause & Submit Actions */}
-        <div className="flex items-center gap-2">
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            className="p-1.5 rounded-lg text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors focus:outline-none"
-            aria-label="Toggle theme"
-            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
-          </button>
-
-          {/* Pause Exam Button */}
-          <button
-            onClick={handlePauseExam}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-charcoal-700 dark:text-charcoal-300 bg-white dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 hover:bg-charcoal-100 dark:hover:bg-charcoal-700/60 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-charcoal-400"
-          >
-            <PauseIcon size={14} />
-            <span>Pause</span>
-          </button>
-
-          {/* Submit Test Button */}
-          <button
-            onClick={() => setShowSubmitModal(true)}
-            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 dark:bg-institutional-700 dark:hover:bg-institutional-600 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-institutional-500 shadow-sm"
-          >
-            <span>Submit Exam</span>
-          </button>
-        </div>
       </header>
+
+      {/* =========================================================================
+          2. SECONDARY SUB-HEADER TOOLBAR (Sections + Time Left + Meta Strip)
+          ========================================================================= */}
+      <nav className="bg-slate-50 dark:bg-charcoal-900/90 border-b border-slate-200 dark:border-charcoal-800 px-4 sm:px-6 py-2 shadow-2xs">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          {/* Section Selection Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            {sections.map((sec) => {
+              const isActive = sec.name === currentSection?.name;
+              return (
+                <button
+                  key={sec.name}
+                  onClick={() => jumpToQuestion(sec.indices[0])}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-charcoal-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-charcoal-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{sec.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-charcoal-700 text-slate-600 dark:text-slate-300'
+                  }`}>
+                    {sec.count} Qs
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Meta & Utility Strip (Time Left, Question Paper, Instructions, Font Zoom) */}
+          <div className="flex flex-wrap items-center gap-3 text-xs self-start md:self-auto">
+            {/* Marking Scheme Pill */}
+            <div className="flex items-center gap-1 font-mono font-bold text-[11px] bg-white dark:bg-charcoal-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-charcoal-700">
+              <span className="text-emerald-600">+1.00</span>
+              <span className="text-slate-300 dark:text-slate-600">/</span>
+              <span className="text-rose-600">-0.25</span>
+            </div>
+
+            {/* Time Left Clock */}
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border font-mono font-bold text-xs ${
+              isTimerDanger
+                ? 'bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 animate-pulse'
+                : 'bg-white dark:bg-charcoal-800 border-slate-200 dark:border-charcoal-700 text-slate-800 dark:text-slate-200'
+            }`}>
+              <ClockIcon size={14} className={isTimerDanger ? 'text-rose-600' : 'text-amber-500'} />
+              <span>TIME LEFT:</span>
+              <span className={isTimerDanger ? 'text-rose-600 font-extrabold' : 'text-rose-600 font-extrabold'}>
+                {formatTime(remainingSeconds)}
+              </span>
+            </div>
+
+            {/* Language Dropdown */}
+            <div className="relative">
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                <option value="English">View in: English</option>
+                <option value="Hindi">View in: Hindi (हिंदी)</option>
+              </select>
+            </div>
+
+            {/* Question Paper Button */}
+            <button
+              onClick={() => setShowQuestionPaperModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-slate-100 border border-slate-200 dark:border-charcoal-700 font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+            >
+              <FileTextIcon size={12} />
+              <span>Q. Paper</span>
+            </button>
+
+            {/* Instructions Button */}
+            <button
+              onClick={() => setShowInstructionsModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-slate-100 border border-slate-200 dark:border-charcoal-700 font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+            >
+              <HelpCircleIcon size={12} />
+              <span>Instructions</span>
+            </button>
+
+            {/* Font Size Zoom Controller */}
+            <div className="flex items-center gap-0.5 bg-white dark:bg-charcoal-800 p-0.5 rounded-lg border border-slate-200 dark:border-charcoal-700">
+              <button
+                onClick={() => setFontZoom('sm')}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold ${fontZoom === 'sm' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                title="Small Font"
+              >
+                A-
+              </button>
+              <button
+                onClick={() => setFontZoom('normal')}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold ${fontZoom === 'normal' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                title="Default Font"
+              >
+                A
+              </button>
+              <button
+                onClick={() => setFontZoom('lg')}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold ${fontZoom === 'lg' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                title="Large Font"
+              >
+                A+
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
 
       {/* Tab Switch Alert Banner */}
       {showTabWarning && (
-        <div className="relative z-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200">
+        <div className="bg-amber-50 dark:bg-amber-950/60 border-b border-amber-300 dark:border-amber-800 px-4 sm:px-6 py-2 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200">
           <div className="flex items-center gap-2">
             <AlertTriangleIcon size={16} className="text-amber-600 shrink-0" />
             <span>
               <strong>Integrity Notice:</strong> Tab switch detected ({tabSwitchCount} of {MAX_TAB_SWITCHES} allowed).{' '}
               {tabSwitchCount >= MAX_TAB_SWITCHES
-                ? 'One more switch will end your test.'
-                : 'Please stay in the exam tab — switching more than twice ends your test.'}
+                ? 'One more switch will terminate and submit your assessment.'
+                : 'Please remain inside the examination window.'}
             </span>
           </div>
           <button
             onClick={() => setShowTabWarning(false)}
-            className="text-xs font-bold underline hover:no-underline ml-4"
+            className="text-xs font-bold underline cursor-pointer ml-4"
           >
-            Dismiss
+            Acknowledge
           </button>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 2. MAIN WORKSPACE: Question Area (Center) & Palette Sidebar (Desktop)     */}
-      {/* ========================================================================= */}
-      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Question area */}
-        <div className="lg:col-span-2 space-y-4">
-            {/* Subject line + marking scheme (same as the landing-page preview) */}
-            <div className="flex items-center justify-between text-xs font-semibold text-charcoal-500 pb-2 border-b border-charcoal-150 dark:border-charcoal-800">
-              <span>
-                {currentQuestion?.subject || 'General'} • {currentQuestion?.topic || 'General'}
-                {currentQuestion?.difficulty ? ` • ${currentQuestion.difficulty}` : ''}
-              </span>
-              <span className="text-institutional-600 dark:text-institutional-400 font-mono font-bold">
-                +2.00 / -0.50 Marks
-              </span>
+      {/* =========================================================================
+          3. MAIN EXAMINATION WORKSPACE (Left: Question Zone | Right: Palette)
+          ========================================================================= */}
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-5 flex flex-col lg:flex-row gap-5 items-stretch">
+        {/* LEFT COLUMN: QUESTION PANE (~70% width) */}
+        <section className="flex-1 flex flex-col justify-between bg-white dark:bg-charcoal-900 rounded-2xl border border-slate-200 dark:border-charcoal-800 shadow-xs overflow-hidden">
+          <div className="p-4 sm:p-6 space-y-5 flex-1 overflow-y-auto">
+            {/* Question Header Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-charcoal-800">
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-blue-900 dark:bg-blue-700 text-white font-mono font-black text-xs flex items-center justify-center">
+                  Q. {currentIndex + 1}
+                </span>
+                <span className="text-sm font-extrabold text-slate-900 dark:text-white">
+                  Question No. {currentIndex + 1} of {questions.length}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-charcoal-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-charcoal-700">
+                  Single Choice Objective
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 text-xs">
+                <button
+                  type="button"
+                  onClick={handleToggleMarkForReview}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border font-bold transition-all cursor-pointer ${
+                    isCurrentMarkedForReview
+                      ? 'bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
+                      : 'bg-white dark:bg-charcoal-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-charcoal-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <FlagIcon size={12} className={isCurrentMarkedForReview ? 'text-purple-600' : 'text-slate-400'} />
+                  <span>{isCurrentMarkedForReview ? 'Flagged for Review' : 'Flag Question'}</span>
+                </button>
+
+                <div className="font-mono text-emerald-700 dark:text-emerald-400 font-extrabold">
+                  Section Mark: +1.00 / -0.25
+                </div>
+              </div>
             </div>
 
-            <div className="text-sm sm:text-base font-semibold text-charcoal-900 dark:text-charcoal-100 leading-question whitespace-pre-line">
-              <strong>Q{currentIndex + 1}.</strong> {currentQuestion?.question_text}
+            {/* Direction / Data Interpretation Box */}
+            {(currentQuestion?.direction || currentQuestion?.passage || currentQuestion?.topic?.toLowerCase().includes('data interpretation') || currentQuestion?.topic?.toLowerCase().includes('comprehension')) && (
+              <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-2 text-xs">
+                <div className="flex items-center gap-2 font-black text-blue-900 dark:text-blue-300 uppercase tracking-wide">
+                  <span>📊</span>
+                  <span>DIRECTION (Q. NOS {Math.max(1, currentIndex - 2)} - {Math.min(questions.length, currentIndex + 2)}): STUDY THE FOLLOWING CAREFULLY & ANSWER THE QUESTION.</span>
+                </div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+                  {currentQuestion?.direction ||
+                    'The data represents the proportional breakdown of commercial transactions across financial quarters. Evaluate net ratios and variance accurately before selecting the optimal choice.'}
+                </p>
+              </div>
+            )}
+
+            {/* Question Text */}
+            <div className={`font-bold text-slate-900 dark:text-white leading-relaxed ${getQuestionFontSize()} p-1`}>
+              {currentQuestion?.question_text}
             </div>
 
-            {/* Clickable Option Rows */}
-            <div className="space-y-2.5 pt-2" role="radiogroup" aria-label="Answer options">
-              {currentQuestion?.options?.map((opt) => {
+            {/* Answer Options (A, B, C, D, E) */}
+            <div className="space-y-3 pt-2" role="radiogroup" aria-label="Answer options">
+              {(currentQuestion?.options || []).map((opt) => {
                 const isSelected = answers[currentQuestion.id] === opt.id;
+
                 return (
                   <div
                     key={opt.id}
                     onClick={() => handleSelectOption(opt.id)}
                     role="radio"
                     aria-checked={isSelected}
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === ' ' || e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSelectOption(opt.id);
-                      }
-                    }}
-                    className={`p-3.5 rounded-xl border text-xs sm:text-sm font-medium flex items-center justify-between cursor-pointer select-none transition-all duration-150 ${
+                    className={`p-3.5 sm:p-4 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-between cursor-pointer select-none transition-all ${
                       isSelected
-                        ? 'border-institutional-500 bg-institutional-50/70 dark:bg-institutional-950/40 text-institutional-900 dark:text-institutional-100 shadow-sm ring-1 ring-institutional-500'
-                        : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-800/60 text-charcoal-800 dark:text-charcoal-200 hover:border-charcoal-300 dark:hover:border-charcoal-600'
+                        ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/60 ring-2 ring-blue-500/30 text-blue-950 dark:text-white shadow-xs'
+                        : 'border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800/70 text-slate-800 dark:text-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-charcoal-750'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                        className={`w-7 h-7 rounded-lg font-black text-xs flex items-center justify-center shrink-0 transition-colors ${
                           isSelected
-                            ? 'bg-institutional-600 text-white'
-                            : 'bg-white dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-600 text-charcoal-700 dark:text-charcoal-300'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 dark:bg-charcoal-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-charcoal-600'
                         }`}
                       >
                         {opt.id}
                       </span>
-                      <span>{opt.text}</span>
+                      <span className="leading-snug">{opt.text}</span>
+                      {isSelected && (
+                        <span className="ml-2 text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          SELECTED
+                        </span>
+                      )}
                     </div>
-                    {isSelected && <CheckIcon size={16} className="text-institutional-600 dark:text-institutional-400" />}
+
+                    {/* Radio Button Circle */}
+                    <div className="shrink-0 pl-3">
+                      {isSelected ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-blue-600 flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-charcoal-600" />
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
+          </div>
 
-            {/* Action bar (same buttons as the landing-page preview, plus Previous / Save & Next) */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
-              <div className="flex gap-2">
-                <button
-                  onClick={handleToggleMarkForReview}
-                  className="px-3 py-1.5 rounded-lg border border-purple-300 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 text-xs font-bold hover:bg-purple-100 transition-colors"
-                >
-                  {isCurrentMarkedForReview ? 'Marked for Review' : 'Mark for Review'}
-                </button>
-                <button
-                  onClick={handleClearResponse}
-                  disabled={!answers[currentQuestion?.id]}
-                  className="px-3 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 text-xs font-semibold hover:bg-charcoal-100 dark:hover:bg-charcoal-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  Clear Response
-                </button>
+          {/* QUESTION ACTION FOOTER (Sticky Navigation Controls) */}
+          <footer className="p-3.5 sm:p-4 bg-slate-50 dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 flex flex-wrap items-center justify-between gap-3">
+            {/* Left Actions */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleMarkForReviewAndNext}
+                className="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-700 hover:bg-slate-800 text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <FlagIcon size={12} />
+                <span>Mark for Review & Next</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearResponse}
+                disabled={!answers[currentQuestion?.id]}
+                className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCwIcon size={12} />
+                <span>Clear Response</span>
+              </button>
+            </div>
+
+            {/* Right Actions */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goToPrevQuestion}
+                disabled={currentIndex === 0}
+                className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <ChevronLeftIcon size={14} />
+                <span>Save & Previous</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveAndNext}
+                className="px-5 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Save & Next</span>
+                <ChevronRightIcon size={14} />
+              </button>
+            </div>
+          </footer>
+        </section>
+
+        {/* RIGHT COLUMN: PROCTORED CANDIDATE + QUESTION PALETTE (~30% width) */}
+        <aside className="w-full lg:w-80 xl:w-96 flex flex-col gap-4 shrink-0">
+          {/* 1. Proctored Candidate Card */}
+          <div className="bg-white dark:bg-charcoal-900 rounded-2xl border border-slate-200 dark:border-charcoal-800 p-3.5 shadow-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {/* Photo Frame */}
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 p-0.5 shadow-xs shrink-0">
+                <div className="w-full h-full bg-slate-900 rounded-[10px] overflow-hidden flex items-center justify-center text-white font-bold text-sm">
+                  {user?.profile?.avatar_url ? (
+                    <img src={user.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'A'}</span>
+                  )}
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={goToPrevQuestion}
-                  disabled={currentIndex === 0}
-                  className="px-3 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 text-xs font-semibold hover:bg-charcoal-100 dark:hover:bg-charcoal-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-                >
-                  <ChevronLeftIcon size={14} />
-                  <span>Previous</span>
-                </button>
-                <button
-                  onClick={handleSaveAndNext}
-                  className="px-4 py-1.5 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5"
-                >
-                  <span>{currentIndex === questions.length - 1 ? 'Save Response' : 'Save & Next'}</span>
-                  <ChevronRightIcon size={14} />
-                </button>
+              <div>
+                <div className="text-xs font-black text-slate-900 dark:text-white">
+                  {user?.full_name || 'Aditya K.'}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  Roll: {user?.id ? '25010' + String(user.id).slice(-4) : '2501048291'}
+                </div>
+                <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold font-mono">
+                  Node: <strong>C-042 (Lab B)</strong>
+                </div>
               </div>
             </div>
 
-            {/* Mobile palette trigger */}
-            <div className="lg:hidden pt-2">
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              PROCTORED
+            </span>
+          </div>
+
+          {/* 2. Palette Legend Card */}
+          <div className="bg-white dark:bg-charcoal-900 rounded-2xl border border-slate-200 dark:border-charcoal-800 p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white pb-2 border-b border-slate-100 dark:border-charcoal-800">
+              <span className="uppercase tracking-wider text-[11px] text-slate-500">PALETTE LEGEND</span>
+              <span className="font-mono text-slate-400">{questions.length} Questions</span>
+            </div>
+
+            {/* Grid of 5 States */}
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded bg-emerald-600 text-white font-mono font-bold text-[10px] flex items-center justify-center">
+                  {String(counts.answered).padStart(2, '0')}
+                </span>
+                <span className="text-slate-700 dark:text-slate-300 font-medium">Answered</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded bg-rose-600 text-white font-mono font-bold text-[10px] flex items-center justify-center">
+                  {String(counts.notAnswered).padStart(2, '0')}
+                </span>
+                <span className="text-slate-700 dark:text-slate-300 font-medium">Not Answered</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded bg-slate-200 dark:bg-charcoal-700 text-slate-700 dark:text-slate-300 font-mono font-bold text-[10px] flex items-center justify-center">
+                  {String(counts.notVisited).padStart(2, '0')}
+                </span>
+                <span className="text-slate-700 dark:text-slate-300 font-medium">Not Visited</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded bg-slate-700 text-white font-mono font-bold text-[10px] flex items-center justify-center">
+                  {String(counts.markedReview).padStart(2, '0')}
+                </span>
+                <span className="text-slate-700 dark:text-slate-300 font-medium">Marked Review</span>
+              </div>
+
+              <div className="col-span-2 flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-charcoal-800">
+                <span className="w-5 h-5 rounded bg-slate-700 text-white font-mono font-bold text-[10px] flex items-center justify-center relative">
+                  {String(counts.ansAndMarkedReview).padStart(2, '0')}
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute top-0.5 right-0.5" />
+                </span>
+                <span className="text-slate-700 dark:text-slate-300 font-medium text-[10px]">
+                  Ans. & Marked for Review (Evaluated)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Question Palette Tiles Grid */}
+          <div className="bg-white dark:bg-charcoal-900 rounded-2xl border border-slate-200 dark:border-charcoal-800 p-4 shadow-xs space-y-3 flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between text-xs font-bold pb-2 border-b border-slate-100 dark:border-charcoal-800">
+                <span className="text-slate-900 dark:text-white">Question Palette</span>
+                <span className="text-blue-600 dark:text-blue-400 font-medium text-[11px] truncate max-w-[130px]">
+                  {currentSection?.name || 'Section'}
+                </span>
+              </div>
+
+              {/* Number Buttons Grid */}
+              <div className="grid grid-cols-6 sm:grid-cols-7 lg:grid-cols-6 gap-2 pt-3 max-h-[320px] overflow-y-auto p-1 scrollbar-thin">
+                {questions.map((q, idx) => {
+                  const state = paletteStates[q.id] || 'NOT_VISITED';
+                  const isCurrent = idx === currentIndex;
+                  const isAnsReview = state === 'ANSWERED_AND_MARKED_FOR_REVIEW';
+
+                  return (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => jumpToQuestion(idx)}
+                      className={`h-9 rounded-xl flex items-center justify-center font-mono font-bold text-xs select-none transition-all cursor-pointer relative ${getTileClasses(state, isCurrent)}`}
+                    >
+                      <span>{idx + 1}</span>
+                      {isAnsReview && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute top-1 right-1" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section Attempt Rate & Pace Bar */}
+            <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-charcoal-800 text-xs">
+              <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300">
+                <span>Section Attempt Rate:</span>
+                <span className="font-mono text-blue-600 dark:text-blue-400">
+                  {sectionStats.answered} / {sectionStats.total} ({sectionStats.percent}%)
+                </span>
+              </div>
+
+              <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-charcoal-800 overflow-hidden">
+                <div
+                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                  style={{ width: `${sectionStats.percent}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                <span>Avg Pace: <strong>42 sec/Q</strong></span>
+                <span>Target Cutoff: <strong>{Math.ceil(sectionStats.total * 0.65)}+ Qs</strong></span>
+              </div>
+            </div>
+
+            {/* SUBMIT TEST BUTTON (Full Width Prominent Red Banner) */}
+            <div className="pt-2">
               <button
-                onClick={() => setShowMobileDrawer(true)}
-                className="w-full py-2.5 px-4 bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 rounded-xl text-xs font-bold text-charcoal-800 dark:text-charcoal-200 flex items-center justify-between"
+                type="button"
+                onClick={() => setShowSubmitModal(true)}
+                className="w-full py-3.5 px-4 rounded-xl bg-red-700 hover:bg-red-800 active:bg-red-900 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <div className="flex items-center gap-2">
-                  <LayersIcon size={16} />
-                  <span>Question Palette ({counts.answered}/{questions.length} Answered)</span>
-                </div>
-                <span className="text-institutional-600 dark:text-institutional-400">Tap to View Grid →</span>
+                <CheckIcon size={18} />
+                <span>Submit Test</span>
               </button>
             </div>
           </div>
-
-        {/* ========================================================================= */}
-        {/* DESKTOP SIDEBAR: Question Navigation Palette (Anti-AI Minimalist Design)   */}
-        {/* ========================================================================= */}
-        <aside className="hidden lg:flex p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-800 flex-col justify-between space-y-4 self-start">
-          <div>
-            {/* Palette Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-charcoal-200 dark:border-charcoal-700 text-xs font-bold uppercase tracking-wider text-charcoal-700 dark:text-charcoal-300">
-              <span>Question Palette</span>
-              <span className="text-[11px] font-mono text-institutional-600">Q {currentIndex + 1} of {questions.length}</span>
-            </div>
-
-            {/* State Legend */}
-            <PaletteLegend />
-
-            {/* Question Tiles Grid */}
-            <div className="grid grid-cols-5 gap-1.5 pt-3 max-h-[420px] overflow-y-auto p-0.5">
-              {questions.map((q, idx) => {
-                const state = paletteStates[q.id] || 'NOT_VISITED';
-                const isCurrent = idx === currentIndex;
-
-                return (
-                  <button
-                    key={q.id}
-                    onClick={() => jumpToQuestion(idx)}
-                    className={`h-8 rounded flex items-center justify-center text-xs font-mono transition-transform hover:scale-105 select-none relative ${tileClass(state)} ${
-                      isCurrent ? `ring-2 ${tileRing(state)}` : ''
-                    }`}
-                    aria-label={`Jump to Question ${idx + 1}`}
-                  >
-                    {idx + 1}
-                    {state === 'ANSWERED_AND_MARKED_FOR_REVIEW' && (
-                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-300" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 text-center font-medium">
-            Candidate: <strong>{user?.full_name?.split(' ')[0] || 'Aspirant'}</strong> • {counts.answered}/{questions.length} answered
-          </div>
         </aside>
-      </div>
-      </section>
-      </div>
+      </main>
 
-      {/* ========================================================================= */}
-      {/* 3. MOBILE COLLAPSIBLE BOTTOM DRAWER (Native App Bottom Sheet)             */}
-      {/* ========================================================================= */}
-      {showMobileDrawer && (
-        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-charcoal-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-charcoal-900 rounded-t-2xl border-t border-charcoal-200 dark:border-charcoal-800 p-5 max-h-[80vh] overflow-y-auto space-y-4 shadow-drawer">
-            {/* Sheet Handle & Header */}
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-1 bg-charcoal-300 dark:bg-charcoal-700 rounded-full mb-3" />
-              <div className="w-full flex items-center justify-between pb-2 border-b border-charcoal-200 dark:border-charcoal-800">
-                <span className="text-sm font-bold text-charcoal-900 dark:text-charcoal-100">
-                  Question Palette ({questions.length} Total)
-                </span>
-                <button
-                  onClick={() => setShowMobileDrawer(false)}
-                  className="p-1 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800 text-charcoal-500"
-                >
-                  <XCircleIcon size={20} />
-                </button>
+      {/* =========================================================================
+          4. BOTTOM STATUS STRIP (Licensing & Proctored Session Footnote)
+          ========================================================================= */}
+      <footer className="bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 px-4 sm:px-6 py-2 text-[11px] text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <strong className="text-slate-700 dark:text-slate-300 uppercase">LEGEND:</strong>
+          <span className="flex items-center gap-1">🟩 Answered</span>
+          <span className="flex items-center gap-1">🟥 Not Answered</span>
+          <span className="flex items-center gap-1">⬜ Not Visited</span>
+          <span className="flex items-center gap-1">⬛ Review</span>
+        </div>
+
+        <div className="font-mono text-[10px]">
+          © 2026 TestAce Assessment Engine. Licensed to Candidate Session. Proctored Stream Active.
+        </div>
+      </footer>
+
+      {/* =========================================================================
+          5. QUESTION PAPER MODAL (Quick Scan of all questions in paper)
+          ========================================================================= */}
+      {showQuestionPaperModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-750 max-w-4xl w-full max-h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  Full Question Paper Preview
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {attemptSession?.test_title || 'Assessment Paper'} • {questions.length} Questions
+                </p>
               </div>
+              <button
+                onClick={() => setShowQuestionPaperModal(false)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Mobile Legend */}
-            <PaletteLegend />
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {questions.map((q, idx) => (
+                <div key={q.id} className="p-4 rounded-xl border border-slate-200 dark:border-charcoal-800 bg-slate-50/50 dark:bg-charcoal-800/40 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
+                    <span>Question {idx + 1} ({q.subject})</span>
+                    <button
+                      onClick={() => {
+                        jumpToQuestion(idx);
+                        setShowQuestionPaperModal(false);
+                      }}
+                      className="text-blue-600 font-bold hover:underline cursor-pointer"
+                    >
+                      Jump to this question →
+                    </button>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-white">{q.question_text}</div>
+                  <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                    {(q.options || []).map((opt) => (
+                      <div key={opt.id} className="p-2 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700">
+                        <strong className="mr-1.5">{opt.id}.</strong> {opt.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-            {/* Mobile Numbers Grid */}
-            <div className="grid grid-cols-5 gap-2.5 p-1.5">
-              {questions.map((q, idx) => {
-                const state = paletteStates[q.id] || 'NOT_VISITED';
-                const isCurrent = idx === currentIndex;
-
-                return (
-                  <button
-                    key={q.id}
-                    onClick={() => jumpToQuestion(idx)}
-                    className={`h-10 rounded flex items-center justify-center text-sm font-mono select-none ${tileClass(state)} ${
-                      isCurrent ? `ring-2 ${tileRing(state)}` : ''
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                );
-              })}
+            <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 flex justify-end">
+              <button
+                onClick={() => setShowQuestionPaperModal(false)}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 text-white cursor-pointer"
+              >
+                Return to Active Exam
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 5. MODAL: PAUSE EXAMINATION OVERLAY                                       */}
-      {/* ========================================================================= */}
+      {/* =========================================================================
+          6. INSTRUCTIONS MODAL
+          ========================================================================= */}
+      {showInstructionsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-750 max-w-2xl w-full max-h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  Examination Guidelines & Marking Scheme
+                </h3>
+                <p className="text-xs text-slate-500">Standard TCS iON Computer-Based Testing Rules</p>
+              </div>
+              <button
+                onClick={() => setShowInstructionsModal(false)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 text-xs text-slate-700 dark:text-slate-300 leading-relaxed flex-1">
+              <div className="p-3.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 space-y-1 font-medium">
+                <div className="font-bold text-blue-900 dark:text-blue-200">Negative Marking Rule:</div>
+                <div>• Correct Answer: <strong>+1.00 Marks</strong> (or +2.00 for tier-specific sections).</div>
+                <div>• Incorrect Answer: <strong>-0.25 Marks</strong> penalty deducted from raw aggregate.</div>
+                <div>• Unattempted: <strong>0.00 Marks</strong> (no penalty applied).</div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="font-bold text-slate-900 dark:text-white">Navigation & Palette Rules:</div>
+                <div>• Click <strong>Save & Next</strong> to save response and proceed to next question.</div>
+                <div>• Click <strong>Mark for Review & Next</strong> to save and flag for secondary evaluation.</div>
+                <div>• Click <strong>Clear Response</strong> to deselect chosen option.</div>
+                <div>• Note: Questions marked for review with an answered option <strong>WILL BE EVALUATED</strong> in final score.</div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 flex justify-end">
+              <button
+                onClick={() => setShowInstructionsModal(false)}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 text-white cursor-pointer"
+              >
+                I Understand
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          7. MODAL: EXAM SUBMISSION SUMMARY (TCS iON Candidate Audit Format)
+          ========================================================================= */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-md animate-fade-in font-sans">
+          <div className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-750 rounded-3xl max-w-4xl w-full max-h-[92vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-charcoal-800 flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                  <ClipboardCheckIcon size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                      Exam Submission Summary
+                    </h2>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                      FINAL REVIEW
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {attemptSession?.test_title || 'SBI PO Prelims All-India Live Mock #04'}
+                    </span>
+                    <span>•</span>
+                    <span className="text-rose-600 font-bold flex items-center gap-1 font-mono">
+                      <span>⏳ Time Remaining:</span>
+                      <span>{remainingMinutes} mins {remainingSecsOnly} secs</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowSubmitModal(false)}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white bg-slate-100/70 hover:bg-slate-200/70 dark:bg-charcoal-800 dark:hover:bg-charcoal-700 transition-colors cursor-pointer text-sm font-bold"
+                title="Cancel & Return to Exam"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Scrollable Content */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
+              {/* Top 4 KPI Metric Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {/* 1. Total Attempted */}
+                <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-charcoal-800/60 border border-slate-200 dark:border-charcoal-700 flex flex-col justify-between space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      TOTAL ATTEMPTED
+                    </span>
+                    <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                      <CheckIcon size={13} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-1.5 font-mono">
+                      <span className="text-3xl font-black text-emerald-800 dark:text-emerald-300">
+                        {String(matrixTotals.netAttempted).padStart(2, '0')}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400">/ {matrixTotals.total}</span>
+                    </div>
+                    {/* Progress Bar */}
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-charcoal-700 overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                          style={{ width: `${matrixTotals.attemptedPercent}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-slate-500">{matrixTotals.attemptedPercent}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Unattempted */}
+                <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-charcoal-800/60 border border-slate-200 dark:border-charcoal-700 flex flex-col justify-between space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      UNATTEMPTED
+                    </span>
+                    <div className="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-950 text-rose-600 flex items-center justify-center font-bold text-xs">
+                      <XCircleIcon size={14} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-1.5 font-mono">
+                      <span className="text-3xl font-black text-rose-600 dark:text-rose-400">
+                        {String(matrixTotals.unattempted).padStart(2, '0')}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400">/ {matrixTotals.total}</span>
+                    </div>
+                    <div className="mt-2 text-[11px] text-slate-500 font-medium">
+                      {matrixTotals.notAnswered} Not Ans • {matrixTotals.notVisited} Not Visited
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Review Flagged */}
+                <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-charcoal-800/60 border border-slate-200 dark:border-charcoal-700 flex flex-col justify-between space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      REVIEW FLAGGED
+                    </span>
+                    <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center font-bold text-xs">
+                      <BookmarkIcon size={13} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-1.5 font-mono">
+                      <span className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                        {String(matrixTotals.markedReview + matrixTotals.ansAndMarked).padStart(2, '0')}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400">Total</span>
+                    </div>
+                    <div className="mt-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      {matrixTotals.ansAndMarked} Ans & Evaluated
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Pacing / Time */}
+                <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-charcoal-800/60 border border-slate-200 dark:border-charcoal-700 flex flex-col justify-between space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      PACING / TIME
+                    </span>
+                    <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center font-bold text-xs">
+                      <ClockIcon size={13} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-1.5 font-mono">
+                      <span className="text-3xl font-black text-slate-900 dark:text-white">
+                        {elapsedFormatted}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400">/ {totalDurationMins}m</span>
+                    </div>
+                    <div className="mt-2 text-[11px] text-slate-500 font-medium">
+                      {remainingMinutes}m {remainingSecsOnly}s Remaining
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sectional Performance Matrix Table (TCS iON Candidate Audit Format) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
+                    <span>Sectional Performance Matrix</span>
+                    <span className="text-slate-400 font-normal">(TCS iON Candidate Audit Format)</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-slate-400 font-medium">
+                    AUTO-SYNC @ {new Date().toLocaleTimeString('en-GB')}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-charcoal-800">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-blue-50/70 dark:bg-charcoal-800 text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-charcoal-700">
+                        <th className="py-3 px-4">SECTION NAME</th>
+                        <th className="py-3 px-3 text-center font-mono">TOTAL QS</th>
+                        <th className="py-3 px-3 text-center text-emerald-700 dark:text-emerald-400 font-bold">ANSWERED</th>
+                        <th className="py-3 px-3 text-center text-rose-700 dark:text-rose-400 font-bold">NOT ANSWERED</th>
+                        <th className="py-3 px-3 text-center">MARKED REVIEW</th>
+                        <th className="py-3 px-3 text-center bg-blue-100/50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold">ANS & MARKED*</th>
+                        <th className="py-3 px-3 text-center">NOT VISITED</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-charcoal-800 bg-white dark:bg-charcoal-900 text-xs font-medium">
+                      {sectionalMatrix.map((sec) => (
+                        <tr key={sec.name} className="hover:bg-slate-50/60 dark:hover:bg-charcoal-800/40 transition-colors">
+                          <td className="py-3 px-4 flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${sec.dotColor} shrink-0`} />
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{sec.name}</span>
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
+                            {sec.total}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            {sec.answered > 0 ? (
+                              <span className="inline-block px-2.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono font-bold">
+                                {String(sec.answered).padStart(2, '0')}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-slate-400">00</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            {sec.notAnswered > 0 ? (
+                              <span className="inline-block px-2.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-mono font-bold">
+                                {String(sec.notAnswered).padStart(2, '0')}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-slate-400">00</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-600 dark:text-slate-400">
+                            {String(sec.markedReview).padStart(2, '0')}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            {sec.ansAndMarked > 0 ? (
+                              <span className="inline-block px-2.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-mono font-bold">
+                                {String(sec.ansAndMarked).padStart(2, '0')}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-slate-400">00</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            {sec.notVisited > 0 ? (
+                              <span className="inline-block px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-charcoal-800 text-slate-600 dark:text-slate-400 font-mono font-bold">
+                                {String(sec.notVisited).padStart(2, '0')}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-slate-400">00</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+
+                      {/* Total Summary Row */}
+                      <tr className="bg-blue-50/60 dark:bg-charcoal-800/80 font-black text-slate-900 dark:text-white border-t-2 border-slate-200 dark:border-charcoal-700">
+                        <td className="py-3 px-4 text-blue-700 dark:text-blue-400 font-extrabold flex items-center gap-1.5">
+                          <span className="text-sm">Σ</span>
+                          <span>Total Summary</span>
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono font-black">{matrixTotals.total}</td>
+                        <td className="py-3 px-3 text-center font-mono text-emerald-700 dark:text-emerald-400">{matrixTotals.answered}</td>
+                        <td className="py-3 px-3 text-center font-mono text-rose-700 dark:text-rose-400">{matrixTotals.notAnswered}</td>
+                        <td className="py-3 px-3 text-center font-mono text-slate-700 dark:text-slate-300">{String(matrixTotals.markedReview).padStart(2, '0')}</td>
+                        <td className="py-3 px-3 text-center font-mono text-blue-700 dark:text-blue-400">{String(matrixTotals.ansAndMarked).padStart(2, '0')}</td>
+                        <td className="py-3 px-3 text-center font-mono text-slate-700 dark:text-slate-300">{String(matrixTotals.notVisited).padStart(2, '0')}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-[11px] pt-1 px-1">
+                  <span className="text-slate-500">
+                    * Answered & Marked for Review will be considered for final scoring evaluation.
+                  </span>
+                  <span className="font-extrabold text-emerald-700 dark:text-emerald-400 font-mono">
+                    Net Attempted Count: {matrixTotals.netAttempted} Qs
+                  </span>
+                </div>
+              </div>
+
+              {/* Attention Callout Box */}
+              <div className="p-4 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <AlertTriangleIcon size={16} />
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div className="font-bold text-rose-900 dark:text-rose-200 text-sm">
+                    Attention: Final Confirmation Required
+                  </div>
+                  <p className="text-rose-800/90 dark:text-rose-300 leading-relaxed font-sans">
+                    You have <strong className="font-bold">{remainingMinutes} minutes and {remainingSecsOnly} seconds remaining</strong> in this exam session. Once you confirm final submission, you <strong className="font-bold">cannot resume, re-enter, or edit</strong> any answers for this assessment. Unsaved responses will be discarded. Answered questions marked for review will be scored in accordance with standard IBPS marking policy (+1.00 for correct, -0.25 for incorrect).
+                  </p>
+                </div>
+              </div>
+
+              {/* Candidate Declaration & Final Sign-Off Checkbox */}
+              <label className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 flex items-start gap-3.5 cursor-pointer hover:bg-blue-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isDeclared}
+                  onChange={(e) => setIsDeclared(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                />
+                <div className="text-xs">
+                  <div className="font-bold text-slate-900 dark:text-white">
+                    Candidate Declaration & Final Sign-Off
+                  </div>
+                  <div className="text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    I have thoroughly verified my sectional attempt summary presented above. I understand that submitting now is irreversible and hereby confirm I wish to conclude my examination.
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {/* Modal Footer Controls */}
+            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-charcoal-900/90 border-t border-slate-100 dark:border-charcoal-800 flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowSubmitModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-[#eef4ff] hover:bg-[#e0ecff] dark:bg-charcoal-800 dark:hover:bg-charcoal-750 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                <ChevronLeftIcon size={14} />
+                <span>Resume Test / Return to Exam</span>
+              </button>
+
+              <span className="text-xs text-slate-400 hidden sm:inline">
+                Press Esc to cancel
+              </span>
+
+              <button
+                type="button"
+                onClick={() => submitExam()}
+                disabled={!isDeclared || submitting}
+                className={`px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-2 ${
+                  isDeclared && !submitting
+                    ? 'bg-[#d78285] hover:bg-[#c97174] text-white cursor-pointer active:scale-98'
+                    : 'bg-[#e7a8aa] dark:bg-rose-950/60 text-white/90 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <LockIcon size={14} />
+                <span>{submitting ? 'Submitting & Grading Responses...' : 'Yes, Final Submit Test'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          8. MODAL: PAUSE EXAMINATION OVERLAY
+          ========================================================================= */}
       {isPaused && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-lifted text-center space-y-5">
-            <div className="w-14 h-14 mx-auto rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center border border-amber-200 dark:border-amber-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-full bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center border border-amber-300">
               <PauseIcon size={24} />
             </div>
 
-            <div className="space-y-1.5">
-              <h2 className="text-xl font-bold text-charcoal-900 dark:text-charcoal-100">
-                Examination Paused
+            <div>
+              <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                Assessment Session Paused
               </h2>
-              <p className="text-xs text-charcoal-500 dark:text-charcoal-400">
-                Your remaining time is frozen at <strong className="font-mono text-charcoal-800 dark:text-charcoal-200">{formatTime(remainingSeconds)}</strong>. Your responses are safely synchronized to the server.
+              <p className="text-xs text-slate-500 mt-1">
+                Timer frozen at <strong className="font-mono text-slate-800 dark:text-slate-200">{formatTime(remainingSeconds)}</strong>. Your responses are safely buffered.
               </p>
-            </div>
-
-            <div className="p-3 bg-charcoal-50 dark:bg-charcoal-800/60 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs text-charcoal-600 dark:text-charcoal-300 text-left space-y-1">
-              <div className="font-semibold text-charcoal-800 dark:text-charcoal-200">Exam Snapshot:</div>
-              <div>• Answered: <strong>{counts.answered}</strong> questions</div>
-              <div>• Pending: <strong>{questions.length - counts.answered}</strong> questions</div>
             </div>
 
             <button
               onClick={handleResumeExam}
-              className="w-full py-2.5 px-4 rounded-lg font-bold text-xs text-white bg-institutional-600 hover:bg-institutional-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+              className="w-full py-2.5 px-4 rounded-xl font-bold text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all cursor-pointer"
             >
-              <PlayIcon size={14} />
-              <span>Resume Examination</span>
+              Resume Assessment Now
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 6. MODAL: FINAL SUBMISSION CONFIRMATION                                   */}
-      {/* ========================================================================= */}
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-lifted space-y-5">
-            <div className="flex items-start justify-between border-b border-charcoal-150 dark:border-charcoal-800 pb-3">
-              <div>
-                <h2 className="text-lg font-bold text-charcoal-900 dark:text-charcoal-100">
-                  Confirm Final Submission
-                </h2>
-                <p className="text-xs text-charcoal-500">
-                  Please review your attempt breakdown before final submission and grading.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowSubmitModal(false)}
-                className="text-charcoal-400 hover:text-charcoal-700 p-1"
-              >
-                <XCircleIcon size={20} />
-              </button>
-            </div>
-
-            {/* Summary Stat Grid */}
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
-                <div className="text-2xl font-bold font-mono text-emerald-800 dark:text-emerald-300">
-                  {counts.answered}
-                </div>
-                <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase mt-0.5">
-                  Answered
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
-                <div className="text-2xl font-bold font-mono text-amber-800 dark:text-amber-300">
-                  {counts.markedReview}
-                </div>
-                <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 uppercase mt-0.5">
-                  In Review
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700">
-                <div className="text-2xl font-bold font-mono text-charcoal-700 dark:text-charcoal-300">
-                  {counts.notAnswered + counts.notVisited}
-                </div>
-                <div className="text-[11px] font-semibold text-charcoal-500 uppercase mt-0.5">
-                  Unattempted
-                </div>
-              </div>
-            </div>
-
-            <p className="text-xs text-charcoal-500 bg-charcoal-50 dark:bg-charcoal-800/60 p-3 rounded-lg border border-charcoal-200 dark:border-charcoal-700">
-              Note: Marking will deduct <strong>0.50 marks</strong> for every incorrect answer. Once submitted, answers cannot be modified.
-            </p>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                onClick={() => setShowSubmitModal(false)}
-                className="px-4 py-2 rounded-lg text-xs font-semibold text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-700 transition-colors"
-              >
-                Return to Exam
-              </button>
-
-              <button
-                onClick={submitExam}
-                disabled={submitting}
-                className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 transition-colors disabled:opacity-50 shadow-sm"
-              >
-                {submitting ? 'Evaluating Answers...' : 'Confirm Submission'}
-              </button>
-            </div>
           </div>
         </div>
       )}
