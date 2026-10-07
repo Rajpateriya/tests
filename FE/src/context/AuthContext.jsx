@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api } from '../services/api';
+import { api, isRealSession } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -113,6 +113,23 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, refreshProfile]);
 
+  // api.js dispatches this when a silent token refresh fails (refresh token itself expired
+  // or blacklisted): end the session here too, without another server call (both tokens are
+  // already dead, and api.js has already cleared them from localStorage).
+  useEffect(() => {
+    const onExpired = () => {
+      setUser(null);
+      setToken(null);
+      setBaseRole(null);
+      setSubscription({ plan: 'FREE', status: 'INACTIVE' });
+      localStorage.removeItem('govexam_user');
+      localStorage.removeItem('govexam_subscription');
+      localStorage.removeItem('govexam_base_role');
+    };
+    window.addEventListener('govexam:session-expired', onExpired);
+    return () => window.removeEventListener('govexam:session-expired', onExpired);
+  }, []);
+
   const login = async (email, password, rememberMe = false) => {
     setLoading(true);
     setError(null);
@@ -130,6 +147,12 @@ export const AuthProvider = ({ children }) => {
       setToken(accessToken);
       localStorage.setItem('govexam_token', accessToken);
       localStorage.setItem('govexam_user', JSON.stringify(loggedUser));
+      // Kept so api.js can silently mint a new access token once this one expires.
+      if (res.tokens?.refresh_token) {
+        localStorage.setItem('govexam_refresh_token', res.tokens.refresh_token);
+      } else {
+        localStorage.removeItem('govexam_refresh_token');
+      }
 
       if (rememberMe) {
         localStorage.setItem('govexam_remember_email', email);
@@ -179,12 +202,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Tell the backend to blacklist this token (and the refresh token) too, so neither can be
+    // reused after logout. Best-effort: a demo session or an unreachable backend must never
+    // block clearing local state.
+    if (isRealSession()) {
+      const refreshToken = localStorage.getItem('govexam_refresh_token');
+      api.auth.logout(refreshToken).catch((err) => console.warn('Logout call failed:', err.message));
+    }
     setUser(null);
     setToken(null);
     setBaseRole(null);
     setSubscription({ plan: 'FREE', status: 'INACTIVE' });
     localStorage.removeItem('govexam_user');
     localStorage.removeItem('govexam_token');
+    localStorage.removeItem('govexam_refresh_token');
     localStorage.removeItem('govexam_subscription');
     localStorage.removeItem('govexam_base_role');
   };

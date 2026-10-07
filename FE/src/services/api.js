@@ -21,8 +21,50 @@ export const isRealSession = () => {
   return !!token && !token.startsWith('demo');
 };
 
+// Auth routes never trigger a silent refresh themselves (that would loop).
+const SKIPS_REFRESH = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout', '/auth/forgot-password', '/auth/reset-password'];
+
+// A 401 is refreshed at most once at a time, even if several requests hit it together —
+// they all wait on the same refresh and then retry with the new token.
+let refreshInFlight = null;
+
+async function refreshAccessToken() {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    const refreshToken = localStorage.getItem('govexam_refresh_token');
+    if (!refreshToken) return null;
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.success === false || !json.data?.access_token) return null;
+      localStorage.setItem('govexam_token', json.data.access_token);
+      if (json.data.refresh_token) localStorage.setItem('govexam_refresh_token', json.data.refresh_token);
+      return json.data.access_token;
+    } catch {
+      return null;
+    }
+  })();
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
+}
+
+// The refresh token is dead too (expired, blacklisted, or there wasn't one): end the session
+// client-side. AuthContext listens for this and clears user/token state without another API call.
+function forceSessionExpired() {
+  localStorage.removeItem('govexam_token');
+  localStorage.removeItem('govexam_refresh_token');
+  window.dispatchEvent(new Event('govexam:session-expired'));
+}
+
 // Generic fetch wrapper
-async function request(endpoint, options = {}) {
+async function request(endpoint, options = {}, _retried = false) {
   const url = `${BASE_URL}${endpoint}`;
   const config = {
     ...options,
@@ -36,8 +78,21 @@ async function request(endpoint, options = {}) {
     const res = await fetch(url, config);
     const json = await res.json();
     if (!res.ok || json.success === false) {
+      // Access token expired/invalid: try one silent refresh, then retry this call once.
+      if (
+        res.status === 401 &&
+        !_retried &&
+        !SKIPS_REFRESH.some((p) => endpoint.startsWith(p)) &&
+        localStorage.getItem('govexam_refresh_token')
+      ) {
+        const newToken = await refreshAccessToken();
+        if (newToken) return request(endpoint, options, true);
+        forceSessionExpired();
+      }
       const errorMsg = json?.error?.message || json?.detail || res.statusText || 'API request failed';
-      throw new Error(errorMsg);
+      const error = new Error(errorMsg);
+      error.status = res.status;
+      throw error;
     }
     return json.data;
   } catch (err) {
@@ -49,7 +104,7 @@ async function request(endpoint, options = {}) {
 // AI pipeline calls: no demo fallback (admins must see real errors), readable
 // 422 validation messages, and multipart uploads (the browser sets the
 // multipart boundary itself, so Content-Type must NOT be forced to JSON).
-async function pipelineRequest(endpoint, { method = 'GET', body, form } = {}) {
+async function pipelineRequest(endpoint, { method = 'GET', body, form } = {}, _retried = false) {
   const token = localStorage.getItem('govexam_token');
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -72,6 +127,12 @@ async function pipelineRequest(endpoint, { method = 'GET', body, form } = {}) {
     // non-JSON error body
   }
   if (!res.ok || json?.success === false) {
+    // The pipeline can run long (uploads, generation): try one silent refresh on a 401, then retry.
+    if (res.status === 401 && !_retried && localStorage.getItem('govexam_refresh_token')) {
+      const newToken = await refreshAccessToken();
+      if (newToken) return pipelineRequest(endpoint, { method, body, form }, true);
+      forceSessionExpired();
+    }
     let message = json?.error?.message;
     if (!message && Array.isArray(json?.detail)) {
       message = json.detail
@@ -349,6 +410,15 @@ export const api = {
     getMe: async () => {
       return await request('/auth/me');
     },
+
+    // Blacklists the current access token server-side (and the refresh token, if there is
+    // one), so neither can be used again even though they have not expired yet.
+    logout: async (refreshToken) => {
+      return await request('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: refreshToken || null }),
+      });
+    },
   },
 
   // Test Discovery & Engine
@@ -359,6 +429,7 @@ export const api = {
       if (params.subject) q.append('subject', params.subject);
       if (params.topic) q.append('topic', params.topic);
       if (params.target_exam) q.append('target_exam', params.target_exam);
+      if (params.is_free !== undefined) q.append('is_free', params.is_free);
 
       try {
         const queryStr = q.toString() ? `?${q.toString()}` : '';
@@ -726,6 +797,20 @@ export const api = {
   admin: {
     getStats: async () => {
       return await request('/admin/stats');
+    },
+
+    // Support tickets: every ticket, from everyone (status is 'OPEN', 'RESOLVED', or omit for all)
+    listSupportTickets: async ({ status = '', skip = 0, limit = 100 } = {}) => {
+      const q = new URLSearchParams({ skip, limit });
+      if (status) q.append('status', status);
+      return await request(`/support/tickets?${q.toString()}`);
+    },
+
+    setSupportTicketStatus: async (ticketId, status, note) => {
+      return await request(`/support/tickets/${ticketId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, note: note || null }),
+      });
     },
 
     getHealth: async () => {
@@ -1230,6 +1315,41 @@ export const api = {
       return await request(`/courses/${courseId}/enroll`, {
         method: 'POST',
       });
+    },
+  },
+
+  // Contact / support tickets
+  support: {
+    // Public: works signed in (ticket is linked to the user) or as a guest.
+    submitTicket: async ({ name, email, subject, message }) => {
+      return await request('/support/contact', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+    },
+
+    // Signed-in user: only the tickets they themselves raised.
+    getMyTickets: async () => {
+      return await request('/support/my-tickets');
+    },
+  },
+
+  // In-app notifications (a student sees their own; an admin also sees admin-wide ones)
+  notifications: {
+    getMine: async (unreadOnly = false) => {
+      return await request(`/notifications${unreadOnly ? '?unread_only=true' : ''}`);
+    },
+
+    getUnreadCount: async () => {
+      return await request('/notifications/unread-count');
+    },
+
+    markRead: async (notificationId) => {
+      return await request(`/notifications/${notificationId}/read`, { method: 'POST' });
+    },
+
+    markAllRead: async () => {
+      return await request('/notifications/read-all', { method: 'POST' });
     },
   },
 

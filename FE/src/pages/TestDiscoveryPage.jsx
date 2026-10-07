@@ -32,8 +32,11 @@ import { TestRulesModal } from '../components/TestRulesModal';
  * Built with institutional rigor, inspiring copywriting, anti-AI aesthetics,
  * interactive hero test-drive sandbox, syllabus blueprint explorer, and percentile predictor.
  */
-export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal, onNavigate }) => {
+export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal, onNavigate, onOpenCourse }) => {
   const { user } = useAuth();
+  const [catalogTab, setCatalogTab] = useState('courses'); // 'courses' | 'mocks' (free mocks only)
+  const [courses, setCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState('ALL'); // ALL | FULL | SUBJECT | TOPIC_MINI
@@ -64,16 +67,27 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
   const [contactMessage, setContactMessage] = useState('');
   const [contactSubmitting, setContactSubmitting] = useState(false);
   const [contactSuccessTicket, setContactSuccessTicket] = useState(null);
+  const [contactError, setContactError] = useState('');
 
-  const handleContactSubmit = (e) => {
+  const handleContactSubmit = async (e) => {
     e.preventDefault();
     if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) return;
+    setContactError('');
     setContactSubmitting(true);
-    setTimeout(() => {
-      const ticketId = `TKT-${Math.floor(10000 + Math.random() * 90000)}`;
-      setContactSuccessTicket(ticketId);
+    try {
+      const ticket = await api.support.submitTicket({
+        // Signed in, always the account's own name/email (the backend enforces this too).
+        name: user ? user.full_name : contactName.trim(),
+        email: user ? user.email : contactEmail.trim(),
+        subject: `${contactCategory} — ${contactExam}`,
+        message: contactMessage.trim(),
+      });
+      setContactSuccessTicket(ticket.ticket_number);
+    } catch (err) {
+      setContactError(err.message || 'Could not submit your ticket. Please try again.');
+    } finally {
       setContactSubmitting(false);
-    }, 750);
+    }
   };
 
   const handleResetContact = () => {
@@ -88,18 +102,35 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
   const loadTests = async () => {
     setLoading(true);
     try {
-      const params = {};
+      // This catalog's "Free Mocks" tab only ever shows free tests — the server filters them out.
+      const params = { is_free: true };
       if (selectedType !== 'ALL') params.test_type = selectedType;
       if (selectedSubject !== 'ALL') params.subject = selectedSubject;
       const res = await api.tests.list(params);
-      setTests(res || DEMO_TESTS);
+      setTests(res || DEMO_TESTS.filter((t) => t.is_free));
     } catch (err) {
       console.warn('Fallback to demo tests:', err);
-      setTests(DEMO_TESTS);
+      setTests(DEMO_TESTS.filter((t) => t.is_free));
     } finally {
       setLoading(false);
     }
   };
+
+  const loadCourses = async () => {
+    setCoursesLoading(true);
+    try {
+      setCourses(await api.courses.list());
+    } catch (err) {
+      console.warn('Failed to load courses:', err);
+      setCourses([]);
+    } finally {
+      setCoursesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
 
   const filteredTests = tests.filter((t) => {
     if (!searchQuery) return true;
@@ -859,29 +890,29 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
             <div>
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-institutional-600 dark:text-institutional-400 uppercase tracking-wider mb-1">
                 <BookOpenIcon size={14} />
-                <span>Test Catalog</span>
+                <span>Catalog</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
-                Available Mock Examinations
+                {catalogTab === 'courses' ? 'Available Courses' : 'Free Mock Tests'}
               </h2>
               <p className="text-xs sm:text-sm text-charcoal-500 dark:text-charcoal-400">
-                Filter by full syllabus papers, subject speed drills, or high-yield topic boosters.
+                {catalogTab === 'courses'
+                  ? 'Subject-wise exam packages with quizzes and full mock tests included.'
+                  : 'Every mock test you can take without enrolling in anything.'}
               </p>
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold overflow-x-auto">
+            {/* Catalog Tabs */}
+            <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold">
               {[
-                { id: 'ALL', label: 'All Mocks' },
-                { id: 'FULL', label: 'Full Mocks' },
-                { id: 'SUBJECT', label: 'Subject Drills' },
-                { id: 'TOPIC_MINI', label: 'Topic Mini Drills' },
+                { id: 'courses', label: 'Courses' },
+                { id: 'mocks', label: 'Free Mocks' },
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setSelectedType(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-                    selectedType === tab.id
+                  onClick={() => setCatalogTab(tab.id)}
+                  className={`px-4 py-1.5 rounded-lg whitespace-nowrap transition-all ${
+                    catalogTab === tab.id
                       ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
                       : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -892,6 +923,64 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
             </div>
           </div>
 
+          {catalogTab === 'courses' ? (
+            coursesLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="h-64 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
+                ))}
+              </div>
+            ) : courses.length === 0 ? (
+              <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-12 text-center space-y-3">
+                <BookOpenIcon size={36} className="text-charcoal-400 mx-auto" />
+                <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">No courses published yet</h3>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {courses.map((course) => (
+                  <article
+                    key={course.id}
+                    className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
+                          {course.target_exam}
+                        </span>
+                        <span className="text-xs font-black px-2 py-0.5 rounded bg-emerald-500 text-white">{course.discount_percent}% OFF</span>
+                      </div>
+                      <h3 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                        {course.title}
+                      </h3>
+                      <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-4 leading-relaxed font-normal">
+                        {course.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 mb-5">
+                        {(course.subjects || []).slice(0, 3).map((sub, i) => (
+                          <span key={i} className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
+                            {sub}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
+                      <div className="flex items-baseline gap-1.5 font-mono">
+                        <span className="text-lg font-black text-charcoal-900 dark:text-white">₹{course.discounted_price}</span>
+                        <span className="text-xs text-charcoal-400 line-through">₹{course.original_price}</span>
+                      </div>
+                      <button
+                        onClick={() => onNavigate && onNavigate('courses')}
+                        className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm"
+                      >
+                        <span>View Course</span>
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )
+          ) : (
+            <>
           {/* Search & Subject Bar */}
           <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-3 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-1 md:max-w-md">
@@ -919,8 +1008,30 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
               </div>
             </div>
 
+            {/* Sub-filter pills: narrows the free-tests set by type */}
+            <div className="flex items-center gap-1">
+              {[
+                { id: 'ALL', label: 'All' },
+                { id: 'FULL', label: 'Full' },
+                { id: 'SUBJECT', label: 'Subject' },
+                { id: 'TOPIC_MINI', label: 'Topic' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedType(tab.id)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
+                    selectedType === tab.id
+                      ? 'bg-institutional-600 text-white'
+                      : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             <div className="text-xs text-charcoal-400 font-mono">
-              Showing <strong>{filteredTests.length}</strong> configured exams
+              Showing <strong>{filteredTests.length}</strong> free exams
             </div>
           </div>
 
@@ -1010,6 +1121,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 </article>
               ))}
             </div>
+          )}
+            </>
           )}
         </section>
 
@@ -1576,7 +1689,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                         <span>Expected Turnaround: Under 90 Minutes</span>
                       </div>
                       <p className="text-[11px] leading-relaxed text-emerald-700 dark:text-emerald-400">
-                        Updates will be dispatched directly to <strong>{contactEmail}</strong> regarding stream <strong>{contactExam}</strong>.
+                        Updates will be dispatched directly to <strong>{user ? user.email : contactEmail}</strong> regarding stream <strong>{contactExam}</strong>.
                       </p>
                     </div>
 
@@ -1616,10 +1729,16 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                           id="contact-name"
                           type="text"
                           required
-                          value={contactName}
+                          readOnly={!!user}
+                          value={user ? user.full_name : contactName}
                           onChange={(e) => setContactName(e.target.value)}
                           placeholder="e.g. Rahul Sharma"
-                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400"
+                          title={user ? 'Signed in as this account — the ticket is raised under your own name' : undefined}
+                          className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 ${
+                            user
+                              ? 'bg-charcoal-100 dark:bg-charcoal-800/60 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 cursor-not-allowed'
+                              : 'bg-charcoal-50 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100'
+                          }`}
                         />
                       </div>
 
@@ -1635,10 +1754,16 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                           id="contact-email"
                           type="email"
                           required
-                          value={contactEmail}
+                          readOnly={!!user}
+                          value={user ? user.email : contactEmail}
                           onChange={(e) => setContactEmail(e.target.value)}
                           placeholder="rahul.aspirant@gmail.com"
-                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400"
+                          title={user ? 'Signed in as this account — the ticket is raised under your own email' : undefined}
+                          className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 ${
+                            user
+                              ? 'bg-charcoal-100 dark:bg-charcoal-800/60 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 cursor-not-allowed'
+                              : 'bg-charcoal-50 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100'
+                          }`}
                         />
                       </div>
                     </div>
@@ -1708,6 +1833,12 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                         className="w-full p-3.5 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 resize-none leading-relaxed"
                       />
                     </div>
+
+                    {contactError && (
+                      <div className="text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-xl px-3.5 py-2.5">
+                        {contactError}
+                      </div>
+                    )}
 
                     {/* Action Bar */}
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">

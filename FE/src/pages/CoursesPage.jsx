@@ -16,7 +16,7 @@ import {
   RefreshCwIcon,
 } from '../components/Icons';
 
-export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTest }) => {
+export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTest, onOpenCourse }) => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState('All');
@@ -535,7 +535,7 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTe
 
                         <button
                           type="button"
-                          onClick={() => toggleExpandCourseQuizzes(course.id)}
+                          onClick={() => (onOpenCourse ? onOpenCourse(course.id) : toggleExpandCourseQuizzes(course.id))}
                           className="py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
                         >
                           <span>Open Quizzes</span>

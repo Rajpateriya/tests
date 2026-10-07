@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { api, isRealSession } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -15,7 +16,140 @@ import {
   CpuIcon,
   ChevronDownIcon,
   MailIcon,
+  BellIcon,
+  CheckCircleIcon,
 } from './Icons';
+
+// Bell: unread count polled every 30s, a dropdown listing notifications, mark-read on click/"mark all".
+const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const ref = useRef(null);
+
+  const poll = async () => {
+    try {
+      const { unread: n } = await api.notifications.getUnreadCount();
+      setUnread(n);
+    } catch {
+      // not signed in against the real backend, or a transient error — stay quiet
+    }
+  };
+
+  // Re-checks the instant a real session starts (login, or switching off the demo role),
+  // not just once at page load — otherwise logging in without a refresh never starts polling.
+  useEffect(() => {
+    setItems([]);
+    setUnread(0);
+    if (!isRealSession()) return;
+    poll();
+    const interval = setInterval(poll, 60000);
+    return () => clearInterval(interval);
+  }, [sessionKey]);
+
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  const openDropdown = async () => {
+    const next = !open;
+    setOpen(next);
+    // Refetch every time it's opened — a stale list would hide a notification that arrived
+    // after the last time it was opened (e.g. a ticket raised since).
+    if (next) {
+      try {
+        setItems(await api.notifications.getMine());
+      } catch {
+        setItems([]);
+      }
+    }
+  };
+
+  const handleMarkRead = async (n) => {
+    if (!n.is_read) {
+      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
+      setUnread((u) => Math.max(0, u - 1));
+      api.notifications.markRead(n.id).catch(() => {}); // the next poll reconciles this either way
+    }
+    setOpen(false);
+    if (!n.ticket_id) return;
+    // Admin: that ticket's row in Admin Studio's Support Tickets tab. Student: their own My
+    // Tickets tab. Both pages read `?ticket=<id>` from the address and scroll to/highlight it.
+    const target = isAdmin ? `/admin/support?ticket=${n.ticket_id}` : `/dashboard/support?ticket=${n.ticket_id}`;
+    window.history.pushState(null, '', target);
+    setCurrentView(isAdmin ? 'admin' : 'dashboard');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  const handleMarkAllRead = async () => {
+    setItems((prev) => prev.map((x) => ({ ...x, is_read: true })));
+    setUnread(0);
+    try {
+      await api.notifications.markAllRead();
+    } catch {
+      // the next poll reconciles this either way
+    }
+  };
+
+  if (!isRealSession()) return null;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={openDropdown}
+        className="relative p-1.5 sm:p-2 rounded-full text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors focus:outline-none cursor-pointer"
+        aria-label="Notifications"
+      >
+        <BellIcon size={16} />
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white text-[9px] font-extrabold flex items-center justify-center">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-xl z-50 animate-fade-in">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-charcoal-150 dark:border-charcoal-800">
+            <span className="text-xs font-extrabold text-charcoal-900 dark:text-white">Notifications</span>
+            {unread > 0 && (
+              <button onClick={handleMarkAllRead} className="text-[11px] font-bold text-institutional-600 dark:text-institutional-400 hover:underline cursor-pointer">
+                Mark all read
+              </button>
+            )}
+          </div>
+          {items.length === 0 ? (
+            <div className="px-4 py-8 text-center text-xs text-charcoal-400">No notifications yet.</div>
+          ) : (
+            <div className="divide-y divide-charcoal-100 dark:divide-charcoal-800">
+              {items.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => handleMarkRead(n)}
+                  className={`w-full text-left px-4 py-3 flex items-start gap-2.5 hover:bg-charcoal-50 dark:hover:bg-charcoal-800/60 transition-colors cursor-pointer ${
+                    !n.is_read ? 'bg-institutional-50/60 dark:bg-institutional-950/30' : ''
+                  }`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${!n.is_read ? 'bg-institutional-600' : 'bg-transparent'}`} />
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-charcoal-900 dark:text-white">{n.title}</div>
+                    <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 mt-0.5 line-clamp-2">{n.message}</div>
+                    <div className="text-[10px] text-charcoal-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                  </div>
+                  {n.is_read && <CheckCircleIcon size={13} className="text-emerald-500 shrink-0 mt-0.5" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /**
  * Floating Pill Navbar — Modern, Slim & Architecturally Aware
@@ -136,7 +270,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               </button>
               <button
                 onClick={() => handleNavClick('courses')}
-                className={`px-3 py-1.5 rounded-full transition-colors ${currentView === 'courses'
+                className={`px-3 py-1.5 rounded-full transition-colors ${['courses','courseDetail'].includes(currentView)
                     ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -189,7 +323,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
 
               <button
                 onClick={() => handleNavClick('courses')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${currentView === 'courses'
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${['courses','courseDetail'].includes(currentView)
                     ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -245,7 +379,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
 
               <button
                 onClick={() => handleNavClick('courses')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${currentView === 'courses'
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${['courses','courseDetail'].includes(currentView)
                     ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -292,6 +426,9 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <span className="text-[10px] text-amber-750 dark:text-amber-400 font-semibold">Coins</span>
             </button>
           )}
+
+          {/* Notifications */}
+          <NotificationBell sessionKey={user?.id} isAdmin={isAdmin} setCurrentView={setCurrentView} />
 
           {/* Theme Toggle Button */}
           <button

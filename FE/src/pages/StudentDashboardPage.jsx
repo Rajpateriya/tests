@@ -25,6 +25,7 @@ import {
   AwardIcon,
   HelpCircleIcon,
   RefreshCwIcon,
+  MessageSquareIcon,
 } from '../components/Icons';
 import { TestRulesModal } from '../components/TestRulesModal';
 
@@ -42,11 +43,18 @@ import { TestRulesModal } from '../components/TestRulesModal';
  * 4. 30-Day Discipline Roadmap Modal (Full view on demand, keeping screen clutter-free).
  * 5. High-contrast typography & rock-solid theme fidelity in both Light & Dark modes.
  */
-export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate }) => {
+// Dashboard addresses: /dashboard/mission (default), /dashboard/analytics, /dashboard/courses, /dashboard/typing, /dashboard/mocks, /dashboard/support
+const DASH_TABS = ['mission', 'analytics', 'courses', 'typing', 'mocks', 'support'];
+const tabFromPath = () => {
+  const tab = window.location.pathname.split('/')[2];
+  return DASH_TABS.includes(tab) ? tab : 'mission';
+};
+
+export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate, onOpenCourse }) => {
   const { user, updateCoins, updateProfile } = useAuth();
 
   // Active Tab View: 'mission' | 'analytics' | 'courses' | 'typing' | 'mocks'
-  const [activeTab, setActiveTab] = useState('mission');
+  const [activeTab, setActiveTab] = useState(tabFromPath);
 
   // Avatar upload state & feedback
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -68,6 +76,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
   const [typingStats, setTypingStats] = useState(null);
   const [activeCourseModal, setActiveCourseModal] = useState(null);
   const [dashboardRulesModalTest, setDashboardRulesModalTest] = useState(null);
+  const [myTickets, setMyTickets] = useState([]);
+  const [myTicketsLoading, setMyTicketsLoading] = useState(false);
+  // A ticket opened straight from a notification (?ticket=<id>): scrolled to and highlighted once loaded.
+  const [highlightTicketId, setHighlightTicketId] = useState(() => new URLSearchParams(window.location.search).get('ticket'));
   const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
   const [activeQuizQuestionIdx, setActiveQuizQuestionIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -91,8 +103,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
   const [practiceSelectedOption, setPracticeSelectedOption] = useState(null);
   const [practiceVerification, setPracticeVerification] = useState(null);
 
+  // Only what every tab needs (the streak/coins header, shown no matter which tab is open) loads
+  // up front. Each tab below loads its own data the first time it is opened.
   useEffect(() => {
-    loadAllData();
+    loadStreakAndHeader();
   }, [user]);
 
   // Question Timer
@@ -106,38 +120,17 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
     return () => clearInterval(interval);
   }, [isDailyCompleted, verificationResult, dailyQuestion]);
 
-  const loadAllData = async () => {
+  // The streak/coins header and the daily question sit above the tabs and are visible no matter
+  // which tab is open, so they load once up front.
+  const loadStreakAndHeader = async () => {
     setLoading(true);
     try {
-      const [dashData, testsData, streakRes] = await Promise.all([
-        api.users.getDashboard(user?.id || 'student-primary-id'),
-        api.tests.list(),
-        api.streak.getStreak(),
-      ]);
-      setDashboard(dashData);
-      setAvailableTests(testsData || []);
+      const streakRes = await api.streak.getStreak();
       setStreakData(streakRes);
-
-      if (streakRes?.today_completed) {
-        setIsDailyCompleted(true);
-      }
-
-      try {
-        const [enrolledRes, exploreRes, typingRes] = await Promise.all([
-          api.courses.getMyEnrollments(),
-          api.courses.list(),
-          api.typing.getMyHistory(),
-        ]);
-        setEnrolledCourses(enrolledRes || []);
-        setExploreCourses(exploreRes || []);
-        setTypingStats(typingRes || null);
-      } catch (courseErr) {
-        console.warn('Courses and typing load fallback:', courseErr);
-      }
-
+      if (streakRes?.today_completed) setIsDailyCompleted(true);
       await loadDailyQuestion();
     } catch (err) {
-      console.warn('Dashboard data fallback:', err);
+      console.warn('Dashboard header data fallback:', err);
     } finally {
       setLoading(false);
     }
@@ -155,11 +148,86 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
     }
   };
 
+  // Each tab fetches its own data the first time it is opened, not when the dashboard loads.
+  const analyticsLoaded = useRef(false);
+  const coursesLoaded = useRef(false);
+  const typingLoaded = useRef(false);
+  const mocksLoaded = useRef(false);
+  const supportLoaded = useRef(false);
   useEffect(() => {
-    if (activeTab === 'courses') {
+    if (activeTab === 'analytics' && !analyticsLoaded.current) {
+      analyticsLoaded.current = true;
+      api.users
+        .getDashboard(user?.id || 'student-primary-id')
+        .then(setDashboard)
+        .catch((err) => console.warn('Failed to load analytics:', err));
+    }
+    if (activeTab === 'courses' && !coursesLoaded.current) {
+      coursesLoaded.current = true;
       fetchEnrolledCourses();
+      api.courses
+        .list()
+        .then((res) => setExploreCourses(res || []))
+        .catch((err) => console.warn('Failed to load explore courses:', err));
+    }
+    if (activeTab === 'typing' && !typingLoaded.current) {
+      typingLoaded.current = true;
+      api.typing
+        .getMyHistory()
+        .then((res) => setTypingStats(res || null))
+        .catch((err) => console.warn('Failed to load typing stats:', err));
+    }
+    if (activeTab === 'mocks' && !mocksLoaded.current) {
+      mocksLoaded.current = true;
+      api.tests
+        .list({ is_free: true }) // this catalog only ever shows free tests
+        .then((res) => setAvailableTests(res || []))
+        .catch((err) => console.warn('Failed to load mock tests:', err));
+    }
+    if (activeTab === 'support' && !supportLoaded.current) {
+      supportLoaded.current = true;
+      fetchMyTickets();
     }
   }, [activeTab]);
+
+  // Opened from a notification: once that ticket is in the loaded list, scroll it into view.
+  useEffect(() => {
+    if (activeTab !== 'support' || !highlightTicketId) return;
+    const el = document.getElementById(`ticket-row-${highlightTicketId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [activeTab, highlightTicketId, myTickets]);
+
+  const fetchMyTickets = async () => {
+    setMyTicketsLoading(true);
+    try {
+      setMyTickets(await api.support.getMyTickets());
+    } catch (err) {
+      console.warn('Failed to load my tickets:', err);
+    } finally {
+      setMyTicketsLoading(false);
+    }
+  };
+
+  // Address bar <-> tab: pushes a history entry on every tab switch, so back/forward moves
+  // between tabs, and a refresh or shared link (/dashboard/mocks) opens that same tab.
+  const addressSynced = useRef(false);
+  useEffect(() => {
+    const first = !addressSynced.current;
+    addressSynced.current = true;
+    const want = `/dashboard/${activeTab}`;
+    if (window.location.pathname !== want) {
+      window.history[first ? 'replaceState' : 'pushState'](null, '', want);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const onPop = () => {
+      setActiveTab(tabFromPath());
+      setHighlightTicketId(new URLSearchParams(window.location.search).get('ticket'));
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const loadDailyQuestion = async () => {
     setQuestionLoading(true);
@@ -299,6 +367,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
     }
   };
 
+  // The server already sends only free tests (?is_free=true); this just narrows by type.
   const filteredTests = availableTests.filter((test) => {
     if (selectedFilter === 'ALL') return true;
     return test.test_type === selectedFilter;
@@ -621,9 +690,11 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
         {[
           { id: 'mission', label: "Today's Mission", icon: TargetIcon, badge: isDailyCompleted ? 'Done ✓' : 'Active ⚡' },
           { id: 'analytics', label: 'Analytics & Mastery', icon: BarChart3Icon },
-          { id: 'courses', label: 'My Enrolled Courses', icon: BookOpenIcon, count: enrolledCourses.length },
+          // From the signed-in user's own profile (already in context), not the tab's lazy-loaded list.
+          { id: 'courses', label: 'My Enrolled Courses', icon: BookOpenIcon, count: (user?.profile?.enrolled_courses || []).length },
           { id: 'typing', label: 'Typing Master', icon: ZapIcon },
-          { id: 'mocks', label: 'Mock Test Catalog', icon: LayersIcon, count: filteredTests.length },
+          { id: 'mocks', label: 'Mock Test Catalog', icon: LayersIcon },
+          { id: 'support', label: 'My Tickets', icon: MessageSquareIcon, count: myTickets.length || undefined },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1332,6 +1403,12 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
 
                       <button
                         onClick={() => {
+                          const courseId = course.id || course.course_id;
+                          // The full course page (every quiz and mock test) is the one place for this now.
+                          if (onOpenCourse && courseId) {
+                            onOpenCourse(courseId); // App.jsx captures this exact /dashboard/courses address to return to
+                            return;
+                          }
                           setActiveCourseModal(course);
                           setSelectedQuizIdx(0);
                           setActiveQuizQuestionIdx(0);
@@ -1473,7 +1550,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
             <div>
               <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white">
-                Exam Mock Test Library ({filteredTests.length})
+                Free Mock Test Library ({filteredTests.length})
               </h3>
               <p className="text-xs text-charcoal-500">
                 Full-Length Mocks, Sectionals, and Topic Drills.
@@ -1512,9 +1589,16 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-mono">
-                      {test.test_type}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-mono">
+                        {test.test_type}
+                      </span>
+                      {test.is_free && (
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          Free
+                        </span>
+                      )}
+                    </div>
                     {getDifficultyBadge(test.difficulty)}
                   </div>
                   <h4 className="text-sm font-bold text-charcoal-900 dark:text-white mt-2 line-clamp-1">
@@ -1542,6 +1626,90 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate 
               </article>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* TAB: MY SUPPORT TICKETS (only what this account itself raised) */}
+      {activeTab === 'support' && (
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 shadow-xs space-y-5 animate-fade-in">
+          <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
+            <div>
+              <h2 className="text-base font-extrabold text-charcoal-950 dark:text-white flex items-center gap-2">
+                <MessageSquareIcon size={18} className="text-institutional-600" />
+                <span>My Support Tickets</span>
+              </h2>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1">
+                Every inquiry or grievance you have raised through the contact form.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchMyTickets}
+              disabled={myTicketsLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-600 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors"
+            >
+              <RefreshCwIcon size={13} className={myTicketsLoading ? 'animate-spin' : ''} />
+              <span>{myTicketsLoading ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
+
+          {myTicketsLoading && myTickets.length === 0 ? (
+            <div className="py-10 text-center text-charcoal-400 text-xs">Loading your tickets...</div>
+          ) : myTickets.length === 0 ? (
+            <div className="py-10 text-center text-charcoal-500 space-y-1">
+              <p className="font-bold text-sm">No tickets raised yet.</p>
+              <p className="text-xs text-charcoal-400">Use the contact form on the homepage to reach support.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {myTickets.map((t) => (
+                <div
+                  key={t.id}
+                  id={`ticket-row-${t.id}`}
+                  className={`p-4 rounded-2xl border bg-charcoal-50/50 dark:bg-charcoal-800/40 space-y-2 transition-colors ${
+                    t.id === highlightTicketId
+                      ? 'border-institutional-400 dark:border-institutional-600 ring-2 ring-institutional-300 dark:ring-institutional-700'
+                      : 'border-charcoal-200 dark:border-charcoal-800'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-extrabold text-institutional-600 dark:text-institutional-400">
+                          {t.ticket_number}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                            t.status === 'RESOLVED'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          }`}
+                        >
+                          {t.status}
+                        </span>
+                      </div>
+                      {t.subject && (
+                        <div className="text-sm font-bold text-charcoal-900 dark:text-white mt-1">{t.subject}</div>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-charcoal-400 font-mono shrink-0">
+                      {new Date(t.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-charcoal-600 dark:text-charcoal-300 whitespace-pre-wrap">{t.message}</p>
+                  {t.status === 'RESOLVED' && t.resolution_note && (
+                    <div className="mt-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                        <CheckCircleIcon size={12} />
+                        <span>Support response</span>
+                      </div>
+                      <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1 whitespace-pre-wrap">{t.resolution_note}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

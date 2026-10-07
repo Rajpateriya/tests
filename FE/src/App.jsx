@@ -10,6 +10,7 @@ import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { AdminStudioPage } from './pages/AdminStudioPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { CoursesPage } from './pages/CoursesPage';
+import { CourseDetailPage } from './pages/CourseDetailPage';
 import { TypingMasterPage } from './pages/TypingMasterPage';
 import { AiPipelinePage } from './pages/AiPipelinePage';
 import { Footer } from './components/Footer';
@@ -47,8 +48,16 @@ const VIEW_PATHS = {
 const viewFromPath = (pathname) => {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
+  if (path === '/dashboard' || path.startsWith('/dashboard/')) return 'dashboard'; // /dashboard/<tab>
   if (path.startsWith('/ai-pipeline/')) return 'pipeline'; // /ai-pipeline/<step>?subject=...
+  if (path.startsWith('/courses/')) return 'courseDetail'; // /courses/<course id>
   return Object.keys(VIEW_PATHS).find((v) => VIEW_PATHS[v] === path) || null;
+};
+
+// The id embedded in a /courses/<id> address, or null when the path doesn't name one.
+const courseIdFromPath = (pathname) => {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  return path.startsWith('/courses/') ? decodeURIComponent(path.slice('/courses/'.length)) : null;
 };
 
 function AppContent() {
@@ -68,6 +77,12 @@ function AppContent() {
       return 'discovery';
     }
   });
+
+  // Which course /courses/<id> names, so a refresh or shared link opens that course directly.
+  const [openCourseId, setOpenCourseId] = useState(() => courseIdFromPath(window.location.pathname));
+  // The exact address the course was opened from (whatever screen/tab that was), so "back" always
+  // returns there precisely — not a fixed screen. null on a refresh/shared link (no origin to return to).
+  const [courseDetailBackPath, setCourseDetailBackPath] = useState(null);
 
   const [activeAttempt, setActiveAttempt] = useState(null);
   const [starting, setStarting] = useState(false);
@@ -103,16 +118,51 @@ function AppContent() {
     }
   }, [user, currentView]);
 
+  // Opens a course by id, address included: /courses/<id>. Wherever this was called from is
+  // captured automatically (the address bar at that moment) as where "back" should return to —
+  // a specific tab of the dashboard, the course list, or anywhere else, with no fixed list of cases.
+  const handleOpenCourse = (courseId) => {
+    setCourseDetailBackPath(window.location.pathname);
+    setOpenCourseId(courseId);
+    setCurrentView('courseDetail');
+  };
+
+  // Returns from the course detail page to exactly where it was opened from.
+  const handleBackFromCourse = () => {
+    const target = courseDetailBackPath || '/courses';
+    window.history.pushState(null, '', target);
+    setCurrentView(viewFromPath(target) || 'courses');
+  };
+
+  // The course detail page's breadcrumb label, named after whichever screen will reopen on "back".
+  const courseDetailBackLabel = (() => {
+    const v = viewFromPath(courseDetailBackPath || '/courses');
+    if (v === 'dashboard') return 'Dashboard';
+    if (v === 'courses') return 'Courses';
+    return 'Back';
+  })();
+
   // Keep the address bar in step with the screen, and the screen in step with back/forward.
+  // A screen that manages its own sub-address (Admin Studio's tabs, the Dashboard's tabs) is left
+  // alone as long as the address already resolves back to that same screen.
   useEffect(() => {
-    if (viewFromPath(window.location.pathname) !== currentView) {
-      window.history.pushState(null, '', VIEW_PATHS[currentView] || '/');
+    if (currentView === 'courseDetail') {
+      const want = `/courses/${encodeURIComponent(openCourseId || '')}`;
+      if (window.location.pathname !== want) window.history.pushState(null, '', want);
+      return;
     }
-  }, [currentView]);
+    if (viewFromPath(window.location.pathname) === currentView) return;
+    window.history.pushState(null, '', VIEW_PATHS[currentView] || '/');
+  }, [currentView, openCourseId]);
 
   useEffect(() => {
     const onPop = () => {
       const v = viewFromPath(window.location.pathname);
+      if (v === 'courseDetail') {
+        setOpenCourseId(courseIdFromPath(window.location.pathname));
+        setCurrentView('courseDetail');
+        return;
+      }
       // Going back into an exam or results screen that no longer exists falls back to the home screen.
       if (v && v !== 'exam' && v !== 'results') setCurrentView(v);
       else if (v === 'exam' || v === 'results') setCurrentView(user ? (isAdmin ? 'admin' : 'dashboard') : 'discovery');
@@ -220,6 +270,7 @@ function AppContent() {
             activeAttempt={activeAttempt}
             onOpenAuthModal={handleOpenAuthModal}
             onNavigate={setCurrentView}
+            onOpenCourse={handleOpenCourse}
           />
         )}
 
@@ -251,6 +302,7 @@ function AppContent() {
             }}
             onStartTest={handleStartTest}
             onNavigate={setCurrentView}
+            onOpenCourse={handleOpenCourse}
           />
         )}
 
@@ -259,6 +311,17 @@ function AppContent() {
           <CoursesPage
             onNavigateToDashboard={() => setCurrentView('dashboard')}
             onNavigateToQuiz={() => setCurrentView('discovery')}
+            onStartTest={handleStartTest}
+            onOpenCourse={handleOpenCourse}
+          />
+        )}
+
+        {/* 5b. One course's full detail page: every quiz and mock test it includes */}
+        {currentView === 'courseDetail' && (
+          <CourseDetailPage
+            courseId={openCourseId}
+            backLabel={courseDetailBackLabel}
+            onBackToCourses={handleBackFromCourse}
             onStartTest={handleStartTest}
           />
         )}

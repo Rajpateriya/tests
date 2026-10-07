@@ -23,6 +23,7 @@ import {
   CheckIcon,
   BookOpenIcon,
   PlusIcon,
+  MessageSquareIcon,
 } from '../components/Icons';
 
 const EXAM_OPTIONS = [
@@ -166,7 +167,7 @@ const formatDate = (value) =>
   value ? new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
 // Admin Studio addresses: /admin/users, /admin/courses, /admin/tests, /admin/tests/<test id>, /admin/health
-const ADMIN_TABS = ['users', 'courses', 'tests', 'health'];
+const ADMIN_TABS = ['users', 'courses', 'tests', 'support', 'health'];
 const parseAdminPath = () => {
   const [, , tab, id] = window.location.pathname.split('/');
   return {
@@ -579,6 +580,7 @@ export const AdminStudioPage = () => {
     duration_minutes: t.duration_minutes ?? '',
     positive_marks_per_q: t.positive_marks_per_q ?? '',
     negative_marks_per_q: t.negative_marks_per_q ?? '',
+    is_free: !!t.is_free,
   });
 
   const openTest = async (t) => {
@@ -623,6 +625,7 @@ export const AdminStudioPage = () => {
         duration_minutes: duration,
         positive_marks_per_q: positive,
         negative_marks_per_q: negative,
+        is_free: testForm.is_free,
       });
       setTestDetail((d) => ({ ...d, test: updated }));
       setTestForm(formFromTest(updated));
@@ -675,6 +678,10 @@ export const AdminStudioPage = () => {
     if (testId) openTest({ id: testId });
     if (courseId === 'new') openCreateCourse();
     else if (courseId) openCourseById(courseId);
+    if (bootPath.current.tab === 'support' && highlightTicketId) {
+      setTicketFilter('');
+      loadTickets('');
+    }
   }, []);
 
   // Back/forward: follow the address
@@ -682,6 +689,12 @@ export const AdminStudioPage = () => {
   onAddressChange.current = () => {
     const { tab, testId, courseId } = parseAdminPath();
     setActiveTab(tab);
+    const ticketParam = new URLSearchParams(window.location.search).get('ticket');
+    setHighlightTicketId(ticketParam);
+    if (tab === 'support' && ticketParam) {
+      setTicketFilter('');
+      loadTickets('');
+    }
     if (courseId) {
       if (courseId === 'new') {
         if (courseModal?.mode !== 'create') openCreateCourse();
@@ -707,6 +720,7 @@ export const AdminStudioPage = () => {
   // (Only the Mock Tests tab needs the full course list, for its "In Courses" column.)
   const coursesLoaded = useRef(false);
   const healthLoaded = useRef(false);
+  const ticketsLoaded = useRef(false);
   useEffect(() => {
     if (activeTab === 'tests' && !coursesLoaded.current) {
       coursesLoaded.current = true;
@@ -716,7 +730,68 @@ export const AdminStudioPage = () => {
       healthLoaded.current = true;
       loadHealth();
     }
+    if (activeTab === 'support' && !ticketsLoaded.current) {
+      ticketsLoaded.current = true;
+      loadTickets();
+    }
   }, [activeTab]);
+
+  // Support tickets: every ticket from everyone, with a status filter
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketFilter, setTicketFilter] = useState(''); // '' = all | 'OPEN' | 'RESOLVED'
+  const [ticketUpdating, setTicketUpdating] = useState(null); // ticket id currently being updated
+  const [resolvingTicket, setResolvingTicket] = useState(null); // ticket mid-resolve, with a reason to type first
+  const [resolveNote, setResolveNote] = useState('');
+  // A ticket opened straight from a notification (?ticket=<id>): scrolled to and highlighted once loaded.
+  const [highlightTicketId, setHighlightTicketId] = useState(() => new URLSearchParams(window.location.search).get('ticket'));
+
+  const loadTickets = async (status = ticketFilter) => {
+    setTicketsLoading(true);
+    try {
+      setTickets(await api.admin.listSupportTickets({ status }));
+    } catch (err) {
+      showToast('error', `Could not load tickets: ${err.message}`);
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
+  const handleTicketFilter = (status) => {
+    setTicketFilter(status);
+    loadTickets(status);
+  };
+
+  // Opened from a notification: once that ticket is in the loaded list, scroll it into view.
+  useEffect(() => {
+    if (activeTab !== 'support' || !highlightTicketId) return;
+    const el = document.getElementById(`ticket-row-${highlightTicketId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [activeTab, highlightTicketId, tickets]);
+
+  // Reopening needs no reason; resolving does, so it opens a small inline prompt first.
+  const handleToggleTicketStatus = (ticket) => {
+    if (ticket.status === 'OPEN') {
+      setResolveNote('');
+      setResolvingTicket(ticket);
+      return;
+    }
+    applyTicketStatus(ticket, 'OPEN');
+  };
+
+  const applyTicketStatus = async (ticket, status, note) => {
+    setTicketUpdating(ticket.id);
+    try {
+      const updated = await api.admin.setSupportTicketStatus(ticket.id, status, note);
+      setTickets((prev) => prev.map((t) => (t.id === ticket.id ? updated : t)));
+      loadOverviewData(); // keeps the open-ticket badge in step
+      setResolvingTicket(null);
+    } catch (err) {
+      showToast('error', err.message);
+    } finally {
+      setTicketUpdating(null);
+    }
+  };
 
   // The picker shows the loaded pages, plus the tests already tagged to this course that are not
   // loaded yet (matching the search), so a tagged test can always be un-ticked.
@@ -792,6 +867,7 @@ export const AdminStudioPage = () => {
               if (activeTab === 'courses') coursesTab.reload();
               if (activeTab === 'tests') testsTab.reload();
               if (activeTab === 'health') loadHealth();
+              if (activeTab === 'support') loadTickets();
               showToast('success', 'Admin studio synchronized with backend.');
             }}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-charcoal-300 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors shadow-xs cursor-pointer"
@@ -802,12 +878,13 @@ export const AdminStudioPage = () => {
         </div>
       </div>
 
-      {/* 4 Live Stats Cards (all numbers from the backend); each opens its tab */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 5 Live Stats Cards (all numbers from the backend); each opens its tab */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { key: 'users', label: 'Total Users', value: stats?.total_users, Icon: UserIcon, tab: 'users', box: 'bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300' },
           { key: 'courses', label: 'Courses', value: stats?.total_courses, Icon: BookOpenIcon, tab: 'courses', box: 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300' },
           { key: 'tests', label: 'Configured Tests', value: stats?.total_configured_tests, Icon: LayersIcon, tab: 'tests', box: 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300' },
+          { key: 'support', label: 'Open Tickets', value: stats?.open_support_tickets, Icon: MessageSquareIcon, tab: 'support', box: 'bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300' },
           { key: 'attempts', label: 'Completed Attempts', value: stats?.completed_attempts, Icon: CheckCircleIcon, tab: null, box: 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300', green: true },
         ].map(({ key, label, value, Icon, tab, box, green }) => {
           const body = (
@@ -884,6 +961,18 @@ export const AdminStudioPage = () => {
         >
           <LayersIcon size={15} />
           <span>Mock Tests ({stats?.total_configured_tests ?? '...'})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('support')}
+          className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+            activeTab === 'support'
+              ? 'bg-institutional-600 text-white shadow-sm font-extrabold'
+              : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+          }`}
+        >
+          <MessageSquareIcon size={15} />
+          <span>Support Tickets ({stats?.open_support_tickets ?? '...'})</span>
         </button>
 
         <button
@@ -2062,7 +2151,16 @@ export const AdminStudioPage = () => {
                       className="hover:bg-institutional-50/60 dark:hover:bg-charcoal-800/50 transition-colors cursor-pointer"
                     >
                       <td className="py-3 px-4">
-                        <div className="font-extrabold text-charcoal-900 dark:text-white truncate max-w-[18rem]">{t.title}</div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="font-extrabold text-charcoal-900 dark:text-white truncate max-w-[16rem]">{t.title}</div>
+                          <span className={`shrink-0 inline-flex px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                            t.is_free
+                              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-500 dark:text-charcoal-400'
+                          }`}>
+                            {t.is_free ? 'Free' : 'Paid'}
+                          </span>
+                        </div>
                         <div className="text-[11px] text-charcoal-400 font-mono truncate max-w-[18rem]">{t.id}</div>
                       </td>
                       <td className="py-3 px-3 whitespace-nowrap">
@@ -2269,6 +2367,34 @@ export const AdminStudioPage = () => {
                 <p className="text-[11px] text-charcoal-400 font-medium">
                   Courses that include this test are updated with the same title, duration and marks. Total marks are recalculated.
                 </p>
+
+                <div className="space-y-1">
+                  <label className="text-charcoal-700 dark:text-charcoal-300 font-bold">Access</label>
+                  <div className="flex items-center gap-2 p-1 rounded-xl bg-charcoal-100 dark:bg-charcoal-800 w-fit">
+                    {[
+                      { value: false, label: 'Paid' },
+                      { value: true, label: 'Free' },
+                    ].map((opt) => (
+                      <button
+                        key={String(opt.value)}
+                        type="button"
+                        onClick={() => setTestForm({ ...testForm, is_free: opt.value })}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                          testForm.is_free === opt.value
+                            ? opt.value
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'bg-institutional-600 text-white shadow-sm'
+                            : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-charcoal-400 font-medium">
+                    New tests default to Paid. A Free test is tagged as such in its data; it is not yet enforced as a paywall anywhere in the product.
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -2351,6 +2477,170 @@ export const AdminStudioPage = () => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: SUPPORT TICKETS (every contact-form submission, from everyone) */}
+      {activeTab === 'support' && (
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 shadow-card space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
+            <div>
+              <h2 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white flex items-center gap-2">
+                <MessageSquareIcon size={18} className="text-institutional-600" />
+                <span>Support Tickets</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 font-mono font-bold">
+                  {tickets.length}
+                </span>
+              </h2>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1">
+                Every contact-form submission, from registered users and guests.
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {[
+                { id: '', label: 'All' },
+                { id: 'OPEN', label: 'Open' },
+                { id: 'RESOLVED', label: 'Resolved' },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => handleTicketFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                    ticketFilter === f.id
+                      ? 'bg-institutional-600 text-white shadow-sm'
+                      : 'text-charcoal-600 dark:text-charcoal-400 border border-charcoal-200 dark:border-charcoal-700 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {ticketsLoading ? (
+            <div className="py-12 text-center text-charcoal-400">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold">
+                <div className="w-4 h-4 border-2 border-institutional-600 border-t-transparent rounded-full animate-spin" />
+                <span>Loading tickets...</span>
+              </div>
+            </div>
+          ) : tickets.length === 0 ? (
+            <div className="py-12 text-center text-charcoal-400 text-xs">
+              {ticketFilter ? `No ${ticketFilter.toLowerCase()} tickets.` : 'No support tickets yet.'}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tickets.map((t) => (
+                <div
+                  key={t.id}
+                  id={`ticket-row-${t.id}`}
+                  className={`p-4 rounded-2xl border bg-charcoal-50/50 dark:bg-charcoal-800/40 space-y-2 transition-colors ${
+                    t.id === highlightTicketId
+                      ? 'border-institutional-400 dark:border-institutional-600 ring-2 ring-institutional-300 dark:ring-institutional-700'
+                      : 'border-charcoal-200 dark:border-charcoal-800'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-extrabold text-institutional-600 dark:text-institutional-400">
+                          {t.ticket_number}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                            t.status === 'RESOLVED'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          }`}
+                        >
+                          {t.status}
+                        </span>
+                        {!t.user_id && (
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-500 dark:text-charcoal-400">
+                            Guest
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm font-bold text-charcoal-900 dark:text-white mt-1">
+                        {t.name} <span className="text-charcoal-400 font-normal">· {t.email}</span>
+                      </div>
+                      {t.subject && (
+                        <div className="text-xs font-semibold text-charcoal-600 dark:text-charcoal-300 mt-0.5">{t.subject}</div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] text-charcoal-400 font-mono">
+                        {new Date(t.created_at).toLocaleDateString()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTicketStatus(t)}
+                        disabled={ticketUpdating === t.id}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-60 ${
+                          t.status === 'OPEN'
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'border border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
+                        }`}
+                      >
+                        {ticketUpdating === t.id ? 'Saving...' : t.status === 'OPEN' ? 'Mark Resolved' : 'Reopen'}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-charcoal-600 dark:text-charcoal-300 whitespace-pre-wrap pl-0.5">{t.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Resolve-with-reason prompt: the reason goes straight into the user's notification */}
+      {resolvingTicket && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-sm animate-fade-in"
+          onClick={() => setResolvingTicket(null)}
+        >
+          <div
+            className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="text-base font-extrabold text-charcoal-950 dark:text-white">
+                Resolve {resolvingTicket.ticket_number}
+              </h3>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1">
+                {resolvingTicket.user_id
+                  ? 'This is sent straight to the user as a notification.'
+                  : `This ticket was raised by a guest (${resolvingTicket.email}), so there's no account to notify.`}
+              </p>
+            </div>
+            <textarea
+              autoFocus
+              rows={4}
+              value={resolveNote}
+              onChange={(e) => setResolveNote(e.target.value)}
+              placeholder="e.g. Fixed the timer bug — please retry your test."
+              className={INPUT_CLS}
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setResolvingTicket(null)}
+                className="px-4 py-2 rounded-xl border border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 font-bold text-xs hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => applyTicketStatus(resolvingTicket, 'RESOLVED', resolveNote)}
+                disabled={ticketUpdating === resolvingTicket.id}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-extrabold text-xs transition-colors"
+              >
+                {ticketUpdating === resolvingTicket.id ? 'Resolving...' : 'Resolve & Notify'}
+              </button>
             </div>
           </div>
         </div>
