@@ -1,6 +1,8 @@
+from typing import Optional
 from fastapi import APIRouter, Body, Depends, status
+from fastapi.security import HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user, security_scheme
 from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.schemas.common import APIResponse
@@ -91,6 +93,20 @@ async def get_me(
         message="User profile retrieved",
         data=current_user,
     )
+
+
+@router.post("/logout", response_model=APIResponse[dict])
+async def logout(
+    refresh_token: Optional[str] = Body(None, embed=True),
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Log out: blacklist the access token (and the refresh token, if sent), so neither
+    can be used again even though they have not expired yet."""
+    auth_service = AuthService(db)
+    await auth_service.logout(auth.credentials if auth else None, refresh_token)
+    return APIResponse(success=True, message="Logged out", data={})
 
 
 @router.post("/refresh", response_model=APIResponse[TokenResponse])

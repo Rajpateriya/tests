@@ -507,13 +507,21 @@ class CourseService:
     async def ensure_test_access(self, user: Any, test_id: str) -> None:
         """A test that is a quiz of an active course may only be started by users enrolled in it.
 
-        Other tests stay public. Admins, and users who already have the test in progress
-        (resuming), are always allowed."""
+        Other tests stay public. Admins, a test tagged free (regardless of any course it is also
+        tagged to), and users who already have the test in progress (resuming), are always
+        allowed."""
+        if user.role == UserRole.ADMIN:
+            return
+
+        test_doc = await self.db.tests.find_one({"_id": test_id}, {"is_free": 1})
+        if test_doc and test_doc.get("is_free"):
+            return
+
         # Only published courses lock their tests: tagging into a draft changes nothing for users.
         courses = await self.db.courses.find(
             {"quizzes.id": test_id, "is_active": {"$ne": False}, "is_published": {"$ne": False}}, {"title": 1}
         ).to_list(length=50)
-        if not courses or user.role == UserRole.ADMIN:
+        if not courses:
             return
 
         if await self.db.attempts.find_one(

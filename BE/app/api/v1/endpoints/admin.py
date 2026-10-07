@@ -131,6 +131,7 @@ async def get_platform_stats(
     courses_count = await db.courses.count_documents({})
     attempts_count = await db.attempts.count_documents({})
     completed_attempts = await db.attempts.count_documents({"status": "COMPLETED"})
+    open_tickets = await db.support_tickets.count_documents({"status": "OPEN"})
 
     return APIResponse(
         success=True,
@@ -142,6 +143,7 @@ async def get_platform_stats(
             "total_courses": courses_count,
             "total_attempts": attempts_count,
             "completed_attempts": completed_attempts,
+            "open_support_tickets": open_tickets,
         },
     )
 

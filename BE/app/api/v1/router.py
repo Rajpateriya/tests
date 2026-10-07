@@ -5,10 +5,12 @@ from app.api.v1.endpoints import (
     auth,
     courses,
     generation,
+    notifications,
     questions,
     results,
     streak,
     subscriptions,
+    support,
     tests,
     typing,
     users,
@@ -28,4 +30,6 @@ api_v1_router.include_router(subscriptions.router)
 api_v1_router.include_router(streak.router)
 api_v1_router.include_router(courses.router)
 api_v1_router.include_router(typing.router)
+api_v1_router.include_router(support.router)
+api_v1_router.include_router(notifications.router)
 

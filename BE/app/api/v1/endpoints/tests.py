@@ -23,6 +23,7 @@ async def list_tests(
     topic: Optional[str] = Query(None, description="Filter by topic"),
     target_exam: Optional[str] = Query(None, description="Filter by target exam (e.g. SSC CGL)"),
     search: Optional[str] = Query(None, max_length=100, description="Search the title or subject"),
+    is_free: Optional[bool] = Query(None, description="true = only free tests"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     current_user: Optional[UserResponse] = Depends(get_optional_current_user),
@@ -41,6 +42,7 @@ async def list_tests(
         target_exam=target_exam,
         search=search,
         is_active=True,
+        is_free=is_free,
     )
     tests = await service.list_tests(params, skip=skip, limit=limit)
     return APIResponse(

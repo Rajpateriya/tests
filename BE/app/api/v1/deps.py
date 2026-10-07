@@ -5,8 +5,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.exceptions import ForbiddenException, UnauthorizedException
 from app.core.security import decode_token
 from app.db.mongodb import get_db
-from app.db.redis import get_redis
 from app.models.user import UserRole
+from app.repositories.token_blacklist_repo import TokenBlacklistRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.user import UserResponse
 
@@ -28,6 +28,9 @@ async def get_current_user(
 
     if payload.get("type") != "access":
         raise UnauthorizedException("Invalid token type")
+
+    if payload.get("jti") and await TokenBlacklistRepository(db).is_blacklisted(payload["jti"]):
+        raise UnauthorizedException("Token has been logged out")
 
     user_id = payload.get("sub")
     if not user_id:
@@ -71,6 +74,8 @@ async def get_optional_current_user(
     try:
         payload = decode_token(auth.credentials)
         if payload.get("type") != "access":
+            return None
+        if payload.get("jti") and await TokenBlacklistRepository(db).is_blacklisted(payload["jti"]):
             return None
         user_id = payload.get("sub")
         if not user_id:

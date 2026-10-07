@@ -100,4 +100,12 @@ async def init_db_indexes(db: AsyncIOMotorDatabase) -> None:
     except Exception as e:
         logger.warning(f"Could not create staging_questions indexes: {e}")
 
+    # Logged-out tokens (jti): a TTL index auto-deletes each entry once the token itself expires
+    try:
+        await db.token_blacklist.create_indexes([
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=0, name="idx_token_blacklist_ttl"),
+        ])
+    except Exception as e:
+        logger.warning(f"Could not create token_blacklist indexes: {e}")
+
     logger.info("MongoDB indexes successfully initialized.")

@@ -37,6 +37,7 @@ class TestService:
             target_exam=params.target_exam,
             search=params.search,
             is_active=params.is_active,
+            is_free=params.is_free,
             skip=skip,
             limit=limit,
         )
@@ -77,6 +78,7 @@ class TestService:
             "question_ids": req.question_ids,
             "total_questions": total_questions,
             "is_active": req.is_active,
+            "is_free": req.is_free,
             "created_at": now,
             "updated_at": now,
         }
@@ -248,6 +250,7 @@ class TestService:
             negative_marks_per_q=doc.get("negative_marks_per_q", 0.5),
             total_questions=doc.get("total_questions", len(doc.get("question_ids", []))),
             is_active=doc.get("is_active", True),
+            is_free=doc.get("is_free", False),
             created_at=doc["created_at"],
         )
 

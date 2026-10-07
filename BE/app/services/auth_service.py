@@ -20,6 +20,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import UserRole
+from app.repositories.token_blacklist_repo import TokenBlacklistRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.user import (
     ForgotPasswordResponse,
@@ -37,6 +38,7 @@ from app.schemas.user import (
 class AuthService:
     def __init__(self, db: AsyncIOMotorDatabase):
         self.repo = UserRepository(db)
+        self.blacklist_repo = TokenBlacklistRepository(db)
 
     async def register(self, req: UserRegisterRequest) -> UserResponse:
         existing = await self.repo.get_by_email(req.email)
@@ -151,15 +153,38 @@ class AuthService:
             "message": "Password has been successfully updated. You may now sign in with your new password.",
         }
 
+    async def logout(self, access_token: Optional[str], refresh_token: Optional[str] = None) -> None:
+        """Blacklist the given token(s) by their `jti`, so neither can be used again even
+        though they have not expired yet. Tokens without a `jti` (very old ones) are skipped."""
+        for token in (access_token, refresh_token):
+            if not token:
+                continue
+            try:
+                payload = decode_token(token)
+            except ValueError:
+                continue
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                await self.blacklist_repo.add(jti, expires_at=datetime.fromtimestamp(exp, tz=timezone.utc))
+
     async def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         try:
             payload = decode_token(refresh_token)
             if payload.get("type") != "refresh":
                 raise UnauthorizedException("Invalid token type")
+            if payload.get("jti") and await self.blacklist_repo.is_blacklisted(payload["jti"]):
+                raise UnauthorizedException("Token has been logged out")
             user_id = payload.get("sub")
             user = await self.repo.get_by_id(user_id)
             if not user or not user.get("is_active", True):
                 raise UnauthorizedException("User not found or inactive")
+
+            # The refresh token just used is now spent: blacklist it too, so it cannot be replayed.
+            if payload.get("jti") and payload.get("exp"):
+                await self.blacklist_repo.add(
+                    payload["jti"], expires_at=datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+                )
 
             new_access_token = create_access_token(
                 subject=user["_id"],

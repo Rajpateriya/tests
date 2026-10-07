@@ -16,12 +16,15 @@ class TestRepository(BaseRepository):
         target_exam: Optional[str] = None,
         search: Optional[str] = None,
         is_active: Optional[bool] = True,
+        is_free: Optional[bool] = None,
         skip: int = 0,
         limit: int = 20,
     ) -> List[Dict[str, Any]]:
         query: Dict[str, Any] = {}
         if is_active is not None:
             query["is_active"] = is_active
+        if is_free is not None:
+            query["is_free"] = is_free
         if test_type:
             query["test_type"] = test_type
         if subject:

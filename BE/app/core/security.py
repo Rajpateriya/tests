@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Union
 import bcrypt
@@ -43,6 +44,7 @@ def create_access_token(
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
         "type": "access",
+        "jti": uuid.uuid4().hex,  # unique id, so this one token can be blacklisted on logout
     }
     if extra_claims:
         to_encode.update(extra_claims)
@@ -73,6 +75,7 @@ def create_refresh_token(
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
         "type": "refresh",
+        "jti": uuid.uuid4().hex,
     }
 
     encoded_jwt = jwt.encode(
