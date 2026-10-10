@@ -231,18 +231,18 @@ class CourseService:
         if not user:
             raise NotFoundException("User not found")
 
-        # Verify signature if Razorpay signature is provided and secret is configured
-        if signature and settings.RAZORPAY_KEY_SECRET:
-            try:
-                body = f"{order_id}|{payment_id}".encode("utf-8")
-                expected_sig = hmac.new(
-                    settings.RAZORPAY_KEY_SECRET.encode("utf-8"), body, hashlib.sha256
-                ).hexdigest()
-                if not hmac.compare_digest(expected_sig, signature):
-                    # Warning logged, but continue in development mode
-                    pass
-            except Exception:
-                pass
+        # Verify Razorpay HMAC-SHA256 signature — required for security
+        if not signature:
+            raise BadRequestException("Payment signature is required for verification")
+        if settings.RAZORPAY_KEY_SECRET:
+            body = f"{order_id}|{payment_id}".encode("utf-8")
+            expected_sig = hmac.new(
+                settings.RAZORPAY_KEY_SECRET.encode("utf-8"), body, hashlib.sha256
+            ).hexdigest()
+            if not hmac.compare_digest(expected_sig, signature):
+                raise BadRequestException(
+                    "Payment signature verification failed. Possible tampered request."
+                )
 
         now = datetime.now(timezone.utc)
         base_price = float(course.get("discounted_price") or course.get("discount_price") or 499)

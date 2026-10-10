@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Razorpay Payment Gateway
-    RAZORPAY_KEY_ID: str = "rzp_test_prepmagnet2026"
-    RAZORPAY_KEY_SECRET: str = "rzp_secret_prepmagnet2026"
-    RAZORPAY_WEBHOOK_SECRET: str = "rzp_webhook_secret_2026"
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
+    RAZORPAY_WEBHOOK_SECRET: str = ""
 
     # CORS
 

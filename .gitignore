@@ -12,6 +12,7 @@ env/
 venv/
 .env
 BE/.env
+FE/.env
 .env.local
 .env.*.local
 __pycache__/

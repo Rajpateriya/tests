@@ -96,7 +96,7 @@ class CourseOrderResponse(BaseModel):
 class CourseVerifyPaymentRequest(BaseModel):
     order_id: str
     payment_id: str
-    signature: Optional[str] = None
+    signature: str  # HMAC-SHA256 from Razorpay checkout callback
     coins_used: int = 0
 
 
