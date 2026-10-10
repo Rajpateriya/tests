@@ -224,10 +224,10 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTe
             <div>
               <div className="text-sm font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
                 <span>GovCoins Balance: <strong className="text-amber-600 dark:text-amber-400">{userCoins} Coins</strong></span>
-                <span className="text-[10px] bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold">1 Coin = ₹1</span>
+                <span className="text-[10px] bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold">100 Coins = ₹10 (₹{(userCoins * 0.1).toFixed(1)} Value)</span>
               </div>
               <p className="text-xs text-charcoal-500 dark:text-charcoal-400">
-                Redeem your daily streak coins for up to ₹100 instant discount on any exam course!
+                Redeem your streak coins for instant discounts on any exam course! (100 GovCoins = ₹10)
               </p>
             </div>
           </div>
@@ -530,7 +530,11 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTe
                       <div className="flex items-center gap-3">
                         <div className="flex-1 py-3 px-4 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
                           <CheckCircleIcon size={16} className="text-emerald-600 dark:text-emerald-400" />
-                          <span>Enrolled in Course</span>
+                          <span>
+                            {course.access_source === 'PASS'
+                              ? `Included in ${course.pass_title || 'Active Pass'}`
+                              : 'Enrolled in Course'}
+                          </span>
                         </div>
 
                         <button
@@ -547,15 +551,24 @@ export const CoursesPage = ({ onNavigateToQuiz, onNavigateToDashboard, onStartTe
                         type="button"
                         onClick={() => handleStartCheckout(course)}
                         disabled={orderLoading}
-                        className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
+                        className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <ShieldIcon size={16} />
-                        <span>Enroll Now — ₹{useCoins && userCoins > 0 ? Math.max(1, course.discounted_price - Math.min(userCoins, 100)) : course.discounted_price}</span>
-                        {useCoins && userCoins > 0 && (
-                          <span className="text-[11px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-normal">
-                            -₹{Math.min(userCoins, 100)} Coins Applied
-                          </span>
-                        )}
+                        {(() => {
+                          const maxCoinsUsed = Math.min(userCoins, course.max_coins_discount || 500);
+                          const coinRupees = Math.round(maxCoinsUsed * 0.1);
+                          const finalPrice = useCoins && userCoins > 0 ? Math.max(1, course.discounted_price - coinRupees) : course.discounted_price;
+                          return (
+                            <>
+                              <span>Enroll Now — ₹{finalPrice}</span>
+                              {useCoins && coinRupees > 0 && (
+                                <span className="text-[11px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-normal">
+                                  -₹{coinRupees} ({maxCoinsUsed} Coins)
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </button>
                     )}
                   </div>

@@ -8,12 +8,14 @@ from app.core.config import settings
 from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.schemas.common import APIResponse
+from app.schemas.pass_schema import PassResponse, UserActivePassOut
 from app.schemas.subscription import (
     CalculateDiscountRequest,
     CreateOrderRequest,
     VerifyPaymentRequest,
 )
 from app.schemas.user import UserResponse
+from app.services.pass_service import PassService
 from app.services.subscription_service import SubscriptionService
 
 router = APIRouter(
@@ -21,6 +23,42 @@ router = APIRouter(
     tags=["Subscriptions & Payments"],
     dependencies=[Depends(check_rate_limit)],
 )
+
+
+@router.get("/passes", response_model=APIResponse[List[PassResponse]])
+async def get_active_passes(
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Retrieve all dynamic targeted passes with covered course details."""
+    service = PassService(db)
+    passes = await service.list_active_passes()
+    return APIResponse(
+        success=True,
+        message="Active exam passes retrieved",
+        data=passes,
+    )
+
+
+@router.get("/my-pass", response_model=APIResponse[Dict[str, Any]])
+async def get_my_active_passes(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Retrieve currently authenticated user's active passes.
+    Automatically checks duration and marks breached passes as EXPIRED.
+    """
+    service = PassService(db)
+    active_passes = await service.sanitize_user_passes(current_user.id)
+    return APIResponse(
+        success=True,
+        message="User active passes retrieved",
+        data={
+            "has_active_pass": len(active_passes) > 0,
+            "active_passes": active_passes,
+            "total_active_passes": len(active_passes),
+        },
+    )
 
 
 @router.get("/plans", response_model=APIResponse[List[Dict[str, Any]]])
@@ -43,13 +81,23 @@ async def calculate_discount(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Calculate the final payable price after applying eligible user GovCoins."""
-    service = SubscriptionService(db)
-    result = await service.calculate_discount(
-        user_id=current_user.id,
-        plan_id=req.plan_id,
-        apply_coins=req.apply_coins,
-    )
+    """Calculate the final payable price after applying eligible user GovCoins (100 coins = 10 Rs)."""
+    # Check if this is a dynamic pass
+    pass_service = PassService(db)
+    pass_doc = await pass_service.pass_repo.get_by_id(req.plan_id)
+    if pass_doc:
+        result = await pass_service.calculate_discount(
+            user_id=current_user.id,
+            pass_id=req.plan_id,
+            apply_coins=req.apply_coins,
+        )
+    else:
+        service = SubscriptionService(db)
+        result = await service.calculate_discount(
+            user_id=current_user.id,
+            plan_id=req.plan_id,
+            apply_coins=req.apply_coins,
+        )
     return APIResponse(
         success=True,
         message="Discount calculated successfully",
@@ -68,12 +116,21 @@ async def create_payment_order(
     Returns order_id, amount_paise, currency and razorpay_key_id so the
     frontend can directly invoke the Razorpay Checkout SDK.
     """
-    service = SubscriptionService(db)
-    order = await service.create_order(
-        user_id=current_user.id,
-        plan_id=req.plan_id,
-        apply_coins=req.apply_coins,
-    )
+    pass_service = PassService(db)
+    pass_doc = await pass_service.pass_repo.get_by_id(req.plan_id)
+    if pass_doc:
+        order = await pass_service.create_order(
+            user_id=current_user.id,
+            pass_id=req.plan_id,
+            apply_coins=req.apply_coins,
+        )
+    else:
+        service = SubscriptionService(db)
+        order = await service.create_order(
+            user_id=current_user.id,
+            plan_id=req.plan_id,
+            apply_coins=req.apply_coins,
+        )
     return APIResponse(
         success=True,
         message="Payment order created successfully",
@@ -88,18 +145,30 @@ async def verify_payment(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """
-    Verify Razorpay HMAC-SHA256 payment signature, activate user subscription,
+    Verify Razorpay HMAC-SHA256 payment signature, activate user subscription or pass,
     and deduct redeemed GovCoins atomically.
     """
-    service = SubscriptionService(db)
-    result = await service.verify_and_activate(
-        user_id=current_user.id,
-        order_id=req.order_id,
-        payment_id=req.payment_id,
-        plan_id=req.plan_id,
-        coins_used=req.coins_used,
-        signature=req.signature,
-    )
+    pass_service = PassService(db)
+    pass_doc = await pass_service.pass_repo.get_by_id(req.plan_id)
+    if pass_doc:
+        result = await pass_service.verify_and_activate_pass(
+            user_id=current_user.id,
+            order_id=req.order_id,
+            payment_id=req.payment_id,
+            pass_id=req.plan_id,
+            coins_used=req.coins_used,
+            signature=req.signature,
+        )
+    else:
+        service = SubscriptionService(db)
+        result = await service.verify_and_activate(
+            user_id=current_user.id,
+            order_id=req.order_id,
+            payment_id=req.payment_id,
+            plan_id=req.plan_id,
+            coins_used=req.coins_used,
+            signature=req.signature,
+        )
     return APIResponse(
         success=True,
         message="Payment verified and subscription activated successfully",

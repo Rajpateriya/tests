@@ -423,28 +423,24 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
         const d = idx + 1;
         const isDone = d <= streakDays;
         const isToday = d === (streakDays + 1) && !isDailyCompleted;
-        const isMilestone = [7, 14, 21, 28, 30].includes(d);
-        const milestoneRewards = { 7: 120, 14: 170, 21: 220, 28: 320, 30: 520 };
+        const isMilestone = [7, 15, 30].includes(d);
+        const milestoneRewards = { 7: 20, 15: 40, 30: 100 };
         const milestoneTitles = {
-          7: 'Week 1 Bronze',
-          14: 'Fortnight Silver',
-          21: 'Discipline Gold',
-          28: 'Focus Diamond',
-          30: 'Platinum Grand Master',
+          7: 'Week 1 Habit Champion (+20 Coins)',
+          15: 'Fortnight Mastery (+40 Coins)',
+          30: 'Monthly Exam Grand Master (+100 Coins)',
         };
         const milestoneBadges = {
           7: 'BRONZE',
-          14: 'SILVER',
-          21: 'GOLD',
-          28: 'DIAMOND',
-          30: 'PLATINUM',
+          15: 'SILVER',
+          30: 'GOLD',
         };
         return {
           day_number: d,
           label: `Day ${d}`,
           completed: isDone,
           is_current: isToday,
-          coins_reward: isMilestone ? milestoneRewards[d] : 20,
+          coins_reward: isMilestone ? milestoneRewards[d] : 5,
           is_milestone: isMilestone,
           milestone_title: isMilestone ? milestoneTitles[d] : null,
           milestone_badge: isMilestone ? milestoneBadges[d] : null,
@@ -581,7 +577,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                   <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">GovCoins</span>
                 </div>
                 <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium">
-                  = ₹{coinsBalance} exam discount
+                  = ₹{(coinsBalance * 0.10).toFixed(1)} exam discount (100 coins = ₹10)
                 </div>
               </div>
             </div>
@@ -991,6 +987,11 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                     <span>Next Milestone: <strong>{nextMilestone.label} (+{nextMilestone.coins_reward} 🪙)</strong> in {Math.max(1, nextMilestone.day_number - streakDays)} days!</span>
                   </div>
                 )}
+
+                <div className="text-[10px] text-charcoal-500 dark:text-charcoal-400 flex items-center justify-between border-t border-charcoal-100 dark:border-charcoal-800 pt-2 font-medium">
+                  <span>⚡ 7d: +20🪙 • 15d: +40🪙 • 30d: +100🪙</span>
+                  <span className="text-rose-600 dark:text-rose-400 font-bold">Loose a day = Reset to 0</span>
+                </div>
               </div>
 
               {/* Aspirant Diagnostic Callout */}

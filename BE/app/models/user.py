@@ -41,6 +41,7 @@ class UserProfile(BaseModel):
     subscription_status: Optional[str] = "INACTIVE"
     subscription_expires_at: Optional[datetime] = None
     enrolled_courses: List[EnrolledCourseItem] = Field(default_factory=list)
+    active_passes: List[Dict[str, Any]] = Field(default_factory=list)
     typing_stats: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 

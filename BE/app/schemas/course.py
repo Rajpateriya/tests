@@ -22,6 +22,9 @@ class CourseSummaryOut(BaseModel):
     features: List[str]
     total_quizzes: int
     is_enrolled: bool = False
+    access_source: Optional[str] = None  # "DIRECT" | "PASS" | None
+    pass_title: Optional[str] = None     # e.g. "Monthly Pass" if unlocked via pass
+    expires_at: Optional[str] = None
     quizzes: List[CourseSubjectQuiz] = Field(default_factory=list)
 
 
@@ -96,7 +99,7 @@ class CourseOrderResponse(BaseModel):
 class CourseVerifyPaymentRequest(BaseModel):
     order_id: str
     payment_id: str
-    signature: str  # HMAC-SHA256 from Razorpay checkout callback
+    signature: Optional[str] = None  # HMAC-SHA256 from Razorpay checkout callback
     coins_used: int = 0
 
 

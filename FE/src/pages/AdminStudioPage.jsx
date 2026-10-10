@@ -23,7 +23,11 @@ import {
   CheckIcon,
   BookOpenIcon,
   PlusIcon,
+  PlusCircleIcon,
   MessageSquareIcon,
+  CoinsIcon,
+  SaveIcon,
+  XIcon,
 } from '../components/Icons';
 
 const EXAM_OPTIONS = [
@@ -46,6 +50,24 @@ const EMPTY_COURSE_FORM = {
   original_price: '',
   discounted_price: '',
   test_ids: [],
+};
+
+const EMPTY_PASS_FORM = {
+  title: '',
+  tagline: 'Full-length official simulations, deep error analytics, and All-India percentile tracking.',
+  badge: 'SAVE 40%',
+  duration_days: 30,
+  base_price: 149,
+  original_price: 249,
+  max_coins_discount: 500,
+  covered_course_ids: [],
+  features: [
+    'Full-Length Official Simulations',
+    'Deep Error Analytics & AI Weak-Area Drills',
+    'All-India Percentile Tracking',
+    'All Covered Exam Courses Included',
+  ],
+  is_active: true,
 };
 
 // Tests tagged to a course: its quizzes without embedded questions (quiz id = test id).
@@ -245,6 +267,16 @@ export const AdminStudioPage = () => {
   const [savingTest, setSavingTest] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deletingTest, setDeletingTest] = useState(false);
+
+  // Targeted Passes: list, create/edit modal, dynamic course coverage selector
+  const passesLoaded = useRef(false);
+  const [passes, setPasses] = useState([]);
+  const [passesLoading, setPassesLoading] = useState(false);
+  const [passModal, setPassModal] = useState(null); // null | { mode: 'create' } | { mode: 'edit', pass }
+  const [passForm, setPassForm] = useState(EMPTY_PASS_FORM);
+  const [savingPass, setSavingPass] = useState(false);
+  const [passCourseSearch, setPassCourseSearch] = useState('');
+  const [featureInput, setFeatureInput] = useState('');
 
   // Show auto-dismissing toast
   const showToast = (type, message) => {
@@ -734,7 +766,103 @@ export const AdminStudioPage = () => {
       ticketsLoaded.current = true;
       loadTickets();
     }
+    if (activeTab === 'passes') {
+      if (!passesLoaded.current) {
+        passesLoaded.current = true;
+        loadPasses();
+      }
+      if (!coursesLoaded.current) {
+        coursesLoaded.current = true;
+        loadCourses();
+      }
+    }
   }, [activeTab]);
+
+  // Targeted Passes: admin CRUD operations
+  const loadPasses = async () => {
+    setPassesLoading(true);
+    try {
+      const data = await api.admin.listPasses();
+      setPasses(data || []);
+    } catch (err) {
+      showToast('error', `Could not load passes: ${err.message}`);
+    } finally {
+      setPassesLoading(false);
+    }
+  };
+
+  const handleOpenCreatePass = () => {
+    if (!coursesLoaded.current) {
+      coursesLoaded.current = true;
+      loadCourses();
+    }
+    const allCids = courses.map((c) => c.id || c._id);
+    setPassForm({
+      ...EMPTY_PASS_FORM,
+      covered_course_ids: allCids,
+    });
+    setPassCourseSearch('');
+    setFeatureInput('');
+    setPassModal({ mode: 'create' });
+  };
+
+  const handleOpenEditPass = (p) => {
+    if (!coursesLoaded.current) {
+      coursesLoaded.current = true;
+      loadCourses();
+    }
+    setPassForm({
+      id: p.id,
+      title: p.title || '',
+      tagline: p.tagline || '',
+      badge: p.badge || '',
+      duration_days: p.duration_days || 30,
+      base_price: p.base_price || 149,
+      original_price: p.original_price || 249,
+      max_coins_discount: p.max_coins_discount || 500,
+      covered_course_ids: p.covered_course_ids || [],
+      features: p.features || [],
+      is_active: p.is_active !== false,
+    });
+    setPassCourseSearch('');
+    setFeatureInput('');
+    setPassModal({ mode: 'edit', pass: p });
+  };
+
+  const handleSavePass = async (e) => {
+    e.preventDefault();
+    if (!passForm.title?.trim()) {
+      showToast('error', 'Pass title is required');
+      return;
+    }
+    setSavingPass(true);
+    try {
+      if (passModal.mode === 'create') {
+        const res = await api.admin.createPass(passForm);
+        showToast('success', `Pass '${res.title}' created successfully!`);
+      } else {
+        const res = await api.admin.updatePass(passModal.pass.id, passForm);
+        showToast('success', `Pass '${res.title}' updated successfully!`);
+      }
+      setPassModal(null);
+      loadPasses();
+    } catch (err) {
+      showToast('error', err.message || 'Failed to save pass');
+    } finally {
+      setSavingPass(false);
+    }
+  };
+
+  const handleDeletePass = async (passId) => {
+    if (!window.confirm('Are you sure you want to delete this pass? Active subscribers will continue until expiration.')) return;
+    try {
+      await api.admin.deletePass(passId);
+      showToast('success', 'Pass removed successfully');
+      loadPasses();
+    } catch (err) {
+      showToast('error', err.message || 'Failed to delete pass');
+    }
+  };
 
   // Support tickets: every ticket from everyone, with a status filter
   const [tickets, setTickets] = useState([]);
@@ -961,6 +1089,18 @@ export const AdminStudioPage = () => {
         >
           <LayersIcon size={15} />
           <span>Mock Tests ({stats?.total_configured_tests ?? '...'})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('passes')}
+          className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+            activeTab === 'passes'
+              ? 'bg-institutional-600 text-white shadow-sm font-extrabold'
+              : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+          }`}
+        >
+          <CrownIcon size={15} />
+          <span>Exam Passes ({passes?.length || 0})</span>
         </button>
 
         <button
@@ -2692,6 +2832,489 @@ export const AdminStudioPage = () => {
                 v1.0.0
               </span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: TARGETED EXAM PASSES */}
+      {activeTab === 'passes' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 p-6 rounded-3xl shadow-card">
+            <div>
+              <div className="flex items-center gap-2">
+                <CrownIcon size={20} className="text-amber-500" />
+                <h2 className="text-lg font-black text-charcoal-950 dark:text-white">
+                  Targeted Passes Built for Exam Cycles
+                </h2>
+              </div>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1 max-w-2xl">
+                Configure all-access exam passes (Monthly, Annual with SAVE 40%, etc.). When a student purchases a pass, they get instant dynamic unlock to all covered courses until the duration breaches.
+              </p>
+            </div>
+            <button
+              onClick={handleOpenCreatePass}
+              className="px-5 py-2.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+            >
+              <PlusCircleIcon size={16} />
+              <span>Create New Pass</span>
+            </button>
+          </div>
+
+          {passesLoading ? (
+            <div className="flex items-center justify-center p-16 bg-white dark:bg-charcoal-900 rounded-3xl border border-charcoal-200 dark:border-charcoal-800">
+              <RefreshCwIcon size={24} className="animate-spin text-institutional-600" />
+            </div>
+          ) : passes.length === 0 ? (
+            <div className="text-center py-16 bg-white dark:bg-charcoal-900 rounded-3xl border border-charcoal-200 dark:border-charcoal-800 p-8 space-y-3">
+              <CrownIcon size={36} className="mx-auto text-amber-500/50" />
+              <div className="text-sm font-extrabold text-charcoal-800 dark:text-charcoal-200">No Exam Passes Configured</div>
+              <p className="text-xs text-charcoal-500 max-w-md mx-auto">
+                Create targeted Monthly or Annual passes to allow students to bundle multiple official test series under a single subscription.
+              </p>
+              <button
+                onClick={handleOpenCreatePass}
+                className="mt-2 px-4 py-2 rounded-xl bg-institutional-600 text-white text-xs font-bold"
+              >
+                Create First Pass
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {passes.map((p) => {
+                const coveredCount = p.covered_course_ids?.length || 0;
+                const totalSystemCourses = courses.length || 0;
+                const coversAll = coveredCount >= totalSystemCourses && totalSystemCourses > 0;
+                return (
+                  <div
+                    key={p.id}
+                    className={`relative flex flex-col justify-between bg-white dark:bg-charcoal-900 border rounded-3xl p-6 shadow-card transition-all ${
+                      p.is_active !== false
+                        ? 'border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-300'
+                        : 'border-rose-200 dark:border-rose-900/40 opacity-75'
+                    }`}
+                  >
+                    <div>
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {p.badge && (
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              {p.badge}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300">
+                            {p.duration_days} Days
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                            p.is_active !== false
+                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                          }`}
+                        >
+                          {p.is_active !== false ? 'Active' : 'Disabled'}
+                        </span>
+                      </div>
+
+                      {/* Title & Tagline */}
+                      <h3 className="text-base font-black text-charcoal-950 dark:text-white flex items-center gap-2">
+                        {p.title}
+                      </h3>
+                      {p.tagline && (
+                        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1 line-clamp-2">
+                          {p.tagline}
+                        </p>
+                      )}
+
+                      {/* Pricing */}
+                      <div className="mt-4 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-charcoal-950 dark:text-white">
+                          ₹{p.base_price}
+                        </span>
+                        {p.original_price > p.base_price && (
+                          <span className="text-xs text-charcoal-400 line-through">
+                            ₹{p.original_price}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-bold text-charcoal-500">
+                          / {p.duration_days} days
+                        </span>
+                      </div>
+
+                      <div className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1">
+                        <CoinsIcon size={12} />
+                        <span>Up to {p.max_coins_discount || 0} coins discount (₹{((p.max_coins_discount || 0) * 0.1).toFixed(0)} off)</span>
+                      </div>
+
+                      {/* Covered Courses Section */}
+                      <div className="mt-4 pt-3 border-t border-charcoal-100 dark:border-charcoal-800">
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-charcoal-500 mb-1.5 flex items-center justify-between">
+                          <span>Covered Courses ({coveredCount})</span>
+                          {coversAll && <span className="text-emerald-600 dark:text-emerald-400 text-[10px]">All Courses</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                          {courses
+                            .filter((c) => p.covered_course_ids?.includes(c.id || c._id))
+                            .map((c) => (
+                              <span
+                                key={c.id || c._id}
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200/50 dark:border-institutional-800/50 truncate max-w-[180px]"
+                                title={c.title}
+                              >
+                                {c.title}
+                              </span>
+                            ))}
+                          {coveredCount === 0 && (
+                            <span className="text-[11px] text-charcoal-400 italic">No courses linked yet</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Features */}
+                      {p.features && p.features.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          {p.features.slice(0, 3).map((feat, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5 text-[11px] text-charcoal-600 dark:text-charcoal-300">
+                              <CheckCircleIcon size={12} className="text-emerald-500 shrink-0" />
+                              <span className="truncate">{feat}</span>
+                            </div>
+                          ))}
+                          {p.features.length > 3 && (
+                            <div className="text-[10px] text-charcoal-400 pl-4 font-semibold">
+                              +{p.features.length - 3} more benefits
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-6 pt-3 border-t border-charcoal-100 dark:border-charcoal-800 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => handleOpenEditPass(p)}
+                        className="flex-1 py-2 px-3 rounded-xl bg-charcoal-100 hover:bg-charcoal-200 dark:bg-charcoal-800 dark:hover:bg-charcoal-700 text-charcoal-800 dark:text-charcoal-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <EditIcon size={13} />
+                        <span>Edit Pass</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeletePass(p.id)}
+                        className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
+                        title="Delete pass"
+                      >
+                        <TrashIcon size={15} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: CREATE / EDIT PASS */}
+      {passModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-950/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-scale-in">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-charcoal-150 dark:border-charcoal-800">
+              <div className="flex items-center gap-2">
+                <CrownIcon size={20} className="text-amber-500" />
+                <h3 className="text-base font-black text-charcoal-950 dark:text-white">
+                  {passModal.mode === 'create' ? 'Create Exam Cycle Pass' : `Edit Pass: ${passModal.pass?.title}`}
+                </h3>
+              </div>
+              <button
+                onClick={() => setPassModal(null)}
+                className="p-2 text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 rounded-xl"
+              >
+                <XIcon size={18} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSavePass} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">
+                    Pass Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={passForm.title}
+                    onChange={(e) => setPassForm({ ...passForm, title: e.target.value })}
+                    placeholder="e.g. Monthly Pass, Annual Pass"
+                    className="w-full px-3 py-2 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">
+                    Highlight Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={passForm.badge}
+                    onChange={(e) => setPassForm({ ...passForm, badge: e.target.value })}
+                    placeholder="e.g. SAVE 40%, POPULAR, BEST VALUE"
+                    className="w-full px-3 py-2 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">
+                  Tagline / Description
+                </label>
+                <input
+                  type="text"
+                  value={passForm.tagline}
+                  onChange={(e) => setPassForm({ ...passForm, tagline: e.target.value })}
+                  placeholder="Full-length official simulations, deep error analytics, and All-India percentile tracking"
+                  className="w-full px-3 py-2 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">
+                    Duration (Days) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={passForm.duration_days}
+                    onChange={(e) => setPassForm({ ...passForm, duration_days: parseInt(e.target.value) || 30 })}
+                    className="w-full px-3 py-2 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">
+                    Price (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={passForm.base_price}
+                    onChange={(e) => setPassForm({ ...passForm, base_price: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">
+                    Strike Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={passForm.original_price}
+                    onChange={(e) => setPassForm({ ...passForm, original_price: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">
+                    Max Coins Disc.
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={passForm.max_coins_discount}
+                    onChange={(e) => setPassForm({ ...passForm, max_coins_discount: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white font-bold"
+                  />
+                  <div className="text-[10px] text-charcoal-400 mt-0.5">
+                    100 coins = ₹10
+                  </div>
+                </div>
+              </div>
+
+              {/* Covered Courses Multi-Selector */}
+              <div className="pt-2 border-t border-charcoal-150 dark:border-charcoal-800">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-extrabold text-charcoal-900 dark:text-white text-xs">
+                    Courses Covered by this Pass ({passForm.covered_course_ids?.length || 0} / {courses.length} selected)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPassForm({ ...passForm, covered_course_ids: courses.map((c) => c.id || c._id) })}
+                      className="text-[11px] font-bold text-institutional-600 hover:underline"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-charcoal-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setPassForm({ ...passForm, covered_course_ids: [] })}
+                      className="text-[11px] font-bold text-rose-500 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative mb-2">
+                  <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
+                  <input
+                    type="text"
+                    placeholder="Search courses to include..."
+                    value={passCourseSearch}
+                    onChange={(e) => setPassCourseSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white text-xs"
+                  />
+                </div>
+
+                <div className="max-h-40 overflow-y-auto space-y-1.5 p-2 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800">
+                  {courses
+                    .filter((c) => !passCourseSearch || c.title?.toLowerCase().includes(passCourseSearch.toLowerCase()))
+                    .map((c) => {
+                      const cid = c.id || c._id;
+                      const isSelected = passForm.covered_course_ids?.includes(cid);
+                      return (
+                        <label
+                          key={cid}
+                          className={`flex items-center gap-2.5 p-2 rounded-xl cursor-pointer text-xs transition-colors ${
+                            isSelected
+                              ? 'bg-institutional-100/60 dark:bg-institutional-950/80 font-bold text-institutional-900 dark:text-institutional-100'
+                              : 'hover:bg-charcoal-100 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPassForm({
+                                  ...passForm,
+                                  covered_course_ids: [...(passForm.covered_course_ids || []), cid],
+                                });
+                              } else {
+                                setPassForm({
+                                  ...passForm,
+                                  covered_course_ids: (passForm.covered_course_ids || []).filter((id) => id !== cid),
+                                });
+                              }
+                            }}
+                            className="rounded text-institutional-600 focus:ring-institutional-500"
+                          />
+                          <span className="flex-1 truncate">{c.title}</span>
+                          <span className="text-[10px] text-charcoal-400 shrink-0 font-normal">
+                            ₹{c.price || 0}
+                          </span>
+                        </label>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* Feature List */}
+              <div className="pt-2 border-t border-charcoal-150 dark:border-charcoal-800">
+                <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">
+                  Bullet Benefits / Features
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. Unlimited attempts on all official simulation mocks"
+                    value={featureInput}
+                    onChange={(e) => setFeatureInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (featureInput.trim()) {
+                          setPassForm({
+                            ...passForm,
+                            features: [...(passForm.features || []), featureInput.trim()],
+                          });
+                          setFeatureInput('');
+                        }
+                      }
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-white text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (featureInput.trim()) {
+                        setPassForm({
+                          ...passForm,
+                          features: [...(passForm.features || []), featureInput.trim()],
+                        });
+                        setFeatureInput('');
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-charcoal-100 hover:bg-charcoal-200 dark:bg-charcoal-800 text-charcoal-800 dark:text-white font-bold"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {(passForm.features || []).map((feat, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-xl bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200"
+                    >
+                      <span>{feat}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPassForm({
+                            ...passForm,
+                            features: passForm.features.filter((_, i) => i !== idx),
+                          });
+                        }}
+                        className="text-charcoal-400 hover:text-rose-500"
+                      >
+                        <XIcon size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active Toggle */}
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="passIsActive"
+                  checked={passForm.is_active}
+                  onChange={(e) => setPassForm({ ...passForm, is_active: e.target.checked })}
+                  className="rounded text-institutional-600 focus:ring-institutional-500"
+                />
+                <label htmlFor="passIsActive" className="text-xs font-bold text-charcoal-800 dark:text-charcoal-200 cursor-pointer">
+                  Make pass active and immediately available for student purchase
+                </label>
+              </div>
+
+              {/* Modal Buttons */}
+              <div className="pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPassModal(null)}
+                  className="px-4 py-2 rounded-xl bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-bold hover:bg-charcoal-200 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPass}
+                  className="px-5 py-2 rounded-xl bg-institutional-600 text-white font-extrabold hover:bg-institutional-700 transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {savingPass ? <RefreshCwIcon size={14} className="animate-spin" /> : <SaveIcon size={14} />}
+                  <span>{passModal.mode === 'create' ? 'Create Pass' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

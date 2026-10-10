@@ -126,19 +126,26 @@ class StreakService:
 
         today_completed = (last_quiz_date == today_str)
 
-        # Check if streak is broken (last activity before yesterday)
+        # Streak Reset Flow: If user missed yesterday, streak resets to 0
         if last_quiz_date and last_quiz_date != today_str and last_quiz_date != yesterday_str:
             effective_streak = 0
+            if current_streak != 0 and user:
+                # Persist streak reset to database
+                await self.user_repo.collection.update_one(
+                    {"_id": user_id},
+                    {"$set": {"profile.current_streak": 0}}
+                )
         else:
             effective_streak = current_streak
 
-        # 30-Day Monthly Discipline Roadmap Configuration
+        # Accurate Milestone Configuration:
+        # 7-day streak: 20 coins
+        # 15-day streak: 40 coins
+        # 30-day streak (month): 100 coins
         MILESTONE_CONFIG = {
-            7: {"bonus": 100, "total": 120, "label": "Week 1 Habit", "badge": "BRONZE"},
-            14: {"bonus": 150, "total": 170, "label": "Fortnight Anchor", "badge": "SILVER"},
-            21: {"bonus": 200, "total": 220, "label": "Discipline Master", "badge": "GOLD"},
-            28: {"bonus": 300, "total": 320, "label": "Focus Champion", "badge": "DIAMOND"},
-            30: {"bonus": 500, "total": 520, "label": "Grand Monthly Master", "badge": "PLATINUM"},
+            7: {"reward": 20, "label": "7-Day Habit", "badge": "BRONZE"},
+            15: {"reward": 40, "label": "15-Day Consistency", "badge": "SILVER"},
+            30: {"reward": 100, "label": "Grand Monthly Master", "badge": "GOLD"},
         }
 
         # 30-day milestone cycle
@@ -148,11 +155,11 @@ class StreakService:
 
         # Calculate next upcoming milestone
         next_milestone_day = 30
-        next_milestone_bonus = 500
-        for m_day in [7, 14, 21, 28, 30]:
+        next_milestone_bonus = 100
+        for m_day in [7, 15, 30]:
             if m_day > days_in_30_cycle:
                 next_milestone_day = m_day
-                next_milestone_bonus = MILESTONE_CONFIG[m_day]["bonus"]
+                next_milestone_bonus = MILESTONE_CONFIG[m_day]["reward"]
                 break
         days_until_bonus = max(0, next_milestone_day - days_in_30_cycle)
 
@@ -163,7 +170,7 @@ class StreakService:
             is_today = (i == days_in_30_cycle + 1) and not today_completed
             is_milestone = i in MILESTONE_CONFIG
             cfg = MILESTONE_CONFIG.get(i)
-            reward = cfg["total"] if is_milestone else 20
+            reward = cfg["reward"] if is_milestone else 5
             timeline.append({
                 "day_number": i,
                 "label": f"Day {i}",
@@ -188,7 +195,9 @@ class StreakService:
             "days_until_bonus": days_until_bonus,
             "next_milestone_day": next_milestone_day,
             "bonus_coins": next_milestone_bonus,
-            "daily_reward_coins": 20,
+            "daily_reward_coins": 5,
+            "coin_rate": "100 coins = 10 Rs",
+            "coin_to_rupee_rate": 0.10,
             "timeline": timeline,
             "total_days_in_month": 30,
             "days_completed_in_cycle": days_in_30_cycle,
@@ -204,12 +213,11 @@ class StreakService:
         total_count: int = 3,
     ) -> Dict[str, Any]:
         """Record solving today's daily quiz, advancing streak and granting coins."""
+        # 7 days streak -> 20 coins; 15 days -> 40 coins; 30 days (month) -> 100 coins
         MILESTONE_CONFIG = {
-            7: {"bonus": 100, "label": "Week 1 Habit"},
-            14: {"bonus": 150, "label": "Fortnight Anchor"},
-            21: {"bonus": 200, "label": "Discipline Master"},
-            28: {"bonus": 300, "label": "Focus Champion"},
-            30: {"bonus": 500, "label": "Grand Monthly Master"},
+            7: {"reward": 20, "label": "7-Day Habit Bonus"},
+            15: {"reward": 40, "label": "15-Day Consistency Bonus"},
+            30: {"reward": 100, "label": "Grand Monthly Master Bonus"},
         }
 
         user = await self.user_repo.get_by_id(user_id)
@@ -238,7 +246,9 @@ class StreakService:
                 "message": "You've already solved today's quiz! Come back tomorrow to continue your streak.",
             }
 
-        # Calculate new streak
+        # Calculate new streak with full reset flow:
+        # If user did quiz yesterday -> streak continues (+1).
+        # Otherwise (missed yesterday or starting fresh) -> streak resets to 1.
         if last_quiz_date == yesterday_str:
             new_streak = current_streak + 1
         else:
@@ -246,24 +256,19 @@ class StreakService:
 
         new_longest = max(longest_streak, new_streak)
 
-        # Milestone detection:
+        # Milestone detection (7d: 20 coins, 15d: 40 coins, 30d: 100 coins)
         day_in_cycle = new_streak % 30
         if day_in_cycle == 0 and new_streak > 0:
             day_in_cycle = 30
 
-        earned_coins = 20
-        is_milestone = False
-        milestone_title = ""
-
         if day_in_cycle in MILESTONE_CONFIG:
             is_milestone = True
-            bonus = MILESTONE_CONFIG[day_in_cycle]["bonus"]
-            earned_coins += bonus
+            earned_coins = MILESTONE_CONFIG[day_in_cycle]["reward"]
             milestone_title = MILESTONE_CONFIG[day_in_cycle]["label"]
-        elif new_streak % 7 == 0:
-            is_milestone = True
-            earned_coins += 100
-            milestone_title = "7-Day Consistency Bonus"
+        else:
+            is_milestone = False
+            earned_coins = 5
+            milestone_title = ""
 
         # Update in DB
         await self.user_repo.update_streak(
@@ -277,7 +282,7 @@ class StreakService:
 
         msg = f"Awesome! Daily quiz completed ({correct_count}/{total_count} correct)! 🔥 Streak: {new_streak} days (+{earned_coins} GovCoins)"
         if is_milestone:
-            msg = f"🎉 {milestone_title.upper()} UNLOCKED! Earned {earned_coins} GovCoins including milestone bonus!"
+            msg = f"🎉 {milestone_title.upper()} UNLOCKED! Earned {earned_coins} GovCoins milestone jackpot!"
 
         return {
             "success": True,

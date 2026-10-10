@@ -8,9 +8,11 @@ from app.db.mongodb import db_manager, get_db
 from app.db.redis import redis_manager
 from app.models.test import TestType
 from app.schemas.common import APIResponse
+from app.schemas.pass_schema import PassCreateRequest, PassResponse, PassUpdateRequest
 from app.schemas.test import AdminTestDetailOut, TestCreate, TestDetailOut, TestQuestionOut, TestUpdate
 from app.schemas.user import PaginatedUsersResponse, UserAdminUpdate, UserResponse
 from app.services.auth_service import AuthService
+from app.services.pass_service import PassService
 from app.services.test_service import TestService
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"], dependencies=[Depends(check_rate_limit)])
@@ -253,4 +255,74 @@ async def delete_user(
         message="User deleted successfully",
         data={"user_id": user_id},
     )
+
+
+# ─── Admin Pass Management Routes ────────────────────────────────────────────
+
+@router.get("/passes", response_model=APIResponse[List[PassResponse]])
+async def list_passes_admin(
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: List all targeted passes with covered courses and subscriber statistics."""
+    service = PassService(db)
+    passes = await service.list_all_passes_admin()
+    return APIResponse(
+        success=True,
+        message="Passes retrieved successfully",
+        data=passes,
+    )
+
+
+@router.post("/passes", response_model=APIResponse[PassResponse], status_code=status.HTTP_201_CREATED)
+async def create_pass_admin(
+    req: PassCreateRequest,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Admin: Create a new targeted exam pass dynamically selecting which courses
+    are covered under it.
+    """
+    service = PassService(db)
+    created = await service.create_pass(req)
+    return APIResponse(
+        success=True,
+        message=f"Pass '{created.title}' created successfully",
+        data=created,
+    )
+
+
+@router.put("/passes/{pass_id}", response_model=APIResponse[PassResponse])
+async def update_pass_admin(
+    pass_id: str,
+    req: PassUpdateRequest,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: Update an existing pass (price, duration, covered courses, active status)."""
+    service = PassService(db)
+    updated = await service.update_pass(pass_id, req)
+    return APIResponse(
+        success=True,
+        message=f"Pass '{updated.title}' updated successfully",
+        data=updated,
+    )
+
+
+@router.delete("/passes/{pass_id}", response_model=APIResponse[dict])
+async def delete_pass_admin(
+    pass_id: str,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: Delete or remove a pass from the system."""
+    service = PassService(db)
+    await service.delete_pass(pass_id)
+    return APIResponse(
+        success=True,
+        message="Pass deleted successfully",
+        data={"pass_id": pass_id},
+    )
+
 

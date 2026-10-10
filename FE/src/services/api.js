@@ -846,6 +846,31 @@ export const api = {
       });
     },
 
+    // Passes (admin): dynamic targeted exam passes with custom course coverage
+    listPasses: async () => {
+      return await request('/admin/passes');
+    },
+
+    createPass: async (payload) => {
+      return await request('/admin/passes', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    updatePass: async (passId, payload) => {
+      return await request(`/admin/passes/${passId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    deletePass: async (passId) => {
+      return await request(`/admin/passes/${passId}`, {
+        method: 'DELETE',
+      });
+    },
+
     // Courses (admin): create a course, tag generated tests to it, edit, archive, see who enrolled
     listCourses: async ({ search = '', skip = 0, limit = 500 } = {}) => {
       const q = new URLSearchParams({ skip, limit });
@@ -1133,8 +1158,24 @@ export const api = {
     },
   },
 
-  // Subscriptions & Coin Discount Payment
+  // Subscriptions & Dynamic Targeted Passes
   subscriptions: {
+    getPasses: async () => {
+      try {
+        return await request('/subscriptions/passes');
+      } catch (err) {
+        return [];
+      }
+    },
+
+    getMyPass: async () => {
+      try {
+        return await request('/subscriptions/my-pass');
+      } catch (err) {
+        return { has_active_pass: false, active_passes: [] };
+      }
+    },
+
     getPlans: async () => {
       try {
         return await request('/subscriptions/plans');

@@ -128,9 +128,27 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
     }
   };
 
+  const [passes, setPasses] = useState([]);
+  const [passesLoading, setPassesLoading] = useState(false);
+
   useEffect(() => {
     loadCourses();
+    loadPasses();
   }, []);
+
+  const loadPasses = async () => {
+    setPassesLoading(true);
+    try {
+      const data = await api.subscriptions.getPasses();
+      if (data && data.length > 0) {
+        setPasses(data);
+      }
+    } catch (err) {
+      console.warn('Failed to load dynamic passes in discovery:', err);
+    } finally {
+      setPassesLoading(false);
+    }
+  };
 
   const filteredTests = tests.filter((t) => {
     if (!searchQuery) return true;
@@ -1341,185 +1359,186 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
             </div>
           </div>
 
-          {/* Cards Grid: Compact ~340px height with rich hover lift & glow */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch max-w-5xl mx-auto">
-            {/* Card 1: Basic Aspirant */}
-            <div className="group relative rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_20px_35px_-10px_rgba(37,99,235,0.18)] dark:hover:shadow-[0_20px_35px_-10px_rgba(59,130,246,0.25)] bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400 dark:hover:border-institutional-500 overflow-hidden">
-              <div className="absolute -inset-full top-0 block -skew-x-12 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-1000 pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-b from-institutional-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch max-w-5xl mx-auto">
+            {passes.length > 0 ? (
+              passes.map((p) => {
+                const isAnnual = p.duration_days > 100;
+                const isMonthly = p.duration_days <= 100;
+                const matchesToggle = landingBillingCycle === 'yearly' ? isAnnual : isMonthly;
+                const coveredCount = p.covered_course_ids?.length || 0;
 
-              <div className="relative z-10">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
-                    Basic Aspirant
-                  </h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400">
-                    Starter
-                  </span>
-                </div>
-                <p className="text-[11px] text-charcoal-500 dark:text-charcoal-400 mb-3 line-clamp-1 leading-normal">
-                  Essential tier-1 mocks and sectional drills for syllabus pacing.
-                </p>
+                return (
+                  <div
+                    key={p.id}
+                    className={`group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl bg-white dark:bg-charcoal-900 border overflow-hidden ${
+                      p.badge || isAnnual
+                        ? 'border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted ring-1 ring-institutional-500/30'
+                        : 'border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400'
+                    }`}
+                  >
+                    {/* Badge */}
+                    {(p.badge || isAnnual) && (
+                      <div className="absolute top-0 right-0">
+                        <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] tracking-wider uppercase px-2.5 py-0.5 rounded-bl-xl shadow-sm flex items-center gap-1">
+                          <SparklesIcon size={10} />
+                          <span>{p.badge || 'SAVE 40%'}</span>
+                        </div>
+                      </div>
+                    )}
 
-                <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
-                  <span className="text-2xl sm:text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white tracking-tight">
-                    ₹{landingBillingCycle === 'yearly' ? 299 : 99}
-                  </span>
-                  <span className="text-xs font-semibold text-charcoal-500">
-                    {landingBillingCycle === 'yearly' ? '/yr' : '/mo'}
-                  </span>
-                  {landingBillingCycle === 'yearly' && (
-                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ml-auto font-mono bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                      ₹25/mo
-                    </span>
-                  )}
-                </div>
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                          {p.title}
+                        </h3>
+                        {!p.badge && !isAnnual && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 font-mono">
+                            {p.duration_days} Days
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-charcoal-500 dark:text-charcoal-400 mb-3 line-clamp-2 leading-normal">
+                        {p.tagline || 'Full-length official simulations, deep error analytics, and All-India percentile tracking.'}
+                      </p>
 
-                <div className="space-y-1.5 mb-4">
-                  {[
-                    '15 Full-Length Tier-I Mock Tests',
-                    '50 Topic-wise Speed Drills',
-                    'Standard TCS iON Exam Engine UI',
-                    'Instant Scorecard & Negative Marking',
-                  ].map((feat, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-[11px]">
-                      <CheckCircleIcon size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
+                      <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
+                        <span className="text-2xl sm:text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white tracking-tight">
+                          ₹{p.base_price}
+                        </span>
+                        <span className="text-xs font-semibold text-charcoal-500">
+                          / {p.duration_days} days
+                        </span>
+                        {p.original_price > p.base_price && (
+                          <span className="text-xs text-charcoal-400 line-through font-mono ml-2">
+                            ₹{p.original_price}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Covered courses banner */}
+                      <div className="mb-3 p-2 rounded-xl bg-institutional-50 dark:bg-institutional-950/60 border border-institutional-200/60 dark:border-institutional-800/60 text-[11px] text-institutional-800 dark:text-institutional-200">
+                        <span className="font-bold">✓ Covers {coveredCount > 0 ? `${coveredCount} Exam Courses` : 'All Courses'}</span>
+                        <span className="block text-[10px] text-charcoal-500 dark:text-charcoal-400">Instant unlock to full mock tests & drills</span>
+                      </div>
+
+                      {/* Benefits */}
+                      <div className="space-y-1.5 mb-4">
+                        {(p.features && p.features.length > 0
+                          ? p.features.slice(0, 4)
+                          : [
+                              'Full-Length Tier-I & Tier-II Simulation Mocks',
+                              'All-India Percentile & AIR Benchmark',
+                              'Speed vs. Accuracy Tradeoff Diagnostics',
+                              'Instant Answer Keys & Mathematical Explanations',
+                            ]
+                        ).map((feat, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-[11px]">
+                            <CheckCircleIcon size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              <div className="relative z-10 pt-2 border-t border-charcoal-100 dark:border-charcoal-800/80">
-                <button
-                  onClick={() => onNavigate ? onNavigate('subscription') : onOpenAuthModal()}
-                  className="w-full py-2 rounded-xl font-bold text-xs border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 group/btn active:scale-[0.98]"
-                >
-                  <span>Select Basic Pass</span>
-                  <ArrowRightIcon size={13} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
-
-            {/* Card 2: Pro Ranker (Featured) */}
-            <div className="group relative rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_20px_35px_-10px_rgba(37,99,235,0.22)] dark:hover:shadow-[0_20px_35px_-10px_rgba(59,130,246,0.3)] bg-white dark:bg-charcoal-900 border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted md:-translate-y-1 ring-1 ring-institutional-500/30 hover:border-institutional-500 overflow-hidden">
-              <div className="absolute top-0 right-0">
-                <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] tracking-wider uppercase px-2.5 py-0.5 rounded-bl-xl shadow-sm flex items-center gap-1">
-                  <SparklesIcon size={10} className="animate-spin-slow" />
-                  <span>MOST POPULAR</span>
-                </div>
-              </div>
-
-              <div className="absolute -inset-full top-0 block -skew-x-12 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-1000 pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-b from-institutional-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-              <div className="relative z-10">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
-                    Pro Ranker
-                  </h3>
-                </div>
-                <p className="text-[11px] text-charcoal-500 dark:text-charcoal-400 mb-3 line-clamp-1 leading-normal">
-                  All-India percentile rankings, speed vs accuracy diagnostics.
-                </p>
-
-                <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
-                  <span className="text-2xl sm:text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white tracking-tight">
-                    ₹{landingBillingCycle === 'yearly' ? 699 : 199}
-                  </span>
-                  <span className="text-xs font-semibold text-charcoal-500">
-                    {landingBillingCycle === 'yearly' ? '/yr' : '/mo'}
-                  </span>
-                  {landingBillingCycle === 'yearly' && (
-                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ml-auto font-mono bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                      ₹58/mo
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-1.5 mb-4">
-                  {[
-                    'Unlimited Full, Subject & Topic Mocks',
-                    'All-India Percentile & AIR Benchmark',
-                    'Speed vs. Accuracy Tradeoff Diagnostics',
-                    'Full Mathematical Proofs & Short-cuts',
-                  ].map((feat, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-[11px]">
-                      <CheckCircleIcon size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
+                    <div className="relative z-10 pt-2 border-t border-charcoal-100 dark:border-charcoal-800/80">
+                      <button
+                        onClick={() => (onNavigate ? onNavigate('subscription') : onOpenAuthModal())}
+                        className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 group/btn active:scale-[0.98] cursor-pointer ${
+                          p.badge || isAnnual
+                            ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20'
+                            : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
+                        }`}
+                      >
+                        <span>Select {p.title}</span>
+                        <ArrowRightIcon size={13} className="group-hover/btn:translate-x-1 transition-transform" />
+                      </button>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="relative z-10 pt-2 border-t border-charcoal-100 dark:border-charcoal-800/80">
-                <button
-                  onClick={() => onNavigate ? onNavigate('subscription') : onOpenAuthModal()}
-                  className="w-full py-2 rounded-xl font-bold text-xs bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20 hover:shadow-md transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 group/btn active:scale-[0.98]"
-                >
-                  <span>Activate Pro Ranker</span>
-                  <ArrowRightIcon size={13} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
-
-            {/* Card 3: Max Ultimate */}
-            <div className="group relative rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_20px_35px_-10px_rgba(37,99,235,0.18)] dark:hover:shadow-[0_20px_35px_-10px_rgba(59,130,246,0.25)] bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400 dark:hover:border-institutional-500 overflow-hidden">
-              <div className="absolute -inset-full top-0 block -skew-x-12 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-1000 pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-b from-institutional-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-              <div className="relative z-10">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
-                    Max Ultimate
-                  </h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400">
-                    All-Access
-                  </span>
-                </div>
-                <p className="text-[11px] text-charcoal-500 dark:text-charcoal-400 mb-3 line-clamp-1 leading-normal">
-                  Multi-exam coverage across SSC, Banking, Railways & PSCs.
-                </p>
-
-                <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
-                  <span className="text-2xl sm:text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white tracking-tight">
-                    ₹{landingBillingCycle === 'yearly' ? 1299 : 299}
-                  </span>
-                  <span className="text-xs font-semibold text-charcoal-500">
-                    {landingBillingCycle === 'yearly' ? '/yr' : '/mo'}
-                  </span>
-                  {landingBillingCycle === 'yearly' && (
-                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ml-auto font-mono bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                      ₹108/mo
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-1.5 mb-4">
-                  {[
-                    'Multi-Exam Access (SSC, Banking, RRB, PSC)',
-                    'Unlimited Dynamic Auto Mock Generator',
-                    'High-Yield Theory Compendiums (PDF)',
-                    'Priority Doubt Resolution Helpline',
-                  ].map((feat, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-[11px]">
-                      <CheckCircleIcon size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
+                  </div>
+                );
+              })
+            ) : (
+              /* Fallback static cards */
+              <>
+                {/* Monthly Card */}
+                <div className="group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100">
+                        Monthly Pass
+                      </h3>
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 font-mono">
+                        30 Days
+                      </span>
                     </div>
-                  ))}
+                    <p className="text-[11px] text-charcoal-500 mb-3">
+                      Essential 30-day exam cycle pass with all covered mocks and analytics.
+                    </p>
+                    <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
+                      <span className="text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white">
+                        ₹149
+                      </span>
+                      <span className="text-xs text-charcoal-500">/ 30 days</span>
+                    </div>
+                    <div className="space-y-1.5 mb-4">
+                      {['Official simulations for covered exams', 'All-India percentile ranking', 'Deep error analytics'].map((feat, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-[11px]">
+                          <CheckCircleIcon size={13} className="text-emerald-600 shrink-0" />
+                          <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onNavigate ? onNavigate('subscription') : onOpenAuthModal()}
+                    className="w-full py-2.5 rounded-xl font-bold text-xs border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 flex items-center justify-center gap-1.5"
+                  >
+                    <span>Select Monthly Pass</span>
+                    <ArrowRightIcon size={13} />
+                  </button>
                 </div>
-              </div>
 
-              <div className="relative z-10 pt-2 border-t border-charcoal-100 dark:border-charcoal-800/80">
-                <button
-                  onClick={() => onNavigate ? onNavigate('subscription') : onOpenAuthModal()}
-                  className="w-full py-2 rounded-xl font-bold text-xs border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 group/btn active:scale-[0.98]"
-                >
-                  <span>Select Max Pass</span>
-                  <ArrowRightIcon size={13} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
+                {/* Annual Card */}
+                <div className="group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl bg-white dark:bg-charcoal-900 border-2 border-institutional-600 shadow-lifted">
+                  <div className="absolute top-0 right-0">
+                    <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] tracking-wider uppercase px-2.5 py-0.5 rounded-bl-xl shadow-sm flex items-center gap-1">
+                      <SparklesIcon size={10} />
+                      <span>SAVE 40%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100">
+                      Annual Pass
+                    </h3>
+                    <p className="text-[11px] text-charcoal-500 mb-3">
+                      365-day complete coverage for all exam cycles throughout the calendar year.
+                    </p>
+                    <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
+                      <span className="text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white">
+                        ₹499
+                      </span>
+                      <span className="text-xs text-charcoal-500">/ 365 days</span>
+                      <span className="text-xs text-charcoal-400 line-through ml-2 font-mono">₹899</span>
+                    </div>
+                    <div className="space-y-1.5 mb-4">
+                      {['All covered courses & test series', '365 days full access', 'Save 40% over monthly renewals', 'Priority doubt support'].map((feat, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-[11px]">
+                          <CheckCircleIcon size={13} className="text-emerald-600 shrink-0" />
+                          <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onNavigate ? onNavigate('subscription') : onOpenAuthModal()}
+                    className="w-full py-2.5 rounded-xl font-bold text-xs bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20 flex items-center justify-center gap-1.5"
+                  >
+                    <span>Select Annual Pass</span>
+                    <ArrowRightIcon size={13} />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </section>
 

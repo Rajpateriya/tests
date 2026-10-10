@@ -115,7 +115,8 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
   const { drills, mockTests } = splitQuizzes(course.quizzes);
   const isEnrolled = course.is_enrolled;
   const discountAmt = Math.round(course.original_price - course.discounted_price);
-  const coinDiscount = useCoins && userCoins > 0 ? Math.min(userCoins, 100) : 0;
+  const maxCoinsUsable = Math.min(userCoins, course.max_coins_discount || 500);
+  const coinDiscount = useCoins && userCoins > 0 ? Math.round(maxCoinsUsable * 0.1) : 0;
 
   return (
     <div className="min-h-screen bg-charcoal-50/60 dark:bg-charcoal-950 py-10 px-4 sm:px-6 lg:px-8">
@@ -160,7 +161,12 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
             )}
             {isEnrolled && (
               <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
-                <CheckCircleIcon size={12} /> Enrolled
+                <CheckCircleIcon size={12} />
+                <span>
+                  {course.access_source === 'PASS'
+                    ? `Included in ${course.pass_title || 'Active Pass'}`
+                    : 'Enrolled'}
+                </span>
               </span>
             )}
           </div>
@@ -187,19 +193,26 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
 
             {isEnrolled ? (
               <div className="py-2.5 px-4 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
-                <CheckCircleIcon size={16} /> Enrolled in Course
+                <CheckCircleIcon size={16} />
+                <span>
+                  {course.access_source === 'PASS'
+                    ? `Included in ${course.pass_title || 'Active Pass'}`
+                    : 'Enrolled in Course'}
+                </span>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={handleStartCheckout}
                 disabled={orderLoading}
-                className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-60"
+                className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 <ShieldIcon size={16} />
                 <span>{orderLoading ? 'Preparing checkout...' : `Enroll Now — ₹${Math.max(1, course.discounted_price - coinDiscount)}`}</span>
                 {coinDiscount > 0 && (
-                  <span className="text-[11px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-normal">-₹{coinDiscount} Coins</span>
+                  <span className="text-[11px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-normal">
+                    -₹{coinDiscount} ({maxCoinsUsable} Coins)
+                  </span>
                 )}
               </button>
             )}
@@ -213,7 +226,7 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                 onChange={(e) => setUseCoins(e.target.checked)}
                 className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-charcoal-300"
               />
-              <span>Apply GovCoins discount ({userCoins} coins available)</span>
+              <span>Apply GovCoins discount ({userCoins} coins available — 100 coins = ₹10)</span>
             </label>
           )}
         </div>

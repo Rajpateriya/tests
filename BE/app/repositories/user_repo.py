@@ -71,6 +71,42 @@ class UserRepository(BaseRepository):
         )
         return await self.get_by_id(user_id)
 
+    async def add_user_pass(self, user_id: str, pass_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Add a purchased pass to user's active_passes list, replacing any older record of the same pass."""
+        pass_id = pass_dict.get("pass_id")
+        if pass_id:
+            await self.collection.update_one(
+                {"_id": user_id},
+                {"$pull": {"profile.active_passes": {"pass_id": pass_id}}}
+            )
+        await self.collection.update_one(
+            {"_id": user_id},
+            {
+                "$push": {"profile.active_passes": pass_dict},
+                "$set": {
+                    "profile.subscription_plan": pass_dict.get("pass_id", "PASS_CUSTOM"),
+                    "profile.subscription_status": "ACTIVE",
+                    "profile.subscription_expires_at": pass_dict.get("expires_at"),
+                }
+            }
+        )
+        return await self.get_by_id(user_id)
+
+    async def update_active_passes(
+        self, user_id: str, passes: List[Dict[str, Any]], overall_status: str = "ACTIVE"
+    ) -> Optional[Dict[str, Any]]:
+        """Update sanitized active passes and subscription status."""
+        await self.collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "profile.active_passes": passes,
+                    "profile.subscription_status": overall_status,
+                }
+            }
+        )
+        return await self.get_by_id(user_id)
+
     async def set_password_reset(
         self, email: str, reset_code: str, reset_token: str, expires_at: datetime
     ) -> Optional[Dict[str, Any]]:

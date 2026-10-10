@@ -74,6 +74,7 @@ async def list_courses(
 
 
 @router.get("/my-enrollments", response_model=APIResponse[List[EnrolledCourseOut]])
+@router.get("/my-courses", response_model=APIResponse[List[EnrolledCourseOut]])
 async def get_my_enrolled_courses(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),

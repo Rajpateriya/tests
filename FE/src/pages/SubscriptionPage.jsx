@@ -16,6 +16,7 @@ import { RazorpayModal } from '../components/RazorpayModal';
 export const SubscriptionPage = ({ onGoToMocks }) => {
   const { subscription, user, upgradeSubscription, updateCoins } = useAuth();
   const [plans, setPlans] = useState([]);
+  const [activeUserPass, setActiveUserPass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applyCoins, setApplyCoins] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -27,16 +28,45 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
   const coinsBalance = user?.profile?.coins_balance ?? 150;
 
   useEffect(() => {
-    loadPlans();
+    loadPassesAndPlans();
   }, []);
 
-  const loadPlans = async () => {
+  const loadPassesAndPlans = async () => {
     setLoading(true);
     try {
-      const data = await api.subscriptions.getPlans();
-      setPlans(data || []);
+      const [passesData, myPassData] = await Promise.all([
+        api.subscriptions.getPasses().catch(() => null),
+        api.subscriptions.getMyPass().catch(() => null),
+      ]);
+
+      if (passesData && passesData.length > 0) {
+        setPlans(passesData.map(p => ({
+          id: p.id,
+          name: p.title,
+          badge: p.badge || (p.duration_days > 100 ? 'SAVE 40%' : 'POPULAR'),
+          popular: !!p.badge || p.duration_days > 100,
+          duration_days: p.duration_days,
+          base_price: p.base_price,
+          original_price: p.original_price,
+          max_coins_discount: p.max_coins_discount,
+          covered_course_ids: p.covered_course_ids || [],
+          description: p.tagline || 'Targeted Pass Built for Exam Cycles',
+          features: p.features || [
+            'Full-length official simulations',
+            'Deep error analytics & AI solutions',
+            'All-India percentile tracking'
+          ]
+        })));
+      } else {
+        const data = await api.subscriptions.getPlans();
+        setPlans(data || []);
+      }
+
+      if (myPassData?.active_pass) {
+        setActiveUserPass(myPassData.active_pass);
+      }
     } catch (err) {
-      console.warn('Plans fallback:', err);
+      console.warn('Passes fallback:', err);
     } finally {
       setLoading(false);
     }
@@ -46,21 +76,23 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
     setSelectedPlan(plan);
     setOrderLoading(true);
     try {
-      // Backend-driven order creation
+      // Backend-driven order creation with pass_id and coin calculation (100 coins = ₹10)
       const order = await api.subscriptions.createOrder(plan.id, applyCoins);
       setCreatedOrder(order);
       setIsRazorpayOpen(true);
     } catch (err) {
       console.error('Order creation failed:', err);
-      // Fallback order
-      const coins = applyCoins ? Math.min(coinsBalance, plan.max_coins_discount || 25) : 0;
+      // Fallback order with 100 coins = 10 Rs formula
+      const maxCoins = plan.max_coins_discount || 500;
+      const coins = applyCoins ? Math.min(coinsBalance, maxCoins) : 0;
+      const discountRupees = Math.round(coins * 0.10);
       setCreatedOrder({
         order_id: `order_${Date.now().toString(36)}`,
-        amount_rupees: Math.max(1, plan.base_price - coins),
+        amount_rupees: Math.max(1, plan.base_price - discountRupees),
         currency: 'INR',
         plan_id: plan.id,
         coins_applied: coins,
-        discount_amount: coins,
+        discount_amount: discountRupees,
         user_coins_available: coinsBalance,
       });
       setIsRazorpayOpen(true);
@@ -81,22 +113,23 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
     setIsRazorpayOpen(false);
     setSelectedPlan(null);
     setCreatedOrder(null);
+    loadPassesAndPlans();
   };
 
-  const currentPlanId = subscription?.status === 'ACTIVE' ? subscription.plan : 'FREE';
+  const currentPlanId = subscription?.status === 'ACTIVE' ? subscription.plan : (activeUserPass?.pass_id || 'FREE');
 
   const faqs = [
     {
       q: 'How do GovCoins work and how can I earn them?',
-      a: 'You earn GovCoins automatically by solving practice quizzes every day! Daily quiz completion rewards 20 GovCoins, plus 5 progressive milestone jackpots (up to 500 Bonus GovCoins on the 30-day monthly habit roadmap). Every GovCoin equals ₹1 discount on any subscription pass.',
+      a: 'You earn GovCoins automatically by solving practice quizzes every day! Daily quiz completion rewards 5 GovCoins, plus milestone rewards (20 coins on 7 days streak, 40 coins on 15 days streak, and 100 coins on a full 30-day month). 100 GovCoins equals ₹10 discount (1 coin = ₹0.10) on all courses and passes!',
     },
     {
-      q: 'How does the TCS iON exam simulation help my real exam score?',
-      a: 'Our exam engine meticulously replicates the official TCS iON platform used by SSC, RRB, and Banking exams—palette buttons, color legends, timers, and marking schemes. Practicing here eliminates test-day interface unfamiliarity.',
+      q: 'What happens if I miss a daily practice day?',
+      a: 'Consistency is essential for civil exam pacing. If you miss a day, your habit streak resets to 0 so you are encouraged to rebuild discipline and re-unlock streak milestone rewards.',
     },
     {
-      q: 'What is the difference between 7-Day Sprint and Monthly Pro passes?',
-      a: 'The 7-Day Sprint Pass is ideal for last-minute revision right before exam day, while the Monthly Pro Pass provides comprehensive syllabus analytics, All-India percentiles, and AI weak-area auto-drills.',
+      q: 'What does a Targeted Exam Pass include?',
+      a: 'Passes (such as Monthly Pass and Annual Pass with SAVE 40%) give you dynamic all-access to all covered courses and official mock simulations for the duration of the pass without paying individually.',
     },
     {
       q: 'Can I access the mocks on both mobile and laptop?',
@@ -112,19 +145,47 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 relative z-10 animate-fade-in">
 
+        {/* Active Pass Banner (if user has active pass) */}
+        {activeUserPass && (
+          <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-500/15 via-institutional-500/10 to-transparent border border-emerald-300 dark:border-emerald-700/80 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold text-2xl shadow-sm shrink-0">
+                👑
+              </div>
+              <div>
+                <div className="text-sm font-black text-charcoal-950 dark:text-white flex items-center gap-2">
+                  <span>{activeUserPass.title || 'Targeted Exam Pass'}</span>
+                  <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                    Active Pass
+                  </span>
+                </div>
+                <div className="text-xs text-charcoal-600 dark:text-charcoal-300 mt-0.5">
+                  Valid until {new Date(activeUserPass.expires_at).toLocaleDateString()} ({activeUserPass.days_remaining} days remaining) • Covers {activeUserPass.covered_course_ids?.length || 'all'} exam courses
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={onGoToMocks}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all shrink-0 cursor-pointer"
+            >
+              Access Unlocked Courses →
+            </button>
+          </div>
+        )}
+
         {/* Hero Banner */}
         <div className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-subtle relative overflow-hidden">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
             <CrownIcon size={14} />
-            <span>PREMIUM ASPIRANT PASSES</span>
+            <span>TARGETED PASSES BUILT FOR EXAM CYCLES</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-tight">
-            Accelerate Your Score to the 99th Percentile
+            Full-Length Official Simulations &amp; All-India Tracking
           </h1>
 
           <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-300 max-w-xl mx-auto leading-relaxed">
-            Unlock unrestricted full mocks, deep AI topic diagnostics, peer percentiles, and instant step-by-step mathematical proofs.
+            Unlock unrestricted full mocks, deep AI topic diagnostics, peer percentiles, and instant step-by-step mathematical proofs across all covered exam courses.
           </p>
 
           {/* GovCoins Discount Feature Card */}
@@ -138,7 +199,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
                   <span>Your Balance: {coinsBalance} GovCoins</span>
                 </div>
                 <div className="text-[11px] text-charcoal-600 dark:text-charcoal-300">
-                  Earned from daily practice & 7-day streaks (1 Coin = ₹1)
+                  Earned from streak challenges (100 Coins = ₹10 Discount)
                 </div>
               </div>
             </div>
@@ -161,9 +222,10 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
           {plans.map((plan) => {
             const isCurrent = currentPlanId === plan.id;
-            const maxCoinDiscount = plan.max_coins_discount || 25;
-            const coinsEligible = applyCoins ? Math.min(coinsBalance, maxCoinDiscount, plan.base_price - 1) : 0;
-            const finalPayable = Math.max(1, plan.base_price - coinsEligible);
+            const maxCoinDiscount = plan.max_coins_discount || 500;
+            const coinsEligible = applyCoins ? Math.min(coinsBalance, maxCoinDiscount) : 0;
+            const discountRupees = Math.round(coinsEligible * 0.10);
+            const finalPayable = Math.max(1, plan.base_price - discountRupees);
 
             return (
               <div
@@ -204,7 +266,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
                   <div className="p-3.5 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850/80 border border-charcoal-200 dark:border-charcoal-800 mb-5">
                     <div className="flex items-baseline justify-between">
                       <span className="text-xs text-charcoal-500 font-semibold">Payable Price</span>
-                      {coinsEligible > 0 && (
+                      {discountRupees > 0 && (
                         <span className="text-xs text-charcoal-400 line-through font-mono">
                           ₹{plan.base_price}
                         </span>
@@ -220,13 +282,13 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
                       </span>
                     </div>
 
-                    {coinsEligible > 0 ? (
+                    {discountRupees > 0 ? (
                       <div className="mt-2 text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                        <span>🪙 Applied {coinsEligible} Coins (-₹{coinsEligible} Discount)</span>
+                        <span>🪙 Applied {coinsEligible} Coins (-₹{discountRupees} Off)</span>
                       </div>
                     ) : (
                       <div className="mt-2 text-[10px] text-charcoal-400">
-                        Eligible for up to ₹{maxCoinDiscount} off using GovCoins
+                        Eligible for up to ₹{(maxCoinDiscount * 0.1).toFixed(0)} off with GovCoins (100 coins = ₹10)
                       </div>
                     )}
                   </div>
