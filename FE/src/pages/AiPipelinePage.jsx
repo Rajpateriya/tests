@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router';
+import { ROUTES } from '../routes';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { CpuIcon, RefreshCwIcon, ShieldIcon } from '../components/Icons';
@@ -68,9 +70,9 @@ const AdminSignIn = () => {
 };
 
 // Address: /ai-pipeline/<step>?subject=<subject>&exam=<exam>, so a refresh or back keeps the step and subject.
-const readAddress = () => {
-  const stepId = window.location.pathname.split('/')[2];
-  const q = new URLSearchParams(window.location.search);
+const readAddress = ({ pathname, search }) => {
+  const stepId = pathname.split('/')[2];
+  const q = new URLSearchParams(search);
   return {
     step: STEPS.some((s) => s.id === stepId) ? stepId : 'structure',
     subject: q.get('subject') || '',
@@ -78,43 +80,48 @@ const readAddress = () => {
   };
 };
 
-export const AiPipelinePage = ({ onGoToMocks }) => {
+export const AiPipelinePage = () => {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const isRealAdmin = user?.role === 'admin' && !!token && !token.startsWith('demo');
 
-  const [boot] = useState(readAddress);
+  const [boot] = useState(() => readAddress(location));
   const [step, setStep] = useState(boot.step);
   const [subjects, setSubjects] = useState([]);
   const [subject, setSubject] = useState(boot.subject);
   const [targetExam, setTargetExam] = useState(boot.exam);
 
-  // Address bar follows the step (new history entry) and the subject/exam (replaces the entry).
-  const lastStep = React.useRef(null);
+  // Address follows the step (new history entry) and the subject/exam (replaces the entry).
+  const lastStep = useRef(null);
+  const lastWritten = useRef(null); // the address this page itself just navigated to
   useEffect(() => {
     const q = new URLSearchParams();
     if (subject) q.set('subject', subject);
     q.set('exam', targetExam);
-    const want = `/ai-pipeline/${step}?${q.toString()}`;
-    const have = window.location.pathname + window.location.search;
+    const want = `${ROUTES.pipeline}/${step}?${q.toString()}`;
+    const have = location.pathname + location.search;
     if (have !== want) {
       const push = lastStep.current !== null && lastStep.current !== step;
-      window.history[push ? 'pushState' : 'replaceState'](null, '', want);
+      lastWritten.current = want;
+      navigate(want, { replace: !push });
     }
     lastStep.current = step;
   }, [step, subject, targetExam]);
 
-  // Back/forward: follow the address
+  // Back/forward (or a link from elsewhere): follow the address. Changes this page wrote itself are skipped.
   useEffect(() => {
-    const onPop = () => {
-      if (!window.location.pathname.startsWith('/ai-pipeline/')) return;
-      const a = readAddress();
-      setStep(a.step);
-      setSubject(a.subject);
-      setTargetExam(a.exam);
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
+    const have = location.pathname + location.search;
+    if (have === lastWritten.current) {
+      lastWritten.current = null;
+      return;
+    }
+    if (!location.pathname.startsWith(`${ROUTES.pipeline}/`)) return;
+    const a = readAddress(location);
+    setStep(a.step);
+    setSubject(a.subject);
+    setTargetExam(a.exam);
+  }, [location.pathname, location.search]);
   const [taxonomyDoc, setTaxonomyDoc] = useState(null);
   const [error, setError] = useState('');
   const [loadingSubjects, setLoadingSubjects] = useState(false);
@@ -262,7 +269,7 @@ export const AiPipelinePage = ({ onGoToMocks }) => {
           {step === 'generate' && <GenerateStep {...props} onGenerated={() => {}} />}
           {step === 'questions' && <QuestionsStep {...props} />}
           {step === 'blueprint' && <BlueprintStep {...props} />}
-          {step === 'assemble' && <AssembleStep {...props} onAssembled={() => {}} onGoToMocks={onGoToMocks} />}
+          {step === 'assemble' && <AssembleStep {...props} onAssembled={() => {}} onGoToMocks={() => navigate(ROUTES.home)} />}
           {step === 'review' && <ReviewStep subject={subject} onChanged={() => {}} />}
         </>
       )}

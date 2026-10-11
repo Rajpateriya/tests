@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router';
+import { ROUTES } from '../routes';
 import {
   SparklesIcon,
   ShieldIcon,
@@ -104,7 +106,9 @@ const LEGAL_DOCS = {
   },
 };
 
-export const Footer = ({ onNavigate }) => {
+export const Footer = () => {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [activeLegalModal, setActiveLegalModal] = useState(null); // 'privacy' | 'terms' | 'refund' | 'honor' | null
   const currentYear = new Date().getFullYear();
 
@@ -132,17 +136,17 @@ export const Footer = ({ onNavigate }) => {
    * Handles page switches, smooth anchor scrolling, blueprint selector dispatches,
    * and catalog tab state activations gracefully.
    */
-  const handleNav = ({ view = 'discovery', hash = null, blueprint = null, catalogTab = null, focusInputId = null }) => {
+  const handleNav = ({ to = ROUTES.home, hash = null, blueprint = null, catalogTab = null, focusInputId = null }) => {
     // If target is another page entirely (courses, typing, dashboard, etc.)
-    if (view && view !== 'discovery' && onNavigate) {
-      onNavigate(view);
+    if (to !== ROUTES.home) {
+      navigate(to);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    // Target is on discovery page (or section within discovery)
-    if (onNavigate) {
-      onNavigate('discovery');
+    // Target is on the landing page (or a section within it)
+    if (pathname !== ROUTES.home) {
+      navigate(ROUTES.home);
     }
 
     const triggerSection = () => {
@@ -194,7 +198,7 @@ export const Footer = ({ onNavigate }) => {
             {/* Column 1: Brand & Academic Engine (2 Columns on large screens) */}
             <div className="lg:col-span-2 space-y-4">
               <div
-                onClick={() => handleNav({ view: 'discovery' })}
+                onClick={() => handleNav({ to: ROUTES.home })}
                 className="flex items-center gap-2 cursor-pointer select-none group w-fit"
                 title="Go to PrepMagnet Home"
               >
@@ -246,7 +250,7 @@ export const Footer = ({ onNavigate }) => {
               <ul className="space-y-2 text-xs">
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'discovery', hash: 'exam-blueprints', blueprint: 'cgl' })}
+                    onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'cgl' })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -255,7 +259,7 @@ export const Footer = ({ onNavigate }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'discovery', hash: 'exam-blueprints', blueprint: 'banking' })}
+                    onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'banking' })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -264,7 +268,7 @@ export const Footer = ({ onNavigate }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'discovery', hash: 'exam-blueprints', blueprint: 'rrb' })}
+                    onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'rrb' })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -273,7 +277,7 @@ export const Footer = ({ onNavigate }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'discovery', hash: 'exam-blueprints', blueprint: 'psc' })}
+                    onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'psc' })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -282,7 +286,7 @@ export const Footer = ({ onNavigate }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'courses' })}
+                    onClick={() => handleNav({ to: ROUTES.courses })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -301,7 +305,7 @@ export const Footer = ({ onNavigate }) => {
               <ul className="space-y-2 text-xs">
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'discovery', hash: 'mock-catalog', catalogTab: 'mocks' })}
+                    onClick={() => handleNav({ to: ROUTES.home, hash: 'mock-catalog', catalogTab: 'mocks' })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -310,7 +314,7 @@ export const Footer = ({ onNavigate }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'discovery', hash: 'hero-sandbox' })}
+                    onClick={() => handleNav({ to: ROUTES.home, hash: 'hero-sandbox' })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -319,7 +323,7 @@ export const Footer = ({ onNavigate }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'discovery', hash: 'rank-predictor' })}
+                    onClick={() => handleNav({ to: ROUTES.home, hash: 'rank-predictor' })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -328,7 +332,7 @@ export const Footer = ({ onNavigate }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'typing' })}
+                    onClick={() => handleNav({ to: ROUTES.typing })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left font-medium"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -337,7 +341,7 @@ export const Footer = ({ onNavigate }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => handleNav({ view: 'discovery', hash: 'passes-section' })}
+                    onClick={() => handleNav({ to: ROUTES.home, hash: 'passes-section' })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
@@ -379,7 +383,7 @@ export const Footer = ({ onNavigate }) => {
                   <button
                     onClick={() =>
                       handleNav({
-                        view: 'discovery',
+                        to: ROUTES.home,
                         hash: 'contact-section',
                         focusInputId: 'contact-name',
                       })

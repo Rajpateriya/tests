@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate, useLocation } from 'react-router';
+import { ROUTES } from '../routes';
 import {
   ShieldIcon,
   UserIcon,
@@ -190,8 +192,8 @@ const formatDate = (value) =>
 
 // Admin Studio addresses: /admin/users, /admin/courses, /admin/tests, /admin/tests/<test id>, /admin/health
 const ADMIN_TABS = ['users', 'courses', 'tests', 'support', 'health'];
-const parseAdminPath = () => {
-  const [, , tab, id] = window.location.pathname.split('/');
+const parseAdminPath = (pathname) => {
+  const [, , tab, id] = pathname.split('/');
   return {
     tab: ADMIN_TABS.includes(tab) ? tab : 'users',
     testId: tab === 'tests' && id ? id : null,
@@ -201,7 +203,13 @@ const parseAdminPath = () => {
 
 export const AdminStudioPage = () => {
   const { user: currentAdmin } = useAuth();
-  const bootPath = useRef(parseAdminPath()); // where the page was opened (a refresh or shared link)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const locationRef = useRef(location); // the newest address, for effects and handlers created in an earlier render
+  locationRef.current = location;
+  const lastWritten = useRef(null); // the address this page itself just navigated to
+  const seenAddress = useRef(location.pathname + location.search);
+  const bootPath = useRef(parseAdminPath(location.pathname)); // where the page was opened (a refresh or shared link)
   const [activeTab, setActiveTab] = useState(bootPath.current.tab); // 'users' | 'courses' | 'tests' | 'health'
 
   // Admin stats & health
@@ -626,7 +634,10 @@ export const AdminStudioPage = () => {
     } catch (err) {
       showToast('error', `Could not load the test: ${err.message}`);
       setTestDetail(null);
-      if (window.location.pathname.startsWith('/admin/tests/')) window.history.replaceState(null, '', '/admin/tests');
+      if (locationRef.current.pathname.startsWith(`${ROUTES.admin}/tests/`)) {
+        lastWritten.current = `${ROUTES.admin}/tests`;
+        navigate(`${ROUTES.admin}/tests`, { replace: true });
+      }
     }
   };
 
@@ -698,10 +709,13 @@ export const AdminStudioPage = () => {
     addressSynced.current = true;
     if (first && (bootPath.current.testId || bootPath.current.courseId)) return; // the address already names it
     const courseKey = courseModal ? (courseModal.mode === 'create' ? 'new' : courseModal.course.id) : null;
-    const want = `/admin/${activeTab}${
+    const want = `${ROUTES.admin}/${activeTab}${
       activeTab === 'tests' && testDetail ? `/${testDetail.test.id}` : activeTab === 'courses' && courseKey ? `/${courseKey}` : ''
     }`;
-    if (window.location.pathname !== want) window.history[first ? 'replaceState' : 'pushState'](null, '', want);
+    if (locationRef.current.pathname !== want && lastWritten.current !== want) {
+      lastWritten.current = want;
+      navigate(want, { replace: first });
+    }
   }, [activeTab, testDetail?.test.id, courseModal?.mode, courseModal?.course?.id]);
 
   // Opened on a test's address (refresh or shared link): open that test
@@ -719,9 +733,9 @@ export const AdminStudioPage = () => {
   // Back/forward: follow the address
   const onAddressChange = useRef(null);
   onAddressChange.current = () => {
-    const { tab, testId, courseId } = parseAdminPath();
+    const { tab, testId, courseId } = parseAdminPath(location.pathname);
     setActiveTab(tab);
-    const ticketParam = new URLSearchParams(window.location.search).get('ticket');
+    const ticketParam = new URLSearchParams(location.search).get('ticket');
     setHighlightTicketId(ticketParam);
     if (tab === 'support' && ticketParam) {
       setTicketFilter('');
@@ -743,10 +757,15 @@ export const AdminStudioPage = () => {
     }
   };
   useEffect(() => {
-    const handler = () => onAddressChange.current();
-    window.addEventListener('popstate', handler);
-    return () => window.removeEventListener('popstate', handler);
-  }, []);
+    const have = location.pathname + location.search;
+    if (have === seenAddress.current) return; // nothing changed (also covers the first render)
+    seenAddress.current = have;
+    if (have === lastWritten.current) {
+      lastWritten.current = null; // this page wrote it itself; the state already matches
+      return;
+    }
+    onAddressChange.current(); // back/forward, or a link from elsewhere (e.g. a notification)
+  }, [location.pathname, location.search]);
 
   // Each tab fetches its own data the first time it is opened, not when the page loads.
   // (Only the Mock Tests tab needs the full course list, for its "In Courses" column.)
@@ -872,7 +891,7 @@ export const AdminStudioPage = () => {
   const [resolvingTicket, setResolvingTicket] = useState(null); // ticket mid-resolve, with a reason to type first
   const [resolveNote, setResolveNote] = useState('');
   // A ticket opened straight from a notification (?ticket=<id>): scrolled to and highlighted once loaded.
-  const [highlightTicketId, setHighlightTicketId] = useState(() => new URLSearchParams(window.location.search).get('ticket'));
+  const [highlightTicketId, setHighlightTicketId] = useState(() => new URLSearchParams(location.search).get('ticket'));
 
   const loadTickets = async (status = ticketFilter) => {
     setTicketsLoading(true);

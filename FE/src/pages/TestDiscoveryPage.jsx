@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
+import { ROUTES } from '../routes';
 import { api, DEMO_TESTS } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -32,7 +34,8 @@ import { TestRulesModal } from '../components/TestRulesModal';
  * Built with institutional rigor, inspiring copywriting, anti-AI aesthetics,
  * interactive hero test-drive sandbox, syllabus blueprint explorer, and percentile predictor.
  */
-export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal, onNavigate, onOpenCourse }) => {
+export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [catalogTab, setCatalogTab] = useState('courses'); // 'courses' | 'mocks' (free mocks only)
   const [courses, setCourses] = useState([]);
@@ -293,7 +296,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
   const activeBlueprint = EXAM_BLUEPRINTS[selectedExamBlueprint];
 
   return (
-    <div className="relative overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero">
+    <div className="relative overflow-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero">
       {/* Dynamic Animated Ambient Background Glows */}
       <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
       <div className="absolute top-[680px] -left-36 w-[550px] h-[550px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
@@ -1003,7 +1006,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                         <span className="text-xs text-charcoal-400 line-through">₹{course.original_price}</span>
                       </div>
                       <button
-                        onClick={() => onNavigate && onNavigate('courses')}
+                        onClick={() => navigate(ROUTES.courses)}
                         className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm"
                       >
                         <span>View Course</span>
@@ -1455,7 +1458,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
 
                     <div className="relative z-10 pt-2 border-t border-charcoal-100 dark:border-charcoal-800/80">
                       <button
-                        onClick={() => (onNavigate ? onNavigate('subscription') : onOpenAuthModal())}
+                        onClick={() => navigate(ROUTES.subscription)}
                         className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 group/btn active:scale-[0.98] cursor-pointer ${p.badge || isAnnual
                             ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20'
                             : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
@@ -1501,7 +1504,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                     </div>
                   </div>
                   <button
-                    onClick={() => onNavigate ? onNavigate('subscription') : onOpenAuthModal()}
+                    onClick={() => navigate(ROUTES.subscription)}
                     className="w-full py-2.5 rounded-xl font-bold text-xs border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 flex items-center justify-center gap-1.5"
                   >
                     <span>Select Monthly Pass</span>
@@ -1541,7 +1544,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                     </div>
                   </div>
                   <button
-                    onClick={() => onNavigate ? onNavigate('subscription') : onOpenAuthModal()}
+                    onClick={() => navigate(ROUTES.subscription)}
                     className="w-full py-2.5 rounded-xl font-bold text-xs bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20 flex items-center justify-center gap-1.5"
                   >
                     <span>Select Annual Pass</span>

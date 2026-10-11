@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
@@ -8,83 +9,68 @@ import { ExamRoomPage } from './pages/ExamRoomPage';
 import { ResultScorecardPage } from './pages/ResultScorecardPage';
 import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { AdminStudioPage } from './pages/AdminStudioPage';
-import { SubscriptionPage } from './pages/SubscriptionPage';
 import { CoursesPage } from './pages/CoursesPage';
 import { CourseDetailPage } from './pages/CourseDetailPage';
 import { TypingMasterPage } from './pages/TypingMasterPage';
 import { AiPipelinePage } from './pages/AiPipelinePage';
 import { Footer } from './components/Footer';
 import { api } from './services/api';
+import { ROUTES, DASHBOARD_TABS, homePathFor } from './routes';
 
 /**
- * AppContent — Architecturally Guided View Router & State Orchestrator
- *
- * Route Access Policies:
- * 1. Guest (Not Logged In):
- *    - Default Landing: 'discovery' (Public Mock Test Discovery & Platform Overview).
- *    - Starting a test or viewing personal stats prompts the AuthModal.
- * 2. Student (Logged In as Aspirant):
- *    - Default Landing: 'dashboard' (Student Performance & Lifetime Portfolio).
- *    - Permitted: 'dashboard', 'discovery', 'exam', 'results', 'subscription'.
- *    - Restricted: 'admin', 'pipeline' (Redirects to 'dashboard').
- * 3. Administrator (Logged In as Admin):
- *    - Default Landing: 'admin' (Admin Studio & Operations).
- *    - Permitted: 'admin', 'pipeline', 'discovery', 'exam', 'results', 'subscription'.
+ * Route access policies:
+ * 1. Guest: the landing page ('/'), courses, typing. Starting a test prompts the AuthModal.
+ *    Dashboard / admin / pipeline addresses redirect to '/'.
+ * 2. Student: dashboard, plus everything public. Admin addresses redirect to the dashboard.
+ * 3. Administrator: Admin Studio and the AI pipeline, plus everything public.
+ *    The student dashboard address redirects to Admin Studio.
+ * The exam and results screens need a live attempt, so opening them by address redirects home.
+ * (The dashboard, Admin Studio and the AI pipeline keep their own tab/step in the address.)
  */
-// Each screen has its own address, so refresh, back/forward and shared links land on the right screen.
-// (Admin Studio adds its own tab and test in the address: /admin/courses, /admin/tests/<id>.)
-const VIEW_PATHS = {
-  discovery: '/',
-  dashboard: '/dashboard',
-  courses: '/courses',
-  subscription: '/subscription',
-  typing: '/typing',
-  admin: '/admin',
-  pipeline: '/ai-pipeline',
-  exam: '/exam',
-  results: '/results',
+
+// Signed-out visitors go to the landing page; a student on an admin screen (or an admin on the
+// student dashboard) is sent to their own area.
+const RequireRole = ({ role, children }) => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to={ROUTES.home} replace />;
+  if (role === 'admin' && user.role !== 'admin') return <Navigate to={ROUTES.dashboard} replace />;
+  if (role === 'student' && user.role === 'admin') return <Navigate to={ROUTES.admin} replace />;
+  return children;
 };
 
-const viewFromPath = (pathname) => {
-  const path = pathname.replace(/\/+$/, '') || '/';
-  if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
-  if (path === '/dashboard' || path.startsWith('/dashboard/')) return 'dashboard'; // /dashboard/<tab>
-  if (path.startsWith('/ai-pipeline/')) return 'pipeline'; // /ai-pipeline/<step>?subject=...
-  if (path.startsWith('/courses/')) return 'courseDetail'; // /courses/<course id>
-  return Object.keys(VIEW_PATHS).find((v) => VIEW_PATHS[v] === path) || null;
+// /dashboard/<tab>: an unknown tab falls back to the default one.
+const DashboardTab = (props) => {
+  const { tab } = useParams();
+  if (!DASHBOARD_TABS.includes(tab)) return <Navigate to={`${ROUTES.dashboard}/${DASHBOARD_TABS[0]}`} replace />;
+  return <StudentDashboardPage {...props} />;
 };
 
-// The id embedded in a /courses/<id> address, or null when the path doesn't name one.
-const courseIdFromPath = (pathname) => {
-  const path = pathname.replace(/\/+$/, '') || '/';
-  return path.startsWith('/courses/') ? decodeURIComponent(path.slice('/courses/'.length)) : null;
+// /courses/<id>: "back" returns to the exact address the course was opened from (see useOpenCourse).
+const CourseDetailRoute = ({ onStartTest }) => {
+  const { courseId } = useParams();
+  const navigate = useNavigate();
+  const { state } = useLocation();
+  const from = state?.from || ROUTES.courses;
+  const backLabel = from.startsWith(ROUTES.dashboard) ? 'Dashboard' : from.startsWith(ROUTES.courses) ? 'Courses' : 'Back';
+
+  return (
+    <CourseDetailPage
+      courseId={courseId}
+      backLabel={backLabel}
+      onBackToCourses={() => navigate(from)}
+      onStartTest={onStartTest}
+    />
+  );
 };
 
 function AppContent() {
-  const { user, isAdmin } = useAuth();
-
-  // Dynamic default view based on initial auth state
-  const [currentView, setCurrentView] = useState(() => {
-    // An address that names a screen wins. The exam and results screens need a live attempt, so they cannot be opened by address.
-    const fromUrl = viewFromPath(window.location.pathname);
-    if (fromUrl && fromUrl !== 'exam' && fromUrl !== 'results' && window.location.pathname !== '/') return fromUrl;
-    const cachedUser = localStorage.getItem('govexam_user');
-    if (!cachedUser) return 'discovery';
-    try {
-      const parsed = JSON.parse(cachedUser);
-      return parsed.role === 'admin' ? 'admin' : 'dashboard';
-    } catch {
-      return 'discovery';
-    }
-  });
-
-  // Which course /courses/<id> names, so a refresh or shared link opens that course directly.
-  const [openCourseId, setOpenCourseId] = useState(() => courseIdFromPath(window.location.pathname));
-  // The exact address the course was opened from (whatever screen/tab that was), so "back" always
-  // returns there precisely — not a fixed screen. null on a refresh/shared link (no origin to return to).
-  const [courseDetailBackPath, setCourseDetailBackPath] = useState(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const isExam = pathname === ROUTES.exam;
 
   const [activeAttempt, setActiveAttempt] = useState(null);
+  const [justFinishedExam, setJustFinishedExam] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState('');
   const [lastCompletedAttemptId, setLastCompletedAttemptId] = useState(null);
@@ -98,78 +84,20 @@ function AppContent() {
     setAuthModalState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  // Architectural Guard: Auto-route on login or logout
+  // Landing: a signed-in user opening '/' goes straight to their own area. Runs once, so the brand
+  // logo can still take them back to the landing page afterwards.
+  const landed = useRef(false);
   useEffect(() => {
-    if (!user) {
-      // If user logs out, return to public discovery
-      if (currentView === 'dashboard' || currentView === 'admin' || currentView === 'pipeline') {
-        setCurrentView('discovery');
-      }
-    } else if (user.role === 'admin') {
-      // If admin logs in from student screen
-      if (currentView === 'dashboard') {
-        setCurrentView('admin');
-      }
-    } else {
-      // If student tries to view admin screens
-      if (currentView === 'admin' || currentView === 'pipeline') {
-        setCurrentView('dashboard');
-      }
-    }
-  }, [user, currentView]);
+    if (landed.current) return;
+    landed.current = true;
+    if (pathname === ROUTES.home && user) navigate(homePathFor(user), { replace: true });
+  }, []);
 
-  // Opens a course by id, address included: /courses/<id>. Wherever this was called from is
-  // captured automatically (the address bar at that moment) as where "back" should return to —
-  // a specific tab of the dashboard, the course list, or anywhere else, with no fixed list of cases.
-  const handleOpenCourse = (courseId) => {
-    setCourseDetailBackPath(window.location.pathname);
-    setOpenCourseId(courseId);
-    setCurrentView('courseDetail');
-  };
-
-  // Returns from the course detail page to exactly where it was opened from.
-  const handleBackFromCourse = () => {
-    const target = courseDetailBackPath || '/courses';
-    window.history.pushState(null, '', target);
-    setCurrentView(viewFromPath(target) || 'courses');
-  };
-
-  // The course detail page's breadcrumb label, named after whichever screen will reopen on "back".
-  const courseDetailBackLabel = (() => {
-    const v = viewFromPath(courseDetailBackPath || '/courses');
-    if (v === 'dashboard') return 'Dashboard';
-    if (v === 'courses') return 'Courses';
-    return 'Back';
-  })();
-
-  // Keep the address bar in step with the screen, and the screen in step with back/forward.
-  // A screen that manages its own sub-address (Admin Studio's tabs, the Dashboard's tabs) is left
-  // alone as long as the address already resolves back to that same screen.
+  // The "just finished" flag only bridges the moment between clearing the attempt and arriving on
+  // the results screen; once we have left the exam address it has done its job.
   useEffect(() => {
-    if (currentView === 'courseDetail') {
-      const want = `/courses/${encodeURIComponent(openCourseId || '')}`;
-      if (window.location.pathname !== want) window.history.pushState(null, '', want);
-      return;
-    }
-    if (viewFromPath(window.location.pathname) === currentView) return;
-    window.history.pushState(null, '', VIEW_PATHS[currentView] || '/');
-  }, [currentView, openCourseId]);
-
-  useEffect(() => {
-    const onPop = () => {
-      const v = viewFromPath(window.location.pathname);
-      if (v === 'courseDetail') {
-        setOpenCourseId(courseIdFromPath(window.location.pathname));
-        setCurrentView('courseDetail');
-        return;
-      }
-      // Going back into an exam or results screen that no longer exists falls back to the home screen.
-      if (v && v !== 'exam' && v !== 'results') setCurrentView(v);
-      else if (v === 'exam' || v === 'results') setCurrentView(user ? (isAdmin ? 'admin' : 'dashboard') : 'discovery');
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, [user, isAdmin]);
+    if (pathname !== ROUTES.exam) setJustFinishedExam(false);
+  }, [pathname]);
 
   const [pendingTestToStart, setPendingTestToStart] = useState(null);
 
@@ -207,7 +135,7 @@ function AppContent() {
         test_title: testOrAttempt.test_title || testOrAttempt.title,
         duration_minutes: testOrAttempt.duration_minutes || 60,
       });
-      setCurrentView('exam');
+      navigate(ROUTES.exam);
       return;
     }
 
@@ -221,7 +149,7 @@ function AppContent() {
         test_title: session.test_title,
         duration_minutes: session.duration_minutes,
       });
-      setCurrentView('exam');
+      navigate(ROUTES.exam);
     } catch (err) {
       setStartError(err.message || 'Could not start this test.');
     } finally {
@@ -231,9 +159,10 @@ function AppContent() {
 
   // Test completed -> Route to Result Scorecard
   const handleTestCompleted = (result) => {
+    setJustFinishedExam(true);
     setActiveAttempt(null);
     setLastCompletedAttemptId(result.attempt_id || 'demo-attempt');
-    setCurrentView('results');
+    navigate(ROUTES.results);
   };
 
   return (
@@ -252,100 +181,110 @@ function AppContent() {
       )}
 
       {/* Floating Pill Navbar (Rendered on all pages EXCEPT fullscreen exam room) */}
-      {currentView !== 'exam' && (
-        <Navbar
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          activeAttempt={activeAttempt}
-          onOpenAuthModal={handleOpenAuthModal}
-        />
-      )}
+      {!isExam && <Navbar activeAttempt={activeAttempt} onOpenAuthModal={handleOpenAuthModal} />}
 
       {/* Main Content Area (With top padding pt-20 to accommodate floating navbar) */}
-      <div className={`flex-1 ${currentView !== 'exam' ? 'pt-20 sm:pt-24 pb-12' : ''}`}>
-        {/* 1. Public Test Discovery / Landing Page */}
-        {currentView === 'discovery' && (
-          <TestDiscoveryPage
-            onStartTest={handleStartTest}
-            activeAttempt={activeAttempt}
-            onOpenAuthModal={handleOpenAuthModal}
-            onNavigate={setCurrentView}
-            onOpenCourse={handleOpenCourse}
+      <div className={`flex-1 ${!isExam ? 'pt-20 sm:pt-24 pb-12' : ''}`}>
+        <Routes>
+          {/* Public Test Discovery / Landing Page */}
+          <Route
+            path={ROUTES.home}
+            element={
+              <TestDiscoveryPage
+                onStartTest={handleStartTest}
+                activeAttempt={activeAttempt}
+                onOpenAuthModal={handleOpenAuthModal}
+              />
+            }
           />
-        )}
 
-        {/* 2. Live Distraction-Free Exam Room */}
-        {currentView === 'exam' && (
-          <ExamRoomPage
-            attemptSession={activeAttempt}
-            onTestCompleted={handleTestCompleted}
-            onExit={() => setCurrentView(user ? (isAdmin ? 'admin' : 'dashboard') : 'discovery')}
+          {/* Live Distraction-Free Exam Room (needs a live attempt) */}
+          <Route
+            path={ROUTES.exam}
+            element={
+              activeAttempt ? (
+                <ExamRoomPage
+                  attemptSession={activeAttempt}
+                  onTestCompleted={handleTestCompleted}
+                  onExit={() => navigate(homePathFor(user))}
+                />
+              ) : justFinishedExam ? null : (
+                <Navigate to={homePathFor(user)} replace />
+              )
+            }
           />
-        )}
 
-        {/* 3. Result Scorecard & Analytics Dashboard */}
-        {currentView === 'results' && (
-          <ResultScorecardPage
-            attemptId={lastCompletedAttemptId || 'demo-attempt'}
-            onRetake={() => setCurrentView('discovery')}
-            onGoToDashboard={() => setCurrentView(user?.role === 'admin' ? 'admin' : 'dashboard')}
-            onBackToDiscovery={() => setCurrentView('discovery')}
+          {/* Result Scorecard & Analytics Dashboard (needs a finished attempt) */}
+          <Route
+            path={ROUTES.results}
+            element={
+              lastCompletedAttemptId ? (
+                <ResultScorecardPage
+                  attemptId={lastCompletedAttemptId}
+                  onRetake={() => navigate(ROUTES.home)}
+                  onGoToDashboard={() => navigate(homePathFor(user))}
+                  onBackToDiscovery={() => navigate(ROUTES.home)}
+                />
+              ) : (
+                <Navigate to={homePathFor(user)} replace />
+              )
+            }
           />
-        )}
 
-        {/* 4. Student Dashboard (Only accessible to authenticated students) */}
-        {currentView === 'dashboard' && (
-          <StudentDashboardPage
-            onSelectAttempt={(attemptId) => {
-              setLastCompletedAttemptId(attemptId);
-              setCurrentView('results');
-            }}
-            onStartTest={handleStartTest}
-            onNavigate={setCurrentView}
-            onOpenCourse={handleOpenCourse}
+          {/* Student Dashboard: /dashboard -> /dashboard/<default tab> */}
+          <Route path={ROUTES.dashboard} element={<Navigate to={`${ROUTES.dashboard}/${DASHBOARD_TABS[0]}`} replace />} />
+          <Route
+            path={`${ROUTES.dashboard}/:tab`}
+            element={
+              <RequireRole role="student">
+                <DashboardTab
+                  onSelectAttempt={(attemptId) => {
+                    setLastCompletedAttemptId(attemptId);
+                    navigate(ROUTES.results);
+                  }}
+                  onStartTest={handleStartTest}
+                />
+              </RequireRole>
+            }
           />
-        )}
 
-        {/* 5. Exam-Oriented Courses & Quizzes Page */}
-        {(currentView === 'courses' || currentView === 'subscription') && (
-          <CoursesPage
-            onNavigateToDashboard={() => setCurrentView('dashboard')}
-            onNavigateToQuiz={() => setCurrentView('discovery')}
-            onStartTest={handleStartTest}
-            onOpenCourse={handleOpenCourse}
+          {/* Exam-Oriented Courses & Quizzes (the /subscription address shows the same page) */}
+          <Route path={ROUTES.courses} element={<CoursesPage onStartTest={handleStartTest} />} />
+          <Route path={ROUTES.subscription} element={<CoursesPage onStartTest={handleStartTest} />} />
+
+          {/* One course's full detail page: every quiz and mock test it includes */}
+          <Route path={`${ROUTES.courses}/:courseId`} element={<CourseDetailRoute onStartTest={handleStartTest} />} />
+
+          {/* Typing Master Mock Engine */}
+          <Route path={ROUTES.typing} element={<TypingMasterPage />} />
+
+          {/* Admin Studio (admin only; it keeps its own tab / open test / open course in the address) */}
+          <Route
+            path={`${ROUTES.admin}/*`}
+            element={
+              <RequireRole role="admin">
+                <AdminStudioPage />
+              </RequireRole>
+            }
           />
-        )}
 
-        {/* 5b. One course's full detail page: every quiz and mock test it includes */}
-        {currentView === 'courseDetail' && (
-          <CourseDetailPage
-            courseId={openCourseId}
-            backLabel={courseDetailBackLabel}
-            onBackToCourses={handleBackFromCourse}
-            onStartTest={handleStartTest}
+          {/* AI Question Pipeline (admin only; it keeps its own step and subject in the address) */}
+          <Route
+            path={`${ROUTES.pipeline}/*`}
+            element={
+              <RequireRole role="admin">
+                <AiPipelinePage />
+              </RequireRole>
+            }
           />
-        )}
 
-        {/* 6. Typing Master Mock Engine */}
-        {currentView === 'typing' && (
-          <TypingMasterPage />
-        )}
-
-        {/* 7. Admin Studio Page (Admin only) */}
-        {currentView === 'admin' && (
-          <AdminStudioPage />
-        )}
-
-        {/* 8. AI Question Pipeline (Admin only) */}
-        {currentView === 'pipeline' && (
-          <AiPipelinePage onGoToMocks={() => setCurrentView('discovery')} />
-        )}
+          {/* Anything else goes home */}
+          <Route path="*" element={<Navigate to={homePathFor(user)} replace />} />
+        </Routes>
       </div>
 
       {/* Institutional Global Footer (Rendered on all pages EXCEPT fullscreen exam room) */}
-      {currentView !== 'exam' && (
-        <Footer onNavigate={setCurrentView} />
-      )}
+      {!isExam && <Footer />}
 
       {/* Authentication Modal (Sign In / Register / 1-Click Demo) */}
       <AuthModal
@@ -359,10 +298,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }

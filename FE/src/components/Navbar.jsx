@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { api, isRealSession } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate, useLocation, matchPath } from 'react-router';
+import { ROUTES } from '../routes';
 import {
   SunIcon,
   MoonIcon,
@@ -22,7 +24,8 @@ import {
 
 // Bell: unread count pushed over a server-sent-events stream (no polling), a dropdown listing
 // notifications, mark-read on click/"mark all".
-const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
+const NotificationBell = ({ sessionKey, isAdmin }) => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -97,10 +100,11 @@ const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
     if (!n.ticket_id) return;
     // Admin: that ticket's row in Admin Studio's Support Tickets tab. Student: their own My
     // Tickets tab. Both pages read `?ticket=<id>` from the address and scroll to/highlight it.
-    const target = isAdmin ? `/admin/support?ticket=${n.ticket_id}` : `/dashboard/support?ticket=${n.ticket_id}`;
-    window.history.pushState(null, '', target);
-    setCurrentView(isAdmin ? 'admin' : 'dashboard');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(
+      isAdmin
+        ? `${ROUTES.admin}/support?ticket=${n.ticket_id}`
+        : `${ROUTES.dashboard}/support?ticket=${n.ticket_id}`
+    );
   };
 
   const handleMarkAllRead = async () => {
@@ -178,7 +182,11 @@ const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
  * - Interactive User Dropdown with quick 1-click role switcher (Student <-> Admin).
  * - Persistent Live Exam Resume pill badge.
  */
-export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthModal }) => {
+export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // True when the address is on (or, unless `end`, under) the given route — drives the active highlight.
+  const isOn = (path, end = false) => !!matchPath({ path, end }, pathname);
   const { theme, toggleTheme } = useTheme();
   const { user, logout, switchRole, isAdmin, canSwitchRole, isPreviewingAsStudent, subscription } = useAuth();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -204,20 +212,23 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleNavClick = (view) => {
-    setCurrentView(view);
+  // Sections with their own tabs (/dashboard/<tab>, /admin/<tab>, /ai-pipeline/<step>) are not re-entered
+  // from inside themselves, so a click never resets the tab or leaves an extra history entry.
+  const SECTION_ROOTS = [ROUTES.dashboard, ROUTES.admin, ROUTES.pipeline];
+  const handleNavClick = (path) => {
+    if (!isOn(path, !SECTION_ROOTS.includes(path))) navigate(path);
     setMobileMenuOpen(false);
   };
 
   const handleContactClick = () => {
     setMobileMenuOpen(false);
-    if (currentView === 'discovery') {
+    if (isOn(ROUTES.home, true)) {
       const el = document.getElementById('contact-section');
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      setCurrentView('discovery');
+      navigate(ROUTES.home);
       setTimeout(() => {
         const el = document.getElementById('contact-section');
         if (el) {
@@ -236,7 +247,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           <button
             onClick={() => {
               switchRole('admin');
-              setCurrentView('admin');
+              navigate(ROUTES.admin);
             }}
             className="px-2.5 py-0.5 rounded bg-white text-purple-950 font-extrabold text-[10px] hover:bg-purple-100 transition-colors shadow-xs"
           >
@@ -250,7 +261,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
       >
         {/* 1. BRAND EMBLEM (Sleek, Compact) */}
         <div
-          onClick={() => handleNavClick('discovery')}
+          onClick={() => handleNavClick(ROUTES.home)}
           className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
         >
           <div className="w-8 h-8 rounded-full bg-institutional-600 text-white flex items-center justify-center font-bold text-xs shadow-sm group-hover:scale-105 transition-transform">
@@ -277,8 +288,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           {!user && (
             <>
               <button
-                onClick={() => handleNavClick('discovery')}
-                className={`px-3 py-1.5 rounded-full transition-colors ${currentView === 'discovery'
+                onClick={() => handleNavClick(ROUTES.home)}
+                className={`px-3 py-1.5 rounded-full transition-colors ${isOn(ROUTES.home, true)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -286,8 +297,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                 Mock Tests
               </button>
               <button
-                onClick={() => handleNavClick('courses')}
-                className={`px-3 py-1.5 rounded-full transition-colors ${['courses', 'courseDetail'].includes(currentView)
+                onClick={() => handleNavClick(ROUTES.courses)}
+                className={`px-3 py-1.5 rounded-full transition-colors ${isOn(ROUTES.courses)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -295,8 +306,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                 Courses & Quizzes
               </button>
               <button
-                onClick={() => handleNavClick('typing')}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors ${currentView === 'typing'
+                onClick={() => handleNavClick(ROUTES.typing)}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors ${isOn(ROUTES.typing)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -316,8 +327,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           {user && !isAdmin && (
             <>
               <button
-                onClick={() => handleNavClick('dashboard')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${currentView === 'dashboard'
+                onClick={() => handleNavClick(ROUTES.dashboard)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${isOn(ROUTES.dashboard)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -327,9 +338,9 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               </button>
 
               {/* <button
-              onClick={() => handleNavClick('discovery')}
+              onClick={() => handleNavClick(ROUTES.home)}
               className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${
-                currentView === 'discovery'
+                isOn(ROUTES.home, true)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
               }`}
@@ -339,8 +350,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             </button> */}
 
               <button
-                onClick={() => handleNavClick('courses')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${['courses', 'courseDetail'].includes(currentView)
+                onClick={() => handleNavClick(ROUTES.courses)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${isOn(ROUTES.courses)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -350,8 +361,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               </button>
 
               <button
-                onClick={() => handleNavClick('typing')}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${currentView === 'typing'
+                onClick={() => handleNavClick(ROUTES.typing)}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${isOn(ROUTES.typing)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -373,8 +384,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           {user && isAdmin && (
             <>
               <button
-                onClick={() => handleNavClick('admin')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${currentView === 'admin'
+                onClick={() => handleNavClick(ROUTES.admin)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${isOn(ROUTES.admin)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -384,8 +395,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               </button>
 
               <button
-                onClick={() => handleNavClick('pipeline')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${currentView === 'pipeline'
+                onClick={() => handleNavClick(ROUTES.pipeline)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${isOn(ROUTES.pipeline)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -395,8 +406,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               </button>
 
               <button
-                onClick={() => handleNavClick('courses')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${['courses', 'courseDetail'].includes(currentView)
+                onClick={() => handleNavClick(ROUTES.courses)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${isOn(ROUTES.courses)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -406,8 +417,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               </button>
 
               <button
-                onClick={() => handleNavClick('typing')}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${currentView === 'typing'
+                onClick={() => handleNavClick(ROUTES.typing)}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${isOn(ROUTES.typing)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
@@ -421,9 +432,9 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
         {/* 3. RIGHT ACTIONS (Auth trigger, Theme toggle, Avatar / Dropdown) */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Active Attempt Warning / Quick Resume Button */}
-          {activeAttempt && currentView !== 'exam' && (
+          {activeAttempt && !isOn(ROUTES.exam) && (
             <button
-              onClick={() => handleNavClick('exam')}
+              onClick={() => handleNavClick(ROUTES.exam)}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-amber-900 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300 dark:border-amber-800 hover:bg-amber-200 transition-colors animate-pulse"
             >
               <ZapIcon size={12} className="text-amber-600 fill-amber-600" />
@@ -434,7 +445,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           {/* Student GovCoins Wallet Pill */}
           {user && !isAdmin && (
             <button
-              onClick={() => handleNavClick('courses')}
+              onClick={() => handleNavClick(ROUTES.courses)}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-amber-900 bg-amber-100/90 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300 dark:border-amber-800 hover:bg-amber-200/80 transition-colors shadow-sm group"
               title="Your GovCoins wallet: Redeem for instant discount on exam courses!"
             >
@@ -445,7 +456,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
           )}
 
           {/* Notifications */}
-          <NotificationBell sessionKey={user?.id} isAdmin={isAdmin} setCurrentView={setCurrentView} />
+          <NotificationBell sessionKey={user?.id} isAdmin={isAdmin} />
 
           {/* Theme Toggle Button */}
           <button
@@ -560,7 +571,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                         <button
                           onClick={() => {
                             switchRole('student');
-                            setCurrentView('dashboard');
+                            navigate(ROUTES.dashboard);
                             setUserDropdownOpen(false);
                           }}
                           className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1 ${!isAdmin
@@ -574,7 +585,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                         <button
                           onClick={() => {
                             switchRole('admin');
-                            setCurrentView('admin');
+                            navigate(ROUTES.admin);
                             setUserDropdownOpen(false);
                           }}
                           className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1 ${isAdmin
@@ -595,7 +606,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                       <>
                         <button
                           onClick={() => {
-                            handleNavClick('dashboard');
+                            handleNavClick(ROUTES.dashboard);
                             setUserDropdownOpen(false);
                           }}
                           className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
@@ -604,16 +615,16 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                         </button>
                         <button
                           onClick={() => {
-                            handleNavClick('courses');
+                            handleNavClick(`${ROUTES.dashboard}/courses`);
                             setUserDropdownOpen(false);
                           }}
                           className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
                         >
-                          Courses & Quizzes
+                          Enrolled Courses
                         </button>
                         <button
                           onClick={() => {
-                            handleNavClick('typing');
+                            handleNavClick(ROUTES.typing);
                             setUserDropdownOpen(false);
                           }}
                           className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
@@ -625,7 +636,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                       <>
                         <button
                           onClick={() => {
-                            handleNavClick('admin');
+                            handleNavClick(ROUTES.admin);
                             setUserDropdownOpen(false);
                           }}
                           className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
@@ -634,7 +645,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                         </button>
                         <button
                           onClick={() => {
-                            handleNavClick('pipeline');
+                            handleNavClick(ROUTES.pipeline);
                             setUserDropdownOpen(false);
                           }}
                           className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
@@ -651,7 +662,7 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                       onClick={() => {
                         logout();
                         setUserDropdownOpen(false);
-                        setCurrentView('discovery');
+                        navigate(ROUTES.home);
                       }}
                       className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-400 font-bold flex items-center gap-1.5"
                     >
@@ -684,19 +695,19 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             {!user ? (
               <>
                 <button
-                  onClick={() => handleNavClick('discovery')}
+                  onClick={() => handleNavClick(ROUTES.home)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   Mock Tests Library
                 </button>
                 <button
-                  onClick={() => handleNavClick('courses')}
+                  onClick={() => handleNavClick(ROUTES.courses)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   Courses & Quizzes
                 </button>
                 <button
-                  onClick={() => handleNavClick('typing')}
+                  onClick={() => handleNavClick(ROUTES.typing)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   ⌨️ Typing Master Mock Test
@@ -731,25 +742,25 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             ) : !isAdmin ? (
               <>
                 <button
-                  onClick={() => handleNavClick('dashboard')}
+                  onClick={() => handleNavClick(ROUTES.dashboard)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   Dashboard
                 </button>
                 <button
-                  onClick={() => handleNavClick('discovery')}
+                  onClick={() => handleNavClick(ROUTES.home)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   Test Library
                 </button>
                 <button
-                  onClick={() => handleNavClick('courses')}
+                  onClick={() => handleNavClick(ROUTES.courses)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   Courses & Quizzes
                 </button>
                 <button
-                  onClick={() => handleNavClick('typing')}
+                  onClick={() => handleNavClick(ROUTES.typing)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   ⌨️ Typing Master
@@ -764,25 +775,25 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
             ) : (
               <>
                 <button
-                  onClick={() => handleNavClick('admin')}
+                  onClick={() => handleNavClick(ROUTES.admin)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   Admin Studio
                 </button>
                 <button
-                  onClick={() => handleNavClick('pipeline')}
+                  onClick={() => handleNavClick(ROUTES.pipeline)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   AI Pipeline
                 </button>
                 <button
-                  onClick={() => handleNavClick('courses')}
+                  onClick={() => handleNavClick(ROUTES.courses)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   Courses
                 </button>
                 <button
-                  onClick={() => handleNavClick('typing')}
+                  onClick={() => handleNavClick(ROUTES.typing)}
                   className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
                 >
                   ⌨️ Typing Master

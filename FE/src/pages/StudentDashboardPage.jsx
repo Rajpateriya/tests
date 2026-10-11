@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { ROUTES, DASHBOARD_TABS, useOpenCourse } from '../routes';
 import {
   TrophyIcon,
   TargetIcon,
@@ -47,18 +49,19 @@ import { AnalyticsDashboardView } from '../components/AnalyticsDashboardView';
  * 4. 30-Day Discipline Roadmap Modal (Full view on demand, keeping screen clutter-free).
  * 5. High-contrast typography & rock-solid theme fidelity in both Light & Dark modes.
  */
-// Dashboard addresses: /dashboard/mission (default), /dashboard/analytics, /dashboard/courses, /dashboard/typing, /dashboard/mocks, /dashboard/support
-const DASH_TABS = ['mission', 'analytics', 'courses', 'typing', 'mocks', 'support'];
-const tabFromPath = () => {
-  const tab = window.location.pathname.split('/')[2];
-  return DASH_TABS.includes(tab) ? tab : 'mission';
-};
-
-export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate, onOpenCourse }) => {
+export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
   const { user, updateCoins, updateProfile } = useAuth();
+  const navigate = useNavigate();
+  const openCourse = useOpenCourse();
+  const { tab } = useParams();
+  const [searchParams] = useSearchParams();
 
-  // Active Tab View: 'mission' | 'analytics' | 'courses' | 'typing' | 'mocks'
-  const [activeTab, setActiveTab] = useState(tabFromPath);
+  // Active tab is the address itself: /dashboard/<tab> ('mission' | 'analytics' | 'courses' | 'typing' | 'mocks' | 'support').
+  // Every switch is a history entry, so back/forward moves between tabs and a shared link opens that tab.
+  const activeTab = DASHBOARD_TABS.includes(tab) ? tab : DASHBOARD_TABS[0];
+  const setActiveTab = (next) => {
+    if (next !== activeTab) navigate(`${ROUTES.dashboard}/${next}`);
+  };
 
   // Avatar upload state & feedback
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -85,7 +88,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
   const [ticketStatusFilter, setTicketStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'RESOLVED'
   const [ticketSearchQuery, setTicketSearchQuery] = useState('');
   // A ticket opened straight from a notification (?ticket=<id>): scrolled to and highlighted once loaded.
-  const [highlightTicketId, setHighlightTicketId] = useState(() => new URLSearchParams(window.location.search).get('ticket'));
+  const highlightTicketId = searchParams.get('ticket');
   const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
   const [activeQuizQuestionIdx, setActiveQuizQuestionIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -111,9 +114,11 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
 
   // Only what every tab needs (the streak/coins header, shown no matter which tab is open) loads
   // up front. Each tab below loads its own data the first time it is opened.
+  // Keyed on the user's id, not the whole user object: a profile photo or coins update replaces that
+  // object, and re-running this would flash the full-page loading screen (and refetch) each time.
   useEffect(() => {
     loadStreakAndHeader();
-  }, [user]);
+  }, [user?.id]);
 
   // Question Timer
   useEffect(() => {
@@ -241,27 +246,6 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
       setMyTicketsLoading(false);
     }
   };
-
-  // Address bar <-> tab: pushes a history entry on every tab switch, so back/forward moves
-  // between tabs, and a refresh or shared link (/dashboard/mocks) opens that same tab.
-  const addressSynced = useRef(false);
-  useEffect(() => {
-    const first = !addressSynced.current;
-    addressSynced.current = true;
-    const want = `/dashboard/${activeTab}`;
-    if (window.location.pathname !== want) {
-      window.history[first ? 'replaceState' : 'pushState'](null, '', want);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    const onPop = () => {
-      setActiveTab(tabFromPath());
-      setHighlightTicketId(new URLSearchParams(window.location.search).get('ticket'));
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
 
   const loadDailyQuestion = async () => {
     setQuestionLoading(true);
@@ -631,7 +615,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
 
             {/* Redeem CTA */}
             <button
-              onClick={() => onNavigate && onNavigate('courses')}
+              onClick={() => navigate(ROUTES.courses)}
               className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-extrabold rounded-2xl bg-institutional-600 hover:bg-institutional-700 active:bg-institutional-800 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
             >
               <SparklesIcon size={14} />
@@ -1216,7 +1200,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                 </button>
 
                 <button
-                  onClick={() => onNavigate && onNavigate('courses')}
+                  onClick={() => navigate(ROUTES.courses)}
                   className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 transition-colors cursor-pointer"
                 >
                   Browse All Courses →
@@ -1281,8 +1265,8 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                         onClick={() => {
                           const courseId = course.id || course.course_id;
                           // The full course page (every quiz and mock test) is the one place for this now.
-                          if (onOpenCourse && courseId) {
-                            onOpenCourse(courseId); // App.jsx captures this exact /dashboard/courses address to return to
+                          if (courseId) {
+                            openCourse(courseId); // remembers this exact /dashboard/courses address to return to
                             return;
                           }
                           setActiveCourseModal(course);
@@ -1305,7 +1289,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                 <p className="font-bold">No exam courses enrolled yet.</p>
                 <p className="text-xs">Explore syllabus-calibrated courses with step-by-step video lessons and quizzes.</p>
                 <button
-                  onClick={() => onNavigate && onNavigate('courses')}
+                  onClick={() => navigate(ROUTES.courses)}
                   className="px-4 py-2 text-xs font-bold rounded-xl bg-institutional-600 text-white cursor-pointer mt-2"
                 >
                   Explore Course Catalog →
@@ -1321,7 +1305,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                 Recommended Courses with GovCoins Discount
               </h3>
               <button
-                onClick={() => onNavigate && onNavigate('courses')}
+                onClick={() => navigate(ROUTES.courses)}
                 className="text-xs font-bold text-institutional-600 dark:text-institutional-400 hover:underline cursor-pointer"
               >
                 View All Plans
@@ -1351,7 +1335,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                     </div>
                   </div>
                   <button
-                    onClick={() => onNavigate && onNavigate('courses')}
+                    onClick={() => navigate(ROUTES.courses)}
                     className="w-full py-1.5 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white cursor-pointer"
                   >
                     Enroll with Coins
@@ -1406,7 +1390,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
 
             <div className="shrink-0 text-center space-y-2">
               <button
-                onClick={() => onNavigate && onNavigate('typing')}
+                onClick={() => navigate(ROUTES.typing)}
                 className="py-3 px-6 rounded-2xl bg-white hover:bg-blue-50 text-institutional-950 font-black text-sm shadow-lg transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
               >
                 <span>Launch Typing Master</span>

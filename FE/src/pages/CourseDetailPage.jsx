@@ -12,6 +12,8 @@ import {
   ArrowRightIcon,
   LockIcon,
   EyeIcon,
+  PlayIcon,
+  SparklesIcon,
 } from '../components/Icons';
 
 // A course's quizzes split into the two kinds Admin Studio can tag/create:
@@ -20,6 +22,27 @@ const splitQuizzes = (quizzes = []) => ({
   drills: quizzes.filter((q) => q.questions && q.questions.length > 0),
   mockTests: quizzes.filter((q) => !(q.questions && q.questions.length > 0)),
 });
+
+const COVER_GRID = {
+  backgroundImage:
+    'linear-gradient(to right, rgba(255,255,255,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.18) 1px, transparent 1px)',
+  backgroundSize: '18px 18px',
+};
+const COVER_GLOW = {
+  backgroundImage: 'radial-gradient(circle at 90% -20%, rgba(255,255,255,0.38), transparent 55%)',
+};
+
+const Backdrop = () => (
+  <>
+    <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
+    <div className="absolute top-[520px] -left-36 w-[520px] h-[520px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
+    <div className="absolute top-[900px] -right-36 w-[560px] h-[560px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
+  </>
+);
+
+// The -mt/-mb + pt/pb pairs cancel the app shell's navbar/footer padding so the backdrop reaches the very top and bottom.
+const PAGE_SHELL = 'relative overflow-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero';
+const PAGE_MAIN = 'relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10';
 
 export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backLabel = 'Courses' }) => {
   const [course, setCourse] = useState(null);
@@ -33,6 +56,7 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
   const [orderLoading, setOrderLoading] = useState(false);
   const [enrollMessage, setEnrollMessage] = useState(null);
 
+  const [quizFilter, setQuizFilter] = useState('all'); // 'all' | 'drill' | 'mock'
   const [previewQuiz, setPreviewQuiz] = useState(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
 
@@ -83,11 +107,17 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-charcoal-50/60 dark:bg-charcoal-950 py-10 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto space-y-6">
-          <div className="h-5 w-40 rounded bg-charcoal-200/60 dark:bg-charcoal-800 animate-pulse" />
-          <div className="h-56 rounded-3xl bg-charcoal-200/50 dark:bg-charcoal-900/50 animate-pulse border border-charcoal-200 dark:border-charcoal-800" />
-          <div className="h-40 rounded-3xl bg-charcoal-200/50 dark:bg-charcoal-900/50 animate-pulse border border-charcoal-200 dark:border-charcoal-800" />
+      <div className={PAGE_SHELL}>
+        <Backdrop />
+        <div className={`${PAGE_MAIN} space-y-5`}>
+          <div className="h-4 w-40 rounded bg-charcoal-200/60 dark:bg-charcoal-800 animate-pulse" />
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6">
+            <div className="space-y-5">
+              <div className="h-64 rounded-2xl bg-charcoal-200/60 dark:bg-charcoal-800/60 animate-pulse" />
+              <div className="h-56 rounded-2xl bg-charcoal-200/60 dark:bg-charcoal-800/60 animate-pulse" />
+            </div>
+            <div className="h-80 rounded-2xl bg-charcoal-200/60 dark:bg-charcoal-800/60 animate-pulse" />
+          </div>
         </div>
       </div>
     );
@@ -95,18 +125,21 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
 
   if (error && !course) {
     return (
-      <div className="min-h-screen bg-charcoal-50/60 dark:bg-charcoal-950 py-10 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto text-center py-16 bg-white dark:bg-charcoal-900 rounded-3xl border border-charcoal-200 dark:border-charcoal-800 space-y-3">
-          <BookOpenIcon size={40} className="mx-auto text-charcoal-400" />
-          <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">Could not open this course</h3>
-          <p className="text-xs text-charcoal-500">{error}</p>
-          <button
-            type="button"
-            onClick={onBackToCourses}
-            className="mt-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
-          >
-            Back to {backLabel}
-          </button>
+      <div className={PAGE_SHELL}>
+        <Backdrop />
+        <div className={PAGE_MAIN}>
+          <div className="max-w-xl mx-auto text-center py-14 bg-white dark:bg-charcoal-900 rounded-2xl border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-2.5">
+            <BookOpenIcon size={36} className="mx-auto text-charcoal-400" />
+            <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">Could not open this course</h3>
+            <p className="text-xs text-charcoal-500">{error}</p>
+            <button
+              type="button"
+              onClick={onBackToCourses}
+              className="mt-2 px-4 py-2 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white text-xs font-bold transition-colors"
+            >
+              Back to {backLabel}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -114,19 +147,32 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
 
   const { drills, mockTests } = splitQuizzes(course.quizzes);
   const isEnrolled = course.is_enrolled;
-  const discountAmt = Math.round(course.original_price - course.discounted_price);
+  const subjects = course.subjects || [];
+  const savings = Math.max(0, Math.round(course.original_price - course.discounted_price));
   const maxCoinsUsable = Math.min(userCoins, course.max_coins_discount || 500);
   const coinDiscount = useCoins && userCoins > 0 ? Math.round(maxCoinsUsable * 0.1) : 0;
+  const finalPrice = Math.max(1, course.discounted_price - coinDiscount);
+  const features = (course.features || []).slice(0, 6);
+
+  const quizzes = [...drills, ...mockTests];
+  const visibleQuizzes = quizFilter === 'drill' ? drills : quizFilter === 'mock' ? mockTests : quizzes;
+  const filterTabs = [
+    { id: 'all', label: 'All', count: quizzes.length },
+    { id: 'drill', label: 'Drills', count: drills.length },
+    { id: 'mock', label: 'Mock tests', count: mockTests.length },
+  ];
 
   return (
-    <div className="min-h-screen bg-charcoal-50/60 dark:bg-charcoal-950 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className={PAGE_SHELL}>
+      <Backdrop />
+
+      <main className={`${PAGE_MAIN} space-y-5`}>
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs font-semibold text-charcoal-500 dark:text-charcoal-400">
           <button
             type="button"
             onClick={onBackToCourses}
-            className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors cursor-pointer"
+            className="hover:text-institutional-600 dark:hover:text-institutional-400 hover:underline transition-colors cursor-pointer"
           >
             {backLabel}
           </button>
@@ -137,216 +183,297 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
         </nav>
 
         {enrollMessage && (
-          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-center justify-between shadow-sm animate-fade-in">
-            <div className="flex items-center gap-3 text-sm font-semibold">
-              <CheckCircleIcon size={20} className="text-emerald-600 dark:text-emerald-400" />
+          <div className="px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-center justify-between gap-3 shadow-subtle animate-fade-in">
+            <div className="flex items-center gap-2.5 text-sm font-semibold">
+              <CheckCircleIcon size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{enrollMessage}</span>
             </div>
-            <button onClick={() => setEnrollMessage(null)} className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline">
+            <button onClick={() => setEnrollMessage(null)} className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0">
               Dismiss
             </button>
           </div>
         )}
 
-        {/* Hero */}
-        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              {course.target_exam}
-            </span>
-            {course.badge && (
-              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                {course.badge}
-              </span>
-            )}
-            {isEnrolled && (
-              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
-                <CheckCircleIcon size={12} />
-                <span>
-                  {course.access_source === 'PASS'
-                    ? `Included in ${course.pass_title || 'Active Pass'}`
-                    : 'Enrolled'}
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6">
+          {/* Course header */}
+          <section className="lg:col-start-1 lg:row-start-1 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-subtle overflow-hidden">
+            <div className="relative h-16 px-5 flex items-center justify-between bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500 overflow-hidden">
+              <div className="absolute inset-0" style={COVER_GRID} />
+              <div className="absolute inset-0" style={COVER_GLOW} />
+
+              <div className="relative flex items-center gap-1.5 min-w-0">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/15 text-white border border-white/25 backdrop-blur-sm truncate">
+                  {course.target_exam}
                 </span>
-              </span>
-            )}
-          </div>
-
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-charcoal-900 dark:text-white tracking-tight">{course.title}</h1>
-            <p className="text-sm text-charcoal-600 dark:text-charcoal-400 mt-1.5">{course.description}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {course.subjects?.map((sub, i) => (
-              <span key={i} className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300">
-                {sub}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800">
-            <div className="flex items-baseline gap-2.5">
-              <span className="text-2xl sm:text-3xl font-black text-charcoal-900 dark:text-white font-mono">₹{course.discounted_price}</span>
-              <span className="text-sm font-semibold text-charcoal-400 line-through font-mono">₹{course.original_price}</span>
-              <span className="text-xs font-black px-2 py-1 rounded-lg bg-emerald-500 text-white">{course.discount_percent}% OFF</span>
-            </div>
-
-            {isEnrolled ? (
-              <div className="py-2.5 px-4 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
-                <CheckCircleIcon size={16} />
-                <span>
-                  {course.access_source === 'PASS'
-                    ? `Included in ${course.pass_title || 'Active Pass'}`
-                    : 'Enrolled in Course'}
-                </span>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleStartCheckout}
-                disabled={orderLoading}
-                className="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
-              >
-                <ShieldIcon size={16} />
-                <span>{orderLoading ? 'Preparing checkout...' : `Enroll Now — ₹${Math.max(1, course.discounted_price - coinDiscount)}`}</span>
-                {coinDiscount > 0 && (
-                  <span className="text-[11px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-normal">
-                    -₹{coinDiscount} ({maxCoinsUsable} Coins)
+                {course.badge && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-300/90 text-amber-950 truncate">
+                    <SparklesIcon size={10} />
+                    <span className="truncate">{course.badge}</span>
                   </span>
                 )}
-              </button>
-            )}
-          </div>
-
-          {!isEnrolled && userCoins > 0 && (
-            <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-charcoal-700 dark:text-charcoal-300 select-none">
-              <input
-                type="checkbox"
-                checked={useCoins}
-                onChange={(e) => setUseCoins(e.target.checked)}
-                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-charcoal-300"
-              />
-              <span>Apply GovCoins discount ({userCoins} coins available — 100 coins = ₹10)</span>
-            </label>
-          )}
-        </div>
-
-        {/* Quizzes */}
-        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
-          <h2 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white flex items-center gap-2">
-            <BookOpenIcon size={18} className="text-blue-500" />
-            <span>All Quizzes &amp; Mock Tests ({drills.length + mockTests.length})</span>
-          </h2>
-
-          {drills.length === 0 && mockTests.length === 0 && (
-            <div className="p-4 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center text-xs text-charcoal-500">
-              No quizzes or mock tests are assigned to this course yet.
-            </div>
-          )}
-
-          {drills.length > 0 && (
-            <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 space-y-3">
-              <div className="text-xs font-extrabold text-blue-900 dark:text-blue-200 flex items-center justify-between">
-                <span>Subject-Wise Quizzes &amp; Drills ({drills.length})</span>
-                <span className="text-[10px] bg-blue-200/70 dark:bg-blue-900 px-2 py-0.5 rounded text-blue-800 dark:text-blue-200 font-semibold">
-                  Step-by-Step Solutions
-                </span>
               </div>
-              <div className="space-y-2">
-                {drills.map((quiz, idx) => (
-                  <div
-                    key={quiz.id || idx}
-                    className="group flex items-center gap-4 p-3.5 rounded-xl bg-white dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 flex items-center justify-center shrink-0">
-                      <BookOpenIcon size={18} />
-                    </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-charcoal-900 dark:text-white truncate">{quiz.title}</div>
-                      <div className="flex items-center gap-2.5 text-[11px] text-charcoal-500 dark:text-charcoal-400 mt-0.5">
-                        <span className="font-semibold text-blue-600 dark:text-blue-400">{quiz.subject}</span>
-                        <span className="w-1 h-1 rounded-full bg-charcoal-300 dark:bg-charcoal-700" />
-                        <span className="flex items-center gap-1"><BookOpenIcon size={11} />{quiz.total_questions || quiz.questions?.length || 0} Qs</span>
-                        <span className="w-1 h-1 rounded-full bg-charcoal-300 dark:bg-charcoal-700" />
-                        <span className="flex items-center gap-1"><ClockIcon size={11} />{quiz.duration_minutes || 15} min</span>
-                      </div>
-                    </div>
+              {isEnrolled && (
+                <span className="relative inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-400 text-emerald-950 shrink-0">
+                  <CheckCircleIcon size={12} />
+                  {course.access_source === 'PASS' ? `Included in ${course.pass_title || 'Active Pass'}` : 'Enrolled'}
+                </span>
+              )}
+            </div>
 
-                    <button
-                      type="button"
-                      onClick={() => openPreview(quiz)}
-                      className="shrink-0 px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1.5"
+            <div className="p-5 sm:p-6 space-y-4">
+              <div className="space-y-1.5">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight text-charcoal-950 dark:text-white">
+                  {course.title}
+                </h1>
+                <p className="text-sm text-charcoal-600 dark:text-charcoal-400 leading-relaxed">{course.description}</p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-charcoal-200 dark:divide-charcoal-800 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 py-2.5">
+                <div className="text-center px-2">
+                  <div className="text-base font-extrabold font-mono text-charcoal-900 dark:text-white">{drills.length}</div>
+                  <div className="text-[10px] uppercase tracking-wider font-semibold text-charcoal-500">Drills</div>
+                </div>
+                <div className="text-center px-2">
+                  <div className="text-base font-extrabold font-mono text-charcoal-900 dark:text-white">{mockTests.length}</div>
+                  <div className="text-[10px] uppercase tracking-wider font-semibold text-charcoal-500">Mock tests</div>
+                </div>
+                <div className="text-center px-2 max-sm:pt-2.5 max-sm:border-t max-sm:border-charcoal-200 dark:max-sm:border-charcoal-800">
+                  <div className="text-base font-extrabold font-mono text-charcoal-900 dark:text-white">{subjects.length}</div>
+                  <div className="text-[10px] uppercase tracking-wider font-semibold text-charcoal-500">Subjects</div>
+                </div>
+                <div className="text-center px-2 max-sm:pt-2.5 max-sm:border-t max-sm:border-charcoal-200 dark:max-sm:border-charcoal-800">
+                  <div className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400">₹{savings}</div>
+                  <div className="text-[10px] uppercase tracking-wider font-semibold text-charcoal-500">You save</div>
+                </div>
+              </div>
+
+              {subjects.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {subjects.map((sub, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700"
                     >
-                      <EyeIcon size={13} />
-                      <span>Preview</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      {sub}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </section>
 
-          {mockTests.length > 0 && (
-            <div className="p-4 rounded-2xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900/60 space-y-3">
-              <div className="text-xs font-extrabold text-sky-900 dark:text-sky-200 flex items-center justify-between">
-                <span>Mock Tests in this Course ({mockTests.length})</span>
-                <span className="text-[10px] bg-sky-200/70 dark:bg-sky-900 px-2 py-0.5 rounded text-sky-800 dark:text-sky-200 font-semibold">
-                  Full Exam Engine
-                </span>
-              </div>
-              <div className="space-y-2">
-                {mockTests.map((t, idx) => (
-                  <div
-                    key={t.id || idx}
-                    className="group flex items-center gap-4 p-3.5 rounded-xl bg-white dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 shadow-sm hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition-all"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-950/70 text-sky-600 dark:text-sky-300 flex items-center justify-center shrink-0">
-                      <LayersIcon size={18} />
+          {/* Enroll panel */}
+          <aside className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-28 self-start bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500" />
+            <div className="p-5 space-y-4">
+              {isEnrolled ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-700 dark:text-emerald-400">
+                    <CheckCircleIcon size={18} />
+                    <span>{course.access_source === 'PASS' ? `Included in ${course.pass_title || 'Active Pass'}` : "You're enrolled"}</span>
+                  </div>
+                  <p className="text-xs text-charcoal-500 dark:text-charcoal-400 leading-relaxed">
+                    Every quiz and mock test in this course is unlocked.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <div className="flex items-baseline gap-2 font-mono">
+                      <span className="text-3xl font-black text-charcoal-900 dark:text-white">₹{finalPrice}</span>
+                      <span className="text-sm text-charcoal-400 line-through">₹{course.original_price}</span>
+                      <span className="text-[11px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-white">{course.discount_percent}% OFF</span>
                     </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-charcoal-900 dark:text-white truncate">{t.title}</div>
-                      <div className="flex items-center gap-2.5 text-[11px] text-charcoal-500 dark:text-charcoal-400 mt-0.5">
-                        <span className="font-semibold text-sky-600 dark:text-sky-400">{t.subject || 'All Subjects'}</span>
-                        <span className="w-1 h-1 rounded-full bg-charcoal-300 dark:bg-charcoal-700" />
-                        <span className="flex items-center gap-1"><BookOpenIcon size={11} />{t.total_questions} Qs</span>
-                        <span className="w-1 h-1 rounded-full bg-charcoal-300 dark:bg-charcoal-700" />
-                        <span className="flex items-center gap-1"><ClockIcon size={11} />{t.duration_minutes} min</span>
-                        <span className="w-1 h-1 rounded-full bg-charcoal-300 dark:bg-charcoal-700" />
-                        <span className="font-mono">
-                          <span className="text-emerald-600 dark:text-emerald-400">+{t.positive_marks}</span>/
-                          <span className="text-rose-600 dark:text-rose-400">-{t.negative_marks}</span>
-                        </span>
+                    {coinDiscount > 0 && (
+                      <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                        incl. −₹{coinDiscount} from {maxCoinsUsable} GovCoins
                       </div>
-                    </div>
-
-                    {isEnrolled ? (
-                      <button
-                        type="button"
-                        onClick={() => onStartTest && onStartTest(t.id)}
-                        className="shrink-0 px-4 py-2 rounded-xl bg-sky-600 text-white font-bold text-xs hover:bg-sky-700 transition-colors shadow-sm flex items-center gap-1.5"
-                      >
-                        <span>Start Test</span>
-                        <ArrowRightIcon size={13} />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleStartCheckout}
-                        className="shrink-0 px-4 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-300 font-bold text-xs hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-600 hover:border-blue-300 dark:hover:border-blue-800 transition-colors flex items-center gap-1.5"
-                      >
-                        <LockIcon size={12} />
-                        <span>Enroll to Unlock</span>
-                      </button>
                     )}
                   </div>
-                ))}
-              </div>
+
+                  <button
+                    type="button"
+                    onClick={handleStartCheckout}
+                    disabled={orderLoading}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                  >
+                    <ShieldIcon size={16} />
+                    <span>{orderLoading ? 'Preparing checkout...' : 'Enroll now'}</span>
+                  </button>
+
+                  {userCoins > 0 && (
+                    <label className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer select-none">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>🪙</span>
+                        <span>
+                          Use GovCoins <span className="font-mono">({userCoins})</span>
+                        </span>
+                      </span>
+                      <span className="relative inline-flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={useCoins}
+                          onChange={(e) => setUseCoins(e.target.checked)}
+                          className="peer sr-only"
+                          aria-label="Apply GovCoins discount"
+                        />
+                        <span className="w-8 h-[18px] rounded-full bg-charcoal-300 dark:bg-charcoal-700 peer-checked:bg-amber-500 transition-colors" />
+                        <span className="absolute left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-[14px]" />
+                      </span>
+                    </label>
+                  )}
+                </>
+              )}
+
+              {error && (
+                <div className="text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-2">
+                  {error}
+                </div>
+              )}
+
+              {features.length > 0 && (
+                <ul className="space-y-2 pt-3 border-t border-charcoal-150 dark:border-charcoal-800">
+                  {features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-charcoal-600 dark:text-charcoal-300">
+                      <CheckCircleIcon size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {!isEnrolled && (
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-charcoal-500 dark:text-charcoal-400">
+                  <ShieldIcon size={12} className="text-institutional-600 shrink-0" />
+                  <span>Secure checkout via Razorpay</span>
+                </div>
+              )}
             </div>
-          )}
+          </aside>
+
+          {/* Quizzes & mock tests */}
+          <section className="lg:col-start-1 lg:row-start-2 bg-white/80 dark:bg-charcoal-900/80 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 rounded-2xl shadow-subtle p-5 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-charcoal-950 dark:text-white flex items-center gap-2">
+                <BookOpenIcon size={18} className="text-institutional-600 dark:text-institutional-400" />
+                <span>Quizzes &amp; mock tests</span>
+              </h2>
+
+              {drills.length > 0 && mockTests.length > 0 && (
+                <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold self-start sm:self-auto">
+                  {filterTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setQuizFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
+                        quizFilter === tab.id
+                          ? 'bg-white dark:bg-charcoal-900 text-institutional-700 dark:text-institutional-300 shadow-sm font-extrabold'
+                          : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {tab.label} <span className="font-mono opacity-70">{tab.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {quizzes.length === 0 ? (
+              <div className="py-8 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center text-xs text-charcoal-500">
+                No quizzes or mock tests are assigned to this course yet.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {visibleQuizzes.map((quiz, idx) => {
+                  const isDrill = quiz.questions && quiz.questions.length > 0;
+                  const qCount = quiz.total_questions || quiz.questions?.length || 0;
+                  return (
+                    <div
+                      key={quiz.id || idx}
+                      className="group flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-300 dark:hover:border-institutional-700 hover:shadow-card transition-all"
+                    >
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                          isDrill
+                            ? 'bg-institutional-50 dark:bg-institutional-950/50 text-institutional-600 dark:text-institutional-300'
+                            : 'bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300'
+                        }`}
+                      >
+                        {isDrill ? <BookOpenIcon size={16} /> : <LayersIcon size={16} />}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-sm text-charcoal-900 dark:text-white truncate">{quiz.title}</div>
+                          <span
+                            className={`hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
+                              isDrill
+                                ? 'bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300'
+                                : 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300'
+                            }`}
+                          >
+                            {isDrill ? 'Drill' : 'Mock'}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-charcoal-500 dark:text-charcoal-400 mt-0.5">
+                          <span className="font-semibold text-institutional-600 dark:text-institutional-400">
+                            {quiz.subject || 'All Subjects'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <BookOpenIcon size={11} />
+                            {qCount} Qs
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <ClockIcon size={11} />
+                            {quiz.duration_minutes || 15} min
+                          </span>
+                          {!isDrill && quiz.positive_marks !== undefined && (
+                            <span className="font-mono">
+                              <span className="text-emerald-600 dark:text-emerald-400">+{quiz.positive_marks}</span>/
+                              <span className="text-rose-600 dark:text-rose-400">-{quiz.negative_marks}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {isDrill ? (
+                        <button
+                          type="button"
+                          onClick={() => openPreview(quiz)}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white font-bold text-xs shadow-sm transition-colors"
+                        >
+                          <EyeIcon size={13} />
+                          <span>Preview</span>
+                        </button>
+                      ) : isEnrolled ? (
+                        <button
+                          type="button"
+                          onClick={() => onStartTest && onStartTest(quiz.id)}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-colors"
+                        >
+                          <PlayIcon size={11} />
+                          <span>Start</span>
+                          <ArrowRightIcon size={12} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleStartCheckout}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-300 font-bold text-xs hover:bg-institutional-50 dark:hover:bg-institutional-950/40 hover:text-institutional-700 hover:border-institutional-300 dark:hover:border-institutional-800 transition-colors"
+                        >
+                          <LockIcon size={12} />
+                          <span>Unlock</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
-      </div>
+      </main>
 
       {/* Quiz preview modal (answers + explanation) */}
       {previewQuiz && (
@@ -355,34 +482,37 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
           onClick={() => setPreviewQuiz(null)}
         >
           <div
-            className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-7 space-y-6 shadow-2xl animate-scale-in"
+            className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 space-y-5 shadow-2xl animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between border-b border-charcoal-200 dark:border-charcoal-800 pb-4">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            <div className="flex items-start justify-between gap-3 border-b border-charcoal-200 dark:border-charcoal-800 pb-4">
+              <div className="min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-institutional-600 dark:text-institutional-400 truncate">
                   {course.title} • {previewQuiz.subject}
                 </div>
-                <h3 className="text-xl font-black text-charcoal-900 dark:text-white">{previewQuiz.title}</h3>
+                <h3 className="text-lg font-extrabold tracking-tight text-charcoal-900 dark:text-white">{previewQuiz.title}</h3>
               </div>
               <button
                 onClick={() => setPreviewQuiz(null)}
-                className="p-1 text-charcoal-400 hover:text-charcoal-600 dark:hover:text-charcoal-200 text-lg rounded-full"
+                className="p-1 text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 text-lg rounded-full shrink-0"
+                aria-label="Close preview"
               >
                 ✕
               </button>
             </div>
 
             {previewQuiz.questions && previewQuiz.questions.length > 0 ? (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between text-xs text-charcoal-500 font-semibold">
-                  <span>Question {activeQuestionIndex + 1} of {previewQuiz.questions.length}</span>
+                  <span>
+                    Question {activeQuestionIndex + 1} of {previewQuiz.questions.length}
+                  </span>
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                     Solution Verified
                   </span>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-sm font-bold text-charcoal-900 dark:text-white leading-relaxed">
+                <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-sm font-bold text-charcoal-900 dark:text-white leading-relaxed">
                   {previewQuiz.questions[activeQuestionIndex].question_text}
                 </div>
 
@@ -418,12 +548,12 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                   })}
                 </div>
 
-                <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 space-y-2">
-                  <div className="text-xs font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                <div className="p-4 rounded-xl bg-institutional-50/70 dark:bg-institutional-950/30 border border-institutional-200/70 dark:border-institutional-900 space-y-2">
+                  <div className="text-xs font-extrabold text-institutional-800 dark:text-institutional-300 flex items-center gap-1.5">
                     <HelpCircleIcon size={14} />
-                    <span>Step-by-Step Detailed Explanation:</span>
+                    <span>Step-by-step explanation</span>
                   </div>
-                  <p className="text-xs text-charcoal-700 dark:text-charcoal-200 whitespace-pre-line leading-relaxed font-sans">
+                  <p className="text-xs text-charcoal-700 dark:text-charcoal-200 whitespace-pre-line leading-relaxed">
                     {previewQuiz.questions[activeQuestionIndex].solution_explanation ||
                       previewQuiz.questions[activeQuestionIndex].explanation ||
                       'Detailed answer derivation provided in course.'}
@@ -435,7 +565,7 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                     type="button"
                     disabled={activeQuestionIndex === 0}
                     onClick={() => setActiveQuestionIndex((prev) => Math.max(0, prev - 1))}
-                    className="px-3.5 py-1.5 rounded-xl border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 disabled:opacity-30 hover:bg-charcoal-100 dark:hover:bg-charcoal-800"
+                    className="px-3.5 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 disabled:opacity-30 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors"
                   >
                     Previous
                   </button>
@@ -443,7 +573,7 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                     type="button"
                     disabled={activeQuestionIndex === previewQuiz.questions.length - 1}
                     onClick={() => setActiveQuestionIndex((prev) => Math.min(previewQuiz.questions.length - 1, prev + 1))}
-                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:opacity-30 hover:bg-blue-700"
+                    className="px-3.5 py-1.5 rounded-lg bg-institutional-600 text-white text-xs font-bold disabled:opacity-30 hover:bg-institutional-700 transition-colors"
                   >
                     Next Question
                   </button>
