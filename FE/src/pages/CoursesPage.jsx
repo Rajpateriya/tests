@@ -304,7 +304,7 @@ export const CoursesPage = ({ onStartTest }) => {
 
         {/* Courses grid */}
         {!loading && filteredCourses.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
             {filteredCourses.map((course) => {
               const isEnrolled = course.is_enrolled;
               const isExpanded = !!expandedQuizzes[course.id];
@@ -359,11 +359,11 @@ export const CoursesPage = ({ onStartTest }) => {
                     <div className="space-y-1.5">
                       <h3
                         onClick={openDetails}
-                        className={`text-base font-extrabold tracking-tight leading-snug text-charcoal-900 dark:text-white line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors cursor-pointer`}
+                        className={`text-base font-extrabold tracking-tight leading-snug min-h-[2.75rem] text-charcoal-900 dark:text-white line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors cursor-pointer`}
                       >
                         {course.title}
                       </h3>
-                      <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 leading-relaxed min-h-[2.5rem]">
                         {course.description}
                       </p>
                     </div>
@@ -391,23 +391,26 @@ export const CoursesPage = ({ onStartTest }) => {
                     </div>
 
                     {/* Subject pills */}
-                    {subjects.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {subjects.slice(0, 3).map((sub, i) => (
-                          <span
-                            key={i}
-                            className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700"
-                          >
-                            {sub}
-                          </span>
-                        ))}
-                        {subjects.length > 3 && (
-                          <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
-                            +{subjects.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    {/* Always one row (long names are shortened, the rest fold into "+N"), so every card is the same height */}
+                    <div className="flex flex-nowrap items-center gap-1.5 min-w-0 min-h-[1.625rem]">
+                      {subjects.slice(0, 2).map((sub, i) => (
+                        <span
+                          key={i}
+                          title={sub}
+                          className="min-w-0 truncate text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700"
+                        >
+                          {sub}
+                        </span>
+                      ))}
+                      {subjects.length > 2 && (
+                        <span
+                          title={subjects.slice(2).join(', ')}
+                          className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40"
+                        >
+                          +{subjects.length - 2}
+                        </span>
+                      )}
+                    </div>
 
                     {/* Quick look toggle */}
                     <button
@@ -482,7 +485,7 @@ export const CoursesPage = ({ onStartTest }) => {
 
                   {/* Footer: price + actions */}
                   <div className="px-5 pb-5">
-                    <div className="pt-3.5 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between gap-3">
+                    <div className="pt-3.5 border-t border-charcoal-150 dark:border-charcoal-800 min-h-[4.25rem] flex items-center justify-between gap-3">
                       {isEnrolled ? (
                         <div className="min-w-0 text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
                           <CheckCircleIcon size={15} className="shrink-0" />
