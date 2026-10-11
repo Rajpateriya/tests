@@ -51,7 +51,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
   // Interactive Target Score & Percentile Predictor Slider State
   const [targetScore, setTargetScore] = useState(148);
 
-  // Interactive Hero Sandbox State (TCS iON Live Test-Drive)
+  // Interactive Hero Sandbox State (PrepMagnet Live Test-Drive)
   const [sandboxSelectedOption, setSandboxSelectedOption] = useState('A');
   const [sandboxPaletteState, setSandboxPaletteState] = useState('ANSWERED'); // 'ANSWERED' | 'REVIEW' | 'NOT_VISITED'
   const [showSandboxExplanation, setShowSandboxExplanation] = useState(false);
@@ -98,6 +98,26 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
   useEffect(() => {
     loadTests();
   }, [selectedType, selectedSubject]);
+
+  // Deep-link event listeners for footer / external navigation
+  useEffect(() => {
+    const onBlueprint = (e) => {
+      if (e.detail && ['cgl', 'banking', 'rrb', 'psc'].includes(e.detail)) {
+        setSelectedExamBlueprint(e.detail);
+      }
+    };
+    const onCatalogTab = (e) => {
+      if (e.detail && ['courses', 'mocks'].includes(e.detail)) {
+        setCatalogTab(e.detail);
+      }
+    };
+    window.addEventListener('prepmagnet:blueprint', onBlueprint);
+    window.addEventListener('prepmagnet:catalog-tab', onCatalogTab);
+    return () => {
+      window.removeEventListener('prepmagnet:blueprint', onBlueprint);
+      window.removeEventListener('prepmagnet:catalog-tab', onCatalogTab);
+    };
+  }, []);
 
   const loadTests = async () => {
     setLoading(true);
@@ -300,7 +320,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
 
           {/* Subheading */}
           <p className="text-base sm:text-lg text-charcoal-600 dark:text-charcoal-300 max-w-3xl mx-auto leading-relaxed font-normal">
-            Calibrated strictly for <strong className="text-charcoal-900 dark:text-charcoal-100 font-bold">SSC CGL, Banking (IBPS/SBI PO), Railways (RRB NTPC)</strong>, and <strong className="text-charcoal-900 dark:text-charcoal-100 font-bold">State PSCs</strong>. Experience the exact TCS iON test interface, server-synchronized countdowns, official negative deduction rules, and deep diagnostic percentiles.
+            Calibrated strictly for <strong className="text-charcoal-900 dark:text-charcoal-100 font-bold">SSC CGL, Banking (IBPS/SBI PO), Railways (RRB NTPC)</strong>, and <strong className="text-charcoal-900 dark:text-charcoal-100 font-bold">State PSCs</strong>. Experience the PrepMagnet CBT test interface, server-synchronized countdowns, official negative deduction rules, and deep diagnostic percentiles.
           </p>
 
           {/* Dual Action CTAs */}
@@ -349,7 +369,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
               <div className="text-xl sm:text-2xl font-extrabold font-mono text-emerald-700 dark:text-emerald-400">
                 1:1
               </div>
-              <div className="text-xs text-charcoal-500 font-medium">TCS iON Examination Engine</div>
+              <div className="text-xs text-charcoal-500 font-medium">PrepMagnet Examination Engine</div>
             </div>
             <div className="space-y-0.5">
               <div className="text-xl sm:text-2xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
@@ -395,10 +415,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
         )}
 
         {/* ========================================================================= */}
-        {/* 3. INTERACTIVE HERO SANDBOX: "TCS iON Live Test-Drive"                    */}
+        {/* 3. INTERACTIVE HERO SANDBOX: "PrepMagnet Live Test-Drive"                 */}
         {/* Candidates can interactively experience the exam engine right on landing  */}
         {/* ========================================================================= */}
-        <section className="relative rounded-3xl p-6 sm:p-8 shadow-card space-y-6 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200/90 dark:border-charcoal-800/90 overflow-hidden bg-terminal-pattern">
+        <section id="hero-sandbox" className="relative rounded-3xl p-6 sm:p-8 shadow-card space-y-6 scroll-mt-24 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200/90 dark:border-charcoal-800/90 overflow-hidden bg-terminal-pattern">
           {/* Moving Atmospheric Glows for Sandbox Lab */}
           <div className="absolute -top-24 -right-24 w-80 h-80 bg-cyan-500/10 dark:bg-cyan-400/15 blur-3xl rounded-full pointer-events-none animate-blob" />
           <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-emerald-500/10 dark:bg-emerald-400/15 blur-3xl rounded-full pointer-events-none animate-blob-delayed" />
@@ -413,7 +433,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 Experience the Exam Room Sandbox
               </h2>
               <p className="text-xs sm:text-sm text-charcoal-500 dark:text-charcoal-400">
-                Click any option below to test the TCS iON question palette states and see instant mathematical derivations.
+                Click any option below to test the PrepMagnet question palette states and see instant mathematical derivations.
               </p>
             </div>
 
@@ -526,7 +546,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
               )}
             </div>
 
-            {/* Right Col: Live TCS iON Question Palette Demo */}
+            {/* Right Col: Live PrepMagnet Question Palette Demo */}
             <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 flex flex-col justify-between space-y-4">
               <div>
                 <div className="flex items-center justify-between pb-3 border-b border-charcoal-200 dark:border-charcoal-750 text-xs font-bold uppercase tracking-wider text-charcoal-700 dark:text-charcoal-300">
@@ -600,7 +620,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
         {/* 4. INTERACTIVE EXAM BLUEPRINT & SYLLABUS EXPLORER                         */}
         {/* Deep, authentic examination intelligence for aspirants                    */}
         {/* ========================================================================= */}
-        <section className="relative rounded-3xl p-6 sm:p-10 shadow-subtle space-y-6 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 overflow-hidden bg-blueprint-pattern">
+        <section id="exam-blueprints" className="relative rounded-3xl p-6 sm:p-10 shadow-subtle space-y-6 scroll-mt-24 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 overflow-hidden bg-blueprint-pattern">
           {/* Moving Blueprint Technical Aura */}
           <div className="absolute top-1/4 -right-16 w-80 h-80 bg-institutional-500/10 dark:bg-institutional-400/15 blur-[100px] rounded-full pointer-events-none animate-drift-slow" />
           <div className="absolute -bottom-24 left-1/3 w-72 h-72 bg-indigo-500/8 dark:bg-indigo-400/12 blur-[90px] rounded-full pointer-events-none animate-blob-delayed" />
@@ -703,7 +723,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
         {/* 5. INTERACTIVE TARGET SCORE & AIR PERCENTILE PREDICTOR                    */}
         {/* Engaging visual tool that calculates candidate standing in real time      */}
         {/* ========================================================================= */}
-        <section className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 sm:p-10 shadow-subtle space-y-6">
+        <section id="rank-predictor" className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 sm:p-10 shadow-subtle space-y-6 scroll-mt-24">
           <div className="max-w-2xl mx-auto text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
               <TargetIcon size={14} />
@@ -771,7 +791,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
         {/* ========================================================================= */}
         {/* 6. INSTITUTIONAL RIGOR: Real Engine vs Diagnostics vs Derivations          */}
         {/* ========================================================================= */}
-        <section className="relative rounded-3xl p-6 sm:p-10 shadow-subtle space-y-8 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 overflow-hidden bg-nodes-pattern">
+        <section id="platform-features" className="relative rounded-3xl p-6 sm:p-10 shadow-subtle space-y-8 scroll-mt-24 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 overflow-hidden bg-nodes-pattern">
           {/* Moving Neural Analytics Glowing Core */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/10 dark:bg-purple-500/15 blur-[110px] rounded-full pointer-events-none animate-glow-pulse" />
           <div className="absolute top-0 right-10 w-64 h-64 bg-cyan-500/8 dark:bg-cyan-400/10 blur-[90px] rounded-full pointer-events-none animate-float-slow" />
@@ -794,7 +814,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                 }`}
               >
-                1. TCS iON Exam Engine
+                1. PrepMagnet CBT Engine
               </button>
               <button
                 onClick={() => setActiveFeatureTab('analytics')}
@@ -1093,7 +1113,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
 
                     {/* Description */}
                     <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-4 leading-relaxed font-normal">
-                      {test.description || 'Full TCS iON test simulation with negative marking and instant scorecard.'}
+                      {test.description || 'Full PrepMagnet CBT test simulation with negative marking and instant scorecard.'}
                     </p>
 
                     {/* Subject Tags */}
@@ -1179,7 +1199,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                     Generic web forms with distracting popups and ads.
                   </td>
                   <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
-                    1:1 Pixel-exact TCS iON examination room layout.
+                    1:1 Pixel-exact PrepMagnet CBT examination room layout.
                   </td>
                 </tr>
                 <tr>
@@ -1271,7 +1291,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 <span className="text-xs font-mono font-bold text-charcoal-500">Prelims: 76.5/100</span>
               </div>
               <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed italic">
-                "The strict 20-minute sectional timer simulation and the exact TCS iON palette made the actual exam day feel completely familiar. Zero exam anxiety!"
+                "The strict 20-minute sectional timer simulation and the exact PrepMagnet question palette made the actual exam day feel completely familiar. Zero exam anxiety!"
               </p>
               <div className="pt-2 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs">

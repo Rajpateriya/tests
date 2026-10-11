@@ -58,7 +58,7 @@ class PassService:
             "features": [
                 "30 Days Full Platform Access",
                 "All Exam Courses & Tier-I/II Mocks Included",
-                "TCS iON Official Simulation UI",
+                "PrepMagnet CBT Simulation UI",
                 "All-India Percentile & AIR Rank",
                 "Speed vs Accuracy Diagnostics",
             ],
@@ -116,7 +116,7 @@ class PassService:
             "covered_course_ids": req.covered_course_ids or [],
             "features": req.features or [
                 "Full Platform Access",
-                "Official TCS iON Exam Engine",
+                "PrepMagnet CBT Exam Engine",
                 "All-India Percentile Tracking",
             ],
             "is_active": req.is_active,

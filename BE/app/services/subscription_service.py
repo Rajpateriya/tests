@@ -21,11 +21,11 @@ SUBSCRIPTION_PLANS = {
         "duration_days": 7,
         "base_price": 49,
         "max_coins_discount": 25,
-        "description": "7 days of intensive mock exam practice with full solution keys and TCS iON exam simulation.",
+        "description": "7 days of intensive mock exam practice with full solution keys and PrepMagnet CBT exam simulation.",
         "features": [
             "7 Days Full Platform Access",
             "15 Full Tier-I & Tier-II Mocks",
-            "TCS iON Exam Engine UI",
+            "PrepMagnet CBT Exam Engine UI",
             "Step-by-Step Answer Explanations",
         ],
         "popular": False,

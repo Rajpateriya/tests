@@ -26,8 +26,10 @@ import {
   HelpCircleIcon,
   RefreshCwIcon,
   MessageSquareIcon,
+  LockIcon,
 } from '../components/Icons';
 import { TestRulesModal } from '../components/TestRulesModal';
+import { AnalyticsDashboardView } from '../components/AnalyticsDashboardView';
 
 /**
  * Competitive Mock Test Platform — Executive Student Dashboard & Learning Hub
@@ -120,15 +122,33 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
     return () => clearInterval(interval);
   }, [isDailyCompleted, verificationResult, dailyQuestion]);
 
-  // The streak/coins header and the daily question sit above the tabs and are visible no matter
-  // which tab is open, so they load once up front.
+  // The streak/coins header and the single daily question load once up front.
+  // Exactly 1 question is permitted per day. If already attempted, isDailyCompleted is true and no question is loaded.
   const loadStreakAndHeader = async () => {
     setLoading(true);
     try {
       const streakRes = await api.streak.getStreak();
       setStreakData(streakRes);
-      if (streakRes?.today_completed) setIsDailyCompleted(true);
-      await loadDailyQuestion();
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const cacheKey = `prepmagnet_daily_${user?.id || 'user'}_${todayStr}`;
+      const cachedToday = localStorage.getItem(cacheKey);
+
+      if (streakRes?.today_completed || cachedToday) {
+        setIsDailyCompleted(true);
+        if (cachedToday) {
+          try {
+            const parsed = JSON.parse(cachedToday);
+            if (parsed.question) setDailyQuestion(parsed.question);
+            if (parsed.selectedOption) setSelectedOption(parsed.selectedOption);
+            if (parsed.verificationResult) setVerificationResult(parsed.verificationResult);
+            if (parsed.reward) setDailyReward(parsed.reward);
+            if (parsed.questionTimer) setQuestionTimer(parsed.questionTimer);
+          } catch (e) {}
+        }
+      } else {
+        await loadDailyQuestion();
+      }
     } catch (err) {
       console.warn('Dashboard header data fallback:', err);
     } finally {
@@ -303,7 +323,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
     }
   };
 
-  // Submit & Verify the single daily question
+  // Submit & Verify the single daily question (Exactly 1 allowed per day)
   const handleVerifyAnswer = async () => {
     if (!selectedOption || !dailyQuestion || isVerifying) return;
     setIsVerifying(true);
@@ -326,6 +346,19 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
       const updatedStreak = await api.streak.getStreak();
       setStreakData(updatedStreak);
       setIsDailyCompleted(true);
+
+      // Cache today's attempt so the review and permanent banner stay persistent across refreshes
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const cacheKey = `prepmagnet_daily_${user?.id || 'user'}_${todayStr}`;
+        localStorage.setItem(cacheKey, JSON.stringify({
+          question: dailyQuestion,
+          selectedOption,
+          verificationResult: res,
+          reward: rewardRes,
+          questionTimer,
+        }));
+      } catch (e) {}
     } catch (err) {
       console.error('Daily answer verification failed:', err);
     } finally {
@@ -629,7 +662,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
               79.4%
             </div>
             <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium mt-1">
-              TCS iON Formula: +2.0 / -0.5
+              PrepMagnet Formula: +2.0 / -0.5
             </div>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -753,9 +786,14 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                 <div className="flex items-center gap-2">
                   {dailyQuestion && getDifficultyBadge(dailyQuestion.difficulty)}
                   {isDailyCompleted && (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                      Completed ✓
-                    </span>
+                    <div
+                      title="Today's Challenge Completed"
+                      className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/90 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/80 shadow-xs animate-uplift-tick cursor-default"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 drop-shadow-xs">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
                   )}
                 </div>
               </div>
@@ -764,36 +802,169 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
               {questionLoading ? (
                 <div className="py-12 text-center">
                   <div className="w-8 h-8 border-3 border-institutional-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-xs text-charcoal-500">Auto-picking today's daily question from DB...</p>
+                  <p className="text-xs text-charcoal-500">Auto-picking today's single practice question from Question Bank...</p>
                 </div>
-              ) : isDailyCompleted && !dailyQuestion ? (
-                /* Celebration State */
-                <div className="py-8 text-center space-y-4 max-w-md mx-auto">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-institutional-600 text-white flex items-center justify-center text-2xl mx-auto shadow-md">
-                    🎉
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-extrabold text-charcoal-900 dark:text-white">
-                      {dailyReward?.milestone_title
-                        ? `🎉 ${dailyReward.milestone_title.toUpperCase()} UNLOCKED!`
-                        : "Today's Daily Challenge Solved!"}
-                    </h3>
-                    <p className="text-xs text-charcoal-600 dark:text-charcoal-300 mt-1">
-                      {dailyReward?.message || `You solved today's practice challenge! +${dailyReward?.coins_earned || 20} GovCoins added to your wallet.`}
-                    </p>
+              ) : isDailyCompleted ? (
+                /* PERMANENT FASCINATING BANNER: TODAY'S SINGLE QUESTION ATTEMPTED */
+                <div className="space-y-6 animate-fade-in">
+                  {/* Master Banner with Radiant Glow */}
+                  <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-emerald-500/10 via-institutional-600/10 to-amber-500/10 dark:from-emerald-950/40 dark:via-institutional-950/40 dark:to-amber-950/40 border border-emerald-500/30 dark:border-emerald-600/40 shadow-xs">
+                    {/* Atmospheric Glow Orbs */}
+                    <div className="absolute -top-16 -right-16 w-48 h-48 bg-emerald-500/15 dark:bg-emerald-400/20 blur-2xl rounded-full pointer-events-none" />
+                    <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-institutional-500/15 dark:bg-institutional-400/20 blur-2xl rounded-full pointer-events-none" />
+
+                    <div className="relative z-10 space-y-4">
+                      {/* Status Pill & Date */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                          </span>
+                          <span>Daily Mission Conquered (1 / 1 Solved)</span>
+                        </div>
+                        <span className="text-[11px] font-mono text-charcoal-500 dark:text-charcoal-400 font-semibold">
+                          {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+
+                      {/* Main Title & Fascinating Words */}
+                      <div className="space-y-2">
+                        <h3 className="text-xl sm:text-2xl font-black text-charcoal-950 dark:text-white tracking-tight flex items-center gap-2">
+                          <span>Mission Accomplished for Today!</span>
+                          <span className="text-2xl animate-bounce">🎯</span>
+                        </h3>
+                        <p className="text-xs sm:text-sm text-charcoal-700 dark:text-charcoal-200 leading-relaxed font-normal">
+                          {dailyReward?.milestone_title
+                            ? `Triumph unlocked! You've claimed the ${dailyReward.milestone_title.toUpperCase()} milestone.`
+                            : "Your daily discipline speaks louder than words. In the fierce arena of competitive exams, showing up every single day is the rare superpower that separates rankers from contenders."}
+                        </p>
+                        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 leading-relaxed italic">
+                          "One question mastered each morning builds the unshakeable foundation of an All-India Ranker. Your practice quota for today is 100% fulfilled."
+                        </p>
+                      </div>
+
+                      {/* Achievement Matrix (4 Metric Cards) */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-charcoal-900/80 border border-charcoal-200/80 dark:border-charcoal-750 backdrop-blur-sm shadow-2xs">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400 flex items-center gap-1">
+                            <span>🔥 Streak</span>
+                          </div>
+                          <div className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+                            {streakDays} Days
+                          </div>
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                            Active & Protected
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-charcoal-900/80 border border-charcoal-200/80 dark:border-charcoal-750 backdrop-blur-sm shadow-2xs">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400 flex items-center gap-1">
+                            <span>🪙 Reward</span>
+                          </div>
+                          <div className="text-lg font-black text-institutional-600 dark:text-institutional-400 font-mono mt-0.5">
+                            +{dailyReward?.coins_earned || 20} Coins
+                          </div>
+                          <div className="text-[10px] text-charcoal-500 font-semibold mt-0.5">
+                            Added to Wallet
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-charcoal-900/80 border border-charcoal-200/80 dark:border-charcoal-750 backdrop-blur-sm shadow-2xs">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400 flex items-center gap-1">
+                            <span>🎯 Daily Quota</span>
+                          </div>
+                          <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                            1 / 1 Solved
+                          </div>
+                          <div className="text-[10px] text-charcoal-500 font-semibold mt-0.5">
+                            No More Qs Today
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-charcoal-900/80 border border-charcoal-200/80 dark:border-charcoal-750 backdrop-blur-sm shadow-2xs">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400 flex items-center gap-1">
+                            <span>⏳ Next Drop</span>
+                          </div>
+                          <div className="text-lg font-black text-charcoal-900 dark:text-charcoal-100 font-mono mt-0.5">
+                            Tomorrow
+                          </div>
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5">
+                            Unlocks 00:00 AM IST
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex justify-center gap-3 pt-2">
-                    <button
-                      onClick={() => handleStartFreePractice('Medium')}
-                      className="px-4 py-2 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white transition-all cursor-pointer shadow-sm"
-                    >
-                      Practice Another Question (Free Practice)
-                    </button>
-                  </div>
+                  {/* Submission & Solution Review Section (Persistent for Today's Question) */}
+                  {verificationResult && dailyQuestion && (
+                    <div className="p-5 sm:p-6 rounded-2xl bg-charcoal-50/70 dark:bg-charcoal-850/60 border border-charcoal-200/80 dark:border-charcoal-750 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-charcoal-200/60 dark:border-charcoal-750">
+                        <div className="flex items-center gap-2 text-xs font-bold text-charcoal-700 dark:text-charcoal-300">
+                          <CheckCircleIcon size={16} className="text-emerald-600" />
+                          <span>Today's Question Review & Official Derivation</span>
+                        </div>
+                        <span className="text-[11px] font-mono text-charcoal-500">
+                          {dailyQuestion.subject} • {dailyQuestion.topic}
+                        </span>
+                      </div>
+
+                      {/* Question Text */}
+                      <div className="text-xs sm:text-sm font-bold text-charcoal-900 dark:text-white leading-relaxed bg-white dark:bg-charcoal-800 p-4 rounded-xl border border-charcoal-200 dark:border-charcoal-700">
+                        {dailyQuestion.question_text}
+                      </div>
+
+                      {/* Options Review */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {(dailyQuestion.options || []).map((opt) => {
+                          const isCorrect = verificationResult.correct_option === opt.id;
+                          const isChosen = selectedOption === opt.id;
+                          const isChosenWrong = isChosen && !verificationResult.is_correct;
+
+                          let style = 'bg-white dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 opacity-60';
+                          if (isCorrect) {
+                            style = 'bg-emerald-50 dark:bg-emerald-950/70 border-emerald-500 text-emerald-950 dark:text-emerald-100 ring-2 ring-emerald-500/30 font-bold';
+                          } else if (isChosenWrong) {
+                            style = 'bg-rose-50 dark:bg-rose-950/70 border-rose-500 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/30 font-bold';
+                          }
+
+                          return (
+                            <div key={opt.id} className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${style}`}>
+                              <span className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] ${
+                                isCorrect ? 'bg-emerald-600 text-white' : isChosenWrong ? 'bg-rose-600 text-white' : 'bg-charcoal-100 dark:bg-charcoal-700'
+                              }`}>
+                                {opt.id}
+                              </span>
+                              <span className="flex-1">{opt.text}</span>
+                              {isCorrect && <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300">✓ Correct</span>}
+                              {isChosenWrong && <span className="text-[10px] font-extrabold text-rose-700 dark:text-rose-300">Your Choice</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Official Explanation */}
+                      <div className="p-4 rounded-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-700 text-xs space-y-1.5">
+                        <div className="font-bold text-[11px] uppercase tracking-wider text-institutional-600 dark:text-institutional-400 flex items-center gap-1.5">
+                          <SparklesIcon size={12} />
+                          <span>Official PrepMagnet Derivation:</span>
+                        </div>
+                        <p className="text-charcoal-700 dark:text-charcoal-300 leading-relaxed font-sans">
+                          {verificationResult.solution_explanation}
+                        </p>
+                      </div>
+
+                      {/* Lock Notice */}
+                      <div className="text-center pt-2 text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium flex items-center justify-center gap-1.5">
+                        <LockIcon size={12} className="text-charcoal-400" />
+                        <span>Today's practice quota is locked. Only 1 question is permitted per day to build daily consistency.</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : dailyQuestion ? (
-                /* Active Question Arena */
+                /* Active Question Arena (Only Shown Before Attempting) */
                 <div className="space-y-5">
                   <div className="flex items-center justify-between text-xs font-semibold text-charcoal-600 dark:text-charcoal-400">
                     <span>{dailyQuestion.subject} • {dailyQuestion.topic}</span>
@@ -812,33 +983,18 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {(dailyQuestion.options || []).map((opt) => {
                       const isSelected = selectedOption === opt.id;
-                      const isVerified = verificationResult !== null;
-                      const isCorrect = verificationResult?.correct_option === opt.id;
-                      const isChosenWrong = isVerified && isSelected && !verificationResult?.is_correct;
-
                       let btnStyle = 'border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:border-institutional-500 hover:bg-institutional-50/30 dark:hover:bg-charcoal-750 text-charcoal-800 dark:text-charcoal-200';
                       let badgeStyle = 'bg-charcoal-100 dark:bg-charcoal-700 text-charcoal-800 dark:text-charcoal-200';
 
-                      if (isSelected && !isVerified) {
+                      if (isSelected) {
                         btnStyle = 'border-institutional-600 bg-institutional-50/70 dark:bg-institutional-950/70 ring-2 ring-institutional-500/30 text-institutional-950 dark:text-white';
                         badgeStyle = 'bg-institutional-600 text-white';
-                      } else if (isVerified) {
-                        if (isCorrect) {
-                          btnStyle = 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-500/30 text-emerald-950 dark:text-emerald-100';
-                          badgeStyle = 'bg-emerald-600 text-white';
-                        } else if (isChosenWrong) {
-                          btnStyle = 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 ring-2 ring-rose-500/30 text-rose-950 dark:text-rose-100';
-                          badgeStyle = 'bg-rose-600 text-white';
-                        } else {
-                          btnStyle = 'opacity-40 border-charcoal-200 dark:border-charcoal-800';
-                        }
                       }
 
                       return (
                         <button
                           key={opt.id}
                           type="button"
-                          disabled={isVerified}
                           onClick={() => setSelectedOption(opt.id)}
                           className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer ${btnStyle}`}
                         >
@@ -853,72 +1009,30 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                     })}
                   </div>
 
-                  {/* Solution Panel */}
-                  {verificationResult && (
-                    <div className={`p-4 rounded-2xl border text-xs sm:text-sm space-y-2 ${
-                      verificationResult.is_correct
-                        ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800'
-                        : 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800'
-                    }`}>
-                      <div className="font-bold flex items-center gap-1.5">
-                        {verificationResult.is_correct ? (
-                          <span className="text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
-                            <CheckCircleIcon size={16} /> Correct! (+20 GovCoins added)
-                          </span>
-                        ) : (
-                          <span className="text-rose-800 dark:text-rose-300 flex items-center gap-1">
-                            <XCircleIcon size={16} /> Incorrect • Option {verificationResult.selected_option} chosen | Correct: Option {verificationResult.correct_option}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-600 dark:text-charcoal-400">
-                        Official TCS iON Solution:
-                      </div>
-                      <p className="text-xs text-charcoal-700 dark:text-charcoal-300 leading-relaxed font-sans">
-                        {verificationResult.solution_explanation}
-                      </p>
-                    </div>
-                  )}
-
                   {/* Submit Action Bar */}
                   <div className="flex items-center justify-between pt-3 border-t border-charcoal-150 dark:border-charcoal-800">
                     <div className="text-xs text-charcoal-500">
-                      {!verificationResult ? (
-                        selectedOption ? `Option ${selectedOption} chosen` : 'Select an option above'
-                      ) : (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">Daily challenge completed</span>
-                      )}
+                      {selectedOption ? `Option ${selectedOption} chosen` : 'Select an option above'}
                     </div>
 
-                    {!verificationResult ? (
-                      <button
-                        type="button"
-                        disabled={!selectedOption || isVerifying}
-                        onClick={handleVerifyAnswer}
-                        className="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                      >
-                        {isVerifying ? (
-                          <>
-                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Checking...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Submit Answer</span>
-                            <ArrowRightIcon size={12} />
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleStartFreePractice('Medium')}
-                        className="px-5 py-2.5 text-xs font-extrabold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <SparklesIcon size={12} />
-                        <span>Practice Another Question</span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      disabled={!selectedOption || isVerifying}
+                      onClick={handleVerifyAnswer}
+                      className="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {isVerifying ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Checking...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Submit Answer</span>
+                          <ArrowRightIcon size={12} />
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               ) : null}
@@ -961,21 +1075,21 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                     return (
                       <div
                         key={step.day_number}
-                        className={`p-2 rounded-xl border flex flex-col items-center justify-between transition-all ${
+                        className={`aspect-square p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all ${
                           isDone
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
                             : isToday
-                            ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200'
+                            ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 shadow-sm'
                             : isJackpot
                             ? 'bg-amber-500/10 border-amber-300 text-charcoal-800 dark:text-charcoal-200'
                             : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400'
                         }`}
                       >
-                        <span className="text-[9px] font-bold">D{step.day_number}</span>
-                        <div className="my-1 text-xs">
+                        <span className="text-[9px] font-bold leading-none">D{step.day_number}</span>
+                        <div className="text-xs leading-none">
                           {isDone ? '✓' : isToday ? '🔥' : isJackpot ? '🎁' : '•'}
                         </div>
-                        <span className="text-[8px] font-mono font-bold">+{step.coins_reward}</span>
+                        <span className="text-[8px] font-mono font-bold leading-none">+{step.coins_reward}</span>
                       </div>
                     );
                   })}
@@ -1000,7 +1114,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                   <span>💡 Diagnostic Recommendation</span>
                 </div>
                 <p className="text-xs text-charcoal-700 dark:text-charcoal-300 leading-relaxed font-medium">
-                  Limiting blind guesses by <strong>10 questions</strong> in your next mock will immediately boost your predicted All-India Rank by over <strong>150 places</strong> under TCS iON negative marking.
+                  Limiting blind guesses by <strong>10 questions</strong> in your next mock will immediately boost your predicted All-India Rank by over <strong>150 places</strong> under PrepMagnet negative marking.
                 </p>
                 <div className="pt-2 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
                   <button
@@ -1021,296 +1135,18 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
             </div>
           </div>
 
-          {/* FREE PRACTICE MODE (ON-DEMAND INFINITE ACCORDION) */}
-          {isFreePracticeActive && (
-            <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-6 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
-                <div>
-                  <h3 className="text-sm font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
-                    <span>Free Practice Arena</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-institutional-50 text-institutional-700 dark:bg-institutional-950 dark:text-institutional-300 font-bold">Infinite Qs</span>
-                  </h3>
-                  <p className="text-xs text-charcoal-500">Pick any difficulty and practice questions one-by-one with immediate verification.</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {['Easy', 'Medium', 'Hard'].map((diff) => (
-                    <button
-                      key={diff}
-                      onClick={() => {
-                        setPracticeDifficulty(diff);
-                        handleStartFreePractice(diff);
-                      }}
-                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        practiceDifficulty === diff
-                          ? 'bg-institutional-600 text-white shadow-xs'
-                          : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300'
-                      }`}
-                    >
-                      {diff}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setIsFreePracticeActive(false)}
-                    className="px-2 py-1 text-xs text-charcoal-400 hover:text-charcoal-700 dark:hover:text-white ml-2 font-bold cursor-pointer"
-                  >
-                    Close ✕
-                  </button>
-                </div>
-              </div>
-
-              {practiceLoading ? (
-                <div className="py-6 text-center text-xs text-charcoal-500 font-semibold">
-                  Fetching random {practiceDifficulty} question...
-                </div>
-              ) : practiceQuestion ? (
-                <div className="space-y-4">
-                  <div className="text-xs font-bold text-charcoal-600 dark:text-charcoal-400">
-                    {practiceQuestion.subject} • {practiceQuestion.topic}
-                  </div>
-                  <div className="text-sm font-bold text-charcoal-900 dark:text-white">
-                    {practiceQuestion.question_text}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {(practiceQuestion.options || []).map((opt) => {
-                      const isSelected = practiceSelectedOption === opt.id;
-                      const isVerified = practiceVerification !== null;
-                      const isCorrect = practiceVerification?.correct_option === opt.id;
-
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          disabled={isVerified}
-                          onClick={() => setPracticeSelectedOption(opt.id)}
-                          className={`p-3 rounded-xl border text-left text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer ${
-                            isSelected && !isVerified
-                              ? 'border-institutional-600 bg-institutional-50/70 dark:bg-institutional-950/70 text-institutional-950 dark:text-white ring-2 ring-institutional-500/30'
-                              : isVerified && isCorrect
-                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-950 dark:text-emerald-100'
-                              : 'border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200'
-                          }`}
-                        >
-                          <span className="w-5 h-5 rounded-md bg-charcoal-100 dark:bg-charcoal-700 flex items-center justify-center font-bold text-[11px] shrink-0">
-                            {opt.id}
-                          </span>
-                          <span className="flex-1">{opt.text}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {practiceVerification && (
-                    <div className="p-3.5 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-xs space-y-1">
-                      <div className="font-bold text-charcoal-900 dark:text-white">
-                        {practiceVerification.is_correct ? '✓ Correct Answer!' : `✗ Incorrect (Correct: Option ${practiceVerification.correct_option})`}
-                      </div>
-                      <p className="text-charcoal-700 dark:text-charcoal-300">{practiceVerification.solution_explanation}</p>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end gap-2 pt-1">
-                    {!practiceVerification ? (
-                      <button
-                        type="button"
-                        disabled={!practiceSelectedOption}
-                        onClick={handleVerifyPracticeAnswer}
-                        className="px-4 py-2 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white disabled:opacity-50 cursor-pointer shadow-xs"
-                      >
-                        Check Answer
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleStartFreePractice(practiceDifficulty)}
-                        className="px-4 py-2 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white cursor-pointer shadow-xs"
-                      >
-                        Next Random Question →
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
         </div>
       )}
 
       {/* =========================================================================
-          TAB 2: ANALYTICS, SECTIONAL MASTERY & SCORECARDS
+          TAB 2: ANALYTICS, SECTIONAL MASTERY & INTERACTIVE SCORECARDS
           ========================================================================= */}
       {activeTab === 'analytics' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left: Sectional Accuracy Matrix */}
-            <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-              <div>
-                <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
-                  <BarChart3Icon size={18} className="text-institutional-600" />
-                  <span>Sectional Accuracy & Subject Mastery</span>
-                </h3>
-                <p className="text-xs text-charcoal-500">
-                  Calibrated across recent full mocks and speed drills.
-                </p>
-              </div>
-
-              <div className="space-y-4 pt-1">
-                {[
-                  { name: 'Quantitative Aptitude', accuracy: 82, questions: '142 / 173', status: 'Strong Area' },
-                  { name: 'General Intelligence & Reasoning', accuracy: 91, questions: '168 / 185', status: 'Mastered' },
-                  { name: 'English Comprehension', accuracy: 74, questions: '118 / 160', status: 'Good Pace' },
-                  { name: 'General Awareness & Current Affairs', accuracy: 64, questions: '96 / 150', status: 'Focus Area' },
-                ].map((subj) => (
-                  <div key={subj.name} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-charcoal-800 dark:text-charcoal-200">{subj.name}</span>
-                      <div className="flex items-center gap-2 font-mono">
-                        <span className="text-charcoal-400 font-normal">{subj.questions}</span>
-                        <span className={`font-black ${
-                          subj.accuracy >= 85 ? 'text-emerald-700 dark:text-emerald-400' :
-                          subj.accuracy >= 70 ? 'text-amber-700 dark:text-amber-400' :
-                          'text-rose-700 dark:text-rose-400'
-                        }`}>
-                          {subj.accuracy}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-charcoal-100 dark:bg-charcoal-800 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          subj.accuracy >= 85 ? 'bg-emerald-500' :
-                          subj.accuracy >= 70 ? 'bg-amber-500' :
-                          'bg-rose-500'
-                        }`}
-                        style={{ width: `${subj.accuracy}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right: TCS iON Question Disposition */}
-            <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-              <div>
-                <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
-                  <TargetIcon size={18} className="text-emerald-600" />
-                  <span>TCS iON Attempt Disposition</span>
-                </h3>
-                <p className="text-xs text-charcoal-500">
-                  Attempt behavior under +2.0 / -0.5 negative marking principles.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center">
-                  <div className="text-2xl font-black text-emerald-800 dark:text-emerald-400 font-mono">142</div>
-                  <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300 mt-0.5">Correct (+284)</div>
-                  <div className="text-[10px] text-charcoal-500 mt-1">79% accuracy</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-center">
-                  <div className="text-2xl font-black text-rose-800 dark:text-rose-400 font-mono">24</div>
-                  <div className="text-xs font-bold text-rose-900 dark:text-rose-300 mt-0.5">Negative (-12)</div>
-                  <div className="text-[10px] text-charcoal-500 mt-1">Avoid blind guesses</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-center">
-                  <div className="text-2xl font-black text-charcoal-800 dark:text-charcoal-200 font-mono">18</div>
-                  <div className="text-xs font-bold text-charcoal-700 dark:text-charcoal-300 mt-0.5">Skipped (0)</div>
-                  <div className="text-[10px] text-charcoal-500 mt-1">Strategic skips</div>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-300 flex items-start gap-2">
-                <span className="text-sm">💡</span>
-                <span className="leading-snug">
-                  <strong>Aspirant Insight:</strong> You lost 12 raw marks to negative guesses. Eliminating wild guesses preserves percentile cutoffs.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Mock Test Scorecards Table */}
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-charcoal-150 dark:border-charcoal-800">
-              <div>
-                <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white">
-                  Recent Mock Test Scorecards
-                </h3>
-                <p className="text-xs text-charcoal-500">
-                  Scores, negative marking penalties, and qualified percentiles.
-                </p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 uppercase tracking-wider font-bold text-[10px]">
-                    <th className="pb-3 pr-4">Mock Test Title</th>
-                    <th className="pb-3 px-3">Date</th>
-                    <th className="pb-3 px-3 font-mono">Raw Score</th>
-                    <th className="pb-3 px-3 font-mono">Accuracy</th>
-                    <th className="pb-3 px-3">Status</th>
-                    <th className="pb-3 pl-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-charcoal-100 dark:divide-charcoal-800">
-                  {(dashboard?.recent_attempts || []).length > 0 ? (
-                    dashboard.recent_attempts.map((att) => (
-                      <tr key={att.attempt_id} className="hover:bg-charcoal-50 dark:hover:bg-charcoal-800/40 transition-colors">
-                        <td className="py-3.5 pr-4 max-w-xs">
-                          <div className="font-bold text-charcoal-900 dark:text-white truncate">{att.test_title}</div>
-                          {att.ended_reason === 'tab_switch' && (
-                            <div className="mt-0.5 text-[11px] font-medium text-rose-600 dark:text-rose-400">
-                              Ended early: tab switch limit reached.
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-3 text-charcoal-500 font-mono text-[11px] whitespace-nowrap">
-                          {new Date(att.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </td>
-                        <td className="py-3.5 px-3 font-mono font-bold text-charcoal-900 dark:text-white whitespace-nowrap">
-                          {att.total_score?.toFixed(1)} / {att.max_possible_score || 50}
-                        </td>
-                        <td className="py-3.5 px-3 font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                          {att.accuracy_percentage?.toFixed(1)}%
-                        </td>
-                        <td className="py-3.5 px-3 whitespace-nowrap">
-                          {att.ended_reason === 'tab_switch' ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
-                              Tab Switch
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                              Qualified
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 pl-3 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => onSelectAttempt(att.attempt_id)}
-                            className="px-3 py-1.5 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-100 hover:bg-charcoal-200 dark:bg-charcoal-800 dark:hover:bg-charcoal-750 text-charcoal-800 dark:text-charcoal-200 transition-colors cursor-pointer"
-                          >
-                            Scorecard
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="py-8 text-center text-charcoal-400">
-                        No recent attempts yet. Launch your first mock test to see detailed analytics!
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <AnalyticsDashboardView
+          dashboard={dashboard}
+          onSelectAttempt={onSelectAttempt}
+          onStartPractice={() => setActiveTab('mocks')}
+        />
       )}
 
       {/* =========================================================================

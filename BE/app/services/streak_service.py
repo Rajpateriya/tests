@@ -76,7 +76,7 @@ class StreakService:
     ) -> Dict[str, Any]:
         """
         Verify candidate's selected option against DB record and return
-        the correctness status and full TCS iON style explanation.
+        the correctness status and full PrepMagnet step-by-step explanation.
         """
         question = await self.question_repo.get_by_id(question_id)
         if not question:

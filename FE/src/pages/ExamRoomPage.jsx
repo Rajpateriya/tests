@@ -1303,7 +1303,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
                 <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
                   Examination Guidelines & Marking Scheme
                 </h3>
-                <p className="text-xs text-slate-500">Standard TCS iON Computer-Based Testing Rules</p>
+                <p className="text-xs text-slate-500">Standard PrepMagnet Computer-Based Testing Rules</p>
               </div>
               <button
                 onClick={() => setShowInstructionsModal(false)}
@@ -1490,12 +1490,12 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
                 </div>
               </div>
 
-              {/* Sectional Performance Matrix Table (TCS iON Candidate Audit Format) */}
+              {/* Sectional Performance Matrix Table (PrepMagnet Candidate Audit Format) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
                     <span>Sectional Performance Matrix</span>
-                    <span className="text-slate-400 font-normal">(TCS iON Candidate Audit Format)</span>
+                    <span className="text-slate-400 font-normal">(PrepMagnet Candidate Audit Format)</span>
                   </div>
                   <span className="font-mono text-[10px] text-slate-400 font-medium">
                     AUTO-SYNC @ {new Date().toLocaleTimeString('en-GB')}
