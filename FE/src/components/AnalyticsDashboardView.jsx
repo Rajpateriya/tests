@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   BarChart3Icon,
   TargetIcon,
@@ -42,6 +42,33 @@ export const AnalyticsDashboardView = ({
   const [scorecardFilter, setScorecardFilter] = useState('ALL'); // 'ALL' | 'QUALIFIED' | 'REVIEW'
   const [activeTooltip, setActiveTooltip] = useState(null); // { x, y, data }
   const [radarView, setRadarView] = useState('radar'); // 'radar' | 'bars'
+  const [hoveredRadarSection, setHoveredRadarSection] = useState(null); // 'Quant' | 'Reasoning' | 'English' | 'GA' | null
+
+  // Hover point coordinates for floating tooltips locked to cursor position
+  const donutContainerRef = useRef(null);
+  const [donutTooltipPos, setDonutTooltipPos] = useState({ x: 100, y: 70 });
+  const radarContainerRef = useRef(null);
+  const [radarTooltipPos, setRadarTooltipPos] = useState({ x: 130, y: 110 });
+
+  const handleDonutMouseMove = (e) => {
+    if (donutContainerRef.current) {
+      const rect = donutContainerRef.current.getBoundingClientRect();
+      setDonutTooltipPos({
+        x: Math.round(e.clientX - rect.left),
+        y: Math.round(e.clientY - rect.top),
+      });
+    }
+  };
+
+  const handleRadarMouseMove = (e) => {
+    if (radarContainerRef.current) {
+      const rect = radarContainerRef.current.getBoundingClientRect();
+      setRadarTooltipPos({
+        x: Math.round(e.clientX - rect.left),
+        y: Math.round(e.clientY - rect.top),
+      });
+    }
+  };
 
   // Extract base dashboard stats or sensible academic defaults
   const totalMocks = dashboard?.total_mocks_attempted ?? 14;
@@ -603,16 +630,15 @@ export const AnalyticsDashboardView = ({
                     strokeWidth="1"
                   />
 
-                  {/* Tooltip Background Card with Native SVG Drop Shadow */}
+                  {/* Tooltip Background Card with Crisp Border and High Contrast */}
                   <rect
                     x={-92 + tooltipShift}
                     y="-78"
                     width="184"
                     height="64"
                     rx="12"
-                    filter="url(#donutShadow)"
-                    className="fill-white dark:fill-charcoal-900 stroke-charcoal-200 dark:stroke-charcoal-700"
-                    strokeWidth="1"
+                    className="fill-white dark:fill-charcoal-900 stroke-charcoal-300 dark:stroke-charcoal-650"
+                    strokeWidth="1.5"
                   />
 
                   {/* Test Title (truncated) */}
@@ -761,8 +787,47 @@ export const AnalyticsDashboardView = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-2">
-            {/* Interactive SVG Donut Chart with Gradients & Hover Effects */}
-            <div className="relative flex items-center justify-center py-1">
+            {/* Interactive SVG Donut Chart with Gradients & Point-Locked Hover Tooltip */}
+            <div
+              ref={donutContainerRef}
+              onMouseMove={handleDonutMouseMove}
+              className="relative flex items-center justify-center py-1"
+            >
+              {/* Minimal Clean Tooltip: Positioned exactly at the hovered point */}
+              {hoveredDisposition && (() => {
+                const info =
+                  hoveredDisposition === 'correct'
+                    ? { title: 'Correct Answers', percent: '77.2%', dotBg: 'bg-emerald-500' }
+                    : hoveredDisposition === 'negative'
+                    ? { title: 'Negative Deductions', percent: '13.0%', dotBg: 'bg-rose-500' }
+                    : { title: 'Strategic Skips', percent: '9.8%', dotBg: 'bg-slate-400' };
+
+                const isNearTop = donutTooltipPos.y < 42;
+
+                return (
+                  <div
+                    className="absolute z-30 pointer-events-none transition-transform duration-75 ease-out whitespace-nowrap"
+                    style={{
+                      left: `${donutTooltipPos.x}px`,
+                      top: `${donutTooltipPos.y}px`,
+                      transform: isNearTop ? 'translate(-50%, 14px)' : 'translate(-50%, -125%)',
+                    }}
+                  >
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-charcoal-900/95 dark:bg-charcoal-100/95 text-white dark:text-charcoal-950 shadow-xl text-xs font-bold border border-charcoal-800 dark:border-charcoal-200 backdrop-blur-xs">
+                      <span className={`w-2 h-2 rounded-full ${info.dotBg}`} />
+                      <span>{info.title}</span>
+                      <span className="font-mono opacity-80">({info.percent})</span>
+                    </div>
+                    {!isNearTop && (
+                      <div className="w-1.5 h-1.5 bg-charcoal-900/95 dark:bg-charcoal-100/95 rotate-45 mx-auto -mt-1 border-r border-b border-charcoal-800 dark:border-charcoal-200" />
+                    )}
+                    {isNearTop && (
+                      <div className="w-1.5 h-1.5 bg-charcoal-900/95 dark:bg-charcoal-100/95 rotate-45 mx-auto -mt-6 border-l border-t border-charcoal-800 dark:border-charcoal-200" />
+                    )}
+                  </div>
+                );
+              })()}
+
               <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90 overflow-visible select-none">
                 <defs>
                   <linearGradient id="correctGrad" x1="0" y1="0" x2="1" y2="1">
@@ -777,9 +842,6 @@ export const AnalyticsDashboardView = ({
                     <stop offset="0%" stopColor="#cbd5e1" />
                     <stop offset="100%" stopColor="#64748b" />
                   </linearGradient>
-                  <filter id="donutShadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="2" stdDeviation="4" floodOpacity="0.25" />
-                  </filter>
                 </defs>
 
                 {/* Base subtle guide ring */}
@@ -801,14 +863,17 @@ export const AnalyticsDashboardView = ({
                   r="66"
                   fill="transparent"
                   stroke="url(#correctGrad)"
-                  strokeWidth={activeDisposition === 'correct' ? '26' : activeDisposition === 'all' ? '18' : '13'}
+                  strokeWidth={activeDisposition === 'correct' ? '24' : activeDisposition === 'all' ? '18' : '14'}
                   strokeDasharray="316 415"
                   strokeDashoffset="0"
                   strokeLinecap="round"
-                  filter={activeDisposition === 'correct' ? 'url(#donutShadow)' : undefined}
                   className="transition-all duration-300 cursor-pointer"
-                  opacity={activeDisposition === 'all' || activeDisposition === 'correct' ? 1 : 0.4}
-                  onMouseEnter={() => setHoveredDisposition('correct')}
+                  opacity={activeDisposition === 'all' || activeDisposition === 'correct' ? 1 : 0.35}
+                  onMouseEnter={(e) => {
+                    handleDonutMouseMove(e);
+                    setHoveredDisposition('correct');
+                  }}
+                  onMouseMove={handleDonutMouseMove}
                   onMouseLeave={() => setHoveredDisposition(null)}
                   onClick={() => setPinnedDisposition(prev => prev === 'correct' ? null : 'correct')}
                 />
@@ -820,14 +885,17 @@ export const AnalyticsDashboardView = ({
                   r="66"
                   fill="transparent"
                   stroke="url(#negativeGrad)"
-                  strokeWidth={activeDisposition === 'negative' ? '26' : activeDisposition === 'all' ? '18' : '13'}
+                  strokeWidth={activeDisposition === 'negative' ? '24' : activeDisposition === 'all' ? '18' : '14'}
                   strokeDasharray="50 415"
                   strokeDashoffset="-322"
                   strokeLinecap="round"
-                  filter={activeDisposition === 'negative' ? 'url(#donutShadow)' : undefined}
                   className="transition-all duration-300 cursor-pointer"
-                  opacity={activeDisposition === 'all' || activeDisposition === 'negative' ? 1 : 0.4}
-                  onMouseEnter={() => setHoveredDisposition('negative')}
+                  opacity={activeDisposition === 'all' || activeDisposition === 'negative' ? 1 : 0.35}
+                  onMouseEnter={(e) => {
+                    handleDonutMouseMove(e);
+                    setHoveredDisposition('negative');
+                  }}
+                  onMouseMove={handleDonutMouseMove}
                   onMouseLeave={() => setHoveredDisposition(null)}
                   onClick={() => setPinnedDisposition(prev => prev === 'negative' ? null : 'negative')}
                 />
@@ -839,14 +907,17 @@ export const AnalyticsDashboardView = ({
                   r="66"
                   fill="transparent"
                   stroke="url(#skippedGrad)"
-                  strokeWidth={activeDisposition === 'skipped' ? '26' : activeDisposition === 'all' ? '18' : '13'}
+                  strokeWidth={activeDisposition === 'skipped' ? '24' : activeDisposition === 'all' ? '18' : '14'}
                   strokeDasharray="34 415"
                   strokeDashoffset="-378"
                   strokeLinecap="round"
-                  filter={activeDisposition === 'skipped' ? 'url(#donutShadow)' : undefined}
                   className="transition-all duration-300 cursor-pointer"
-                  opacity={activeDisposition === 'all' || activeDisposition === 'skipped' ? 1 : 0.4}
-                  onMouseEnter={() => setHoveredDisposition('skipped')}
+                  opacity={activeDisposition === 'all' || activeDisposition === 'skipped' ? 1 : 0.35}
+                  onMouseEnter={(e) => {
+                    handleDonutMouseMove(e);
+                    setHoveredDisposition('skipped');
+                  }}
+                  onMouseMove={handleDonutMouseMove}
                   onMouseLeave={() => setHoveredDisposition(null)}
                   onClick={() => setPinnedDisposition(prev => prev === 'skipped' ? null : 'skipped')}
                 />
@@ -907,7 +978,10 @@ export const AnalyticsDashboardView = ({
             {/* Hover-Synchronized Legend Cards */}
             <div className="space-y-2.5">
               <div
-                onMouseEnter={() => setHoveredDisposition('correct')}
+                onMouseEnter={() => {
+                  setHoveredDisposition('correct');
+                  setDonutTooltipPos({ x: 100, y: 35 });
+                }}
                 onMouseLeave={() => setHoveredDisposition(null)}
                 onClick={() => setPinnedDisposition(prev => prev === 'correct' ? null : 'correct')}
                 className={`p-3 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between ${
@@ -936,7 +1010,10 @@ export const AnalyticsDashboardView = ({
               </div>
 
               <div
-                onMouseEnter={() => setHoveredDisposition('negative')}
+                onMouseEnter={() => {
+                  setHoveredDisposition('negative');
+                  setDonutTooltipPos({ x: 165, y: 100 });
+                }}
                 onMouseLeave={() => setHoveredDisposition(null)}
                 onClick={() => setPinnedDisposition(prev => prev === 'negative' ? null : 'negative')}
                 className={`p-3 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between ${
@@ -965,7 +1042,10 @@ export const AnalyticsDashboardView = ({
               </div>
 
               <div
-                onMouseEnter={() => setHoveredDisposition('skipped')}
+                onMouseEnter={() => {
+                  setHoveredDisposition('skipped');
+                  setDonutTooltipPos({ x: 65, y: 135 });
+                }}
                 onMouseLeave={() => setHoveredDisposition(null)}
                 onClick={() => setPinnedDisposition(prev => prev === 'skipped' ? null : 'skipped')}
                 className={`p-3 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between ${
@@ -1079,7 +1159,42 @@ export const AnalyticsDashboardView = ({
           {radarView === 'radar' ? (
             /* Interactive SVG Radar Chart */
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-2">
-              <div className="relative shrink-0 flex items-center justify-center">
+              <div
+                ref={radarContainerRef}
+                onMouseMove={handleRadarMouseMove}
+                className="relative shrink-0 flex items-center justify-center"
+              >
+                {/* Minimal Clean Tooltip: Positioned exactly at the hovered point */}
+                {hoveredRadarSection && (() => {
+                  const sec = sectionalMastery.find((s) => s.id === hoveredRadarSection);
+                  if (!sec) return null;
+
+                  const isNearTop = radarTooltipPos.y < 42;
+
+                  return (
+                    <div
+                      className="absolute z-30 pointer-events-none transition-transform duration-75 ease-out whitespace-nowrap"
+                      style={{
+                        left: `${radarTooltipPos.x}px`,
+                        top: `${radarTooltipPos.y}px`,
+                        transform: isNearTop ? 'translate(-50%, 14px)' : 'translate(-50%, -125%)',
+                      }}
+                    >
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-charcoal-900/95 dark:bg-charcoal-100/95 text-white dark:text-charcoal-950 shadow-xl text-xs font-bold border border-charcoal-800 dark:border-charcoal-200 backdrop-blur-xs">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sec.color }} />
+                        <span>{sec.name}</span>
+                        <span className="font-mono opacity-80">({sec.accuracy}%)</span>
+                      </div>
+                      {!isNearTop && (
+                        <div className="w-1.5 h-1.5 bg-charcoal-900/95 dark:bg-charcoal-100/95 rotate-45 mx-auto -mt-1 border-r border-b border-charcoal-800 dark:border-charcoal-200" />
+                      )}
+                      {isNearTop && (
+                        <div className="w-1.5 h-1.5 bg-charcoal-900/95 dark:bg-charcoal-100/95 rotate-45 mx-auto -mt-6 border-l border-t border-charcoal-800 dark:border-charcoal-200" />
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <svg width="290" height="210" viewBox="0 0 310 220" className="select-none">
                   {/* Concentric Polygons (25%, 50%, 75%, 100%) */}
                   {[0.25, 0.5, 0.75, 1.0].map((level) => {
@@ -1104,8 +1219,24 @@ export const AnalyticsDashboardView = ({
                   })}
 
                   {/* Axes Lines */}
-                  <line x1="130" y1="46" x2="130" y2="174" stroke="currentColor" className="text-charcoal-200 dark:text-charcoal-800" strokeWidth="1" />
-                  <line x1="66" y1="110" x2="194" y2="110" stroke="currentColor" className="text-charcoal-200 dark:text-charcoal-800" strokeWidth="1" />
+                  <line
+                    x1="130"
+                    y1="46"
+                    x2="130"
+                    y2="174"
+                    stroke={hoveredRadarSection === 'Quant' || hoveredRadarSection === 'English' ? '#0284c7' : 'currentColor'}
+                    className={hoveredRadarSection === 'Quant' || hoveredRadarSection === 'English' ? '' : 'text-charcoal-200 dark:text-charcoal-800'}
+                    strokeWidth={hoveredRadarSection === 'Quant' || hoveredRadarSection === 'English' ? '2' : '1'}
+                  />
+                  <line
+                    x1="66"
+                    y1="110"
+                    x2="194"
+                    y2="110"
+                    stroke={hoveredRadarSection === 'Reasoning' || hoveredRadarSection === 'GA' ? '#0284c7' : 'currentColor'}
+                    className={hoveredRadarSection === 'Reasoning' || hoveredRadarSection === 'GA' ? '' : 'text-charcoal-200 dark:text-charcoal-800'}
+                    strokeWidth={hoveredRadarSection === 'Reasoning' || hoveredRadarSection === 'GA' ? '2' : '1'}
+                  />
 
                   {/* Topper Benchmark Polygon (Amber Dotted) */}
                   <polygon
@@ -1126,23 +1257,196 @@ export const AnalyticsDashboardView = ({
                     strokeWidth="2.5"
                   />
 
-                  {/* Interactive Vertices */}
-                  <circle cx="130" cy="58.9" r="4.5" fill="#0284c7" stroke="white" strokeWidth="2" />
-                  <circle cx="183.7" cy="110" r="4.5" fill="#0284c7" stroke="white" strokeWidth="2" />
-                  <circle cx="130" cy="155.2" r="4.5" fill="#0284c7" stroke="white" strokeWidth="2" />
-                  <circle cx="88.8" cy="110" r="4.5" fill="#0284c7" stroke="white" strokeWidth="2" />
+                  {/* Topper Benchmark Highlight Vertices */}
+                  <circle cx="130" cy="55.5" r={hoveredRadarSection === 'Quant' ? '5.5' : '3'} fill="#f59e0b" stroke="white" strokeWidth="1.5" className="transition-all" />
+                  <circle cx="185.7" cy="110" r={hoveredRadarSection === 'Reasoning' ? '5.5' : '3'} fill="#f59e0b" stroke="white" strokeWidth="1.5" className="transition-all" />
+                  <circle cx="130" cy="161" r={hoveredRadarSection === 'English' ? '5.5' : '3'} fill="#f59e0b" stroke="white" strokeWidth="1.5" className="transition-all" />
+                  <circle cx="82.4" cy="110" r={hoveredRadarSection === 'GA' ? '5.5' : '3'} fill="#f59e0b" stroke="white" strokeWidth="1.5" className="transition-all" />
 
-                  {/* Labels positioned cleanly inside viewBox */}
-                  <text x="130" y="24" textAnchor="middle" className="text-[10px] font-black fill-charcoal-800 dark:fill-charcoal-200">Quant (88%)</text>
-                  <text x="195" y="114" textAnchor="start" className="text-[10px] font-black fill-charcoal-800 dark:fill-charcoal-200">Reasoning (92.5%)</text>
-                  <text x="130" y="196" textAnchor="middle" className="text-[10px] font-black fill-charcoal-800 dark:fill-charcoal-200">English (78%)</text>
-                  <text x="74" y="114" textAnchor="end" className="text-[10px] font-black fill-charcoal-800 dark:fill-charcoal-200">GA (71%)</text>
+                  {/* Animated Ping Ring on Active Hovered Node */}
+                  {hoveredRadarSection === 'Quant' && (
+                    <circle cx="130" cy="58.9" r="14" fill="#0284c7" opacity="0.4" className="animate-ping pointer-events-none" />
+                  )}
+                  {hoveredRadarSection === 'Reasoning' && (
+                    <circle cx="183.7" cy="110" r="14" fill="#0284c7" opacity="0.4" className="animate-ping pointer-events-none" />
+                  )}
+                  {hoveredRadarSection === 'English' && (
+                    <circle cx="130" cy="155.2" r="14" fill="#0284c7" opacity="0.4" className="animate-ping pointer-events-none" />
+                  )}
+                  {hoveredRadarSection === 'GA' && (
+                    <circle cx="88.8" cy="110" r="14" fill="#0284c7" opacity="0.4" className="animate-ping pointer-events-none" />
+                  )}
+
+                  {/* Interactive Aspirant Vertices with High-Contrast Ring */}
+                  <circle
+                    cx="130"
+                    cy="58.9"
+                    r={hoveredRadarSection === 'Quant' ? '7' : '4.5'}
+                    fill={hoveredRadarSection === 'Quant' ? '#f59e0b' : '#0284c7'}
+                    stroke="white"
+                    strokeWidth="2.5"
+                    className="transition-all cursor-pointer"
+                  />
+                  <circle
+                    cx="183.7"
+                    cy="110"
+                    r={hoveredRadarSection === 'Reasoning' ? '7' : '4.5'}
+                    fill={hoveredRadarSection === 'Reasoning' ? '#10b981' : '#0284c7'}
+                    stroke="white"
+                    strokeWidth="2.5"
+                    className="transition-all cursor-pointer"
+                  />
+                  <circle
+                    cx="130"
+                    cy="155.2"
+                    r={hoveredRadarSection === 'English' ? '7' : '4.5'}
+                    fill={hoveredRadarSection === 'English' ? '#6366f1' : '#0284c7'}
+                    stroke="white"
+                    strokeWidth="2.5"
+                    className="transition-all cursor-pointer"
+                  />
+                  <circle
+                    cx="88.8"
+                    cy="110"
+                    r={hoveredRadarSection === 'GA' ? '7' : '4.5'}
+                    fill={hoveredRadarSection === 'GA' ? '#ec4899' : '#0284c7'}
+                    stroke="white"
+                    strokeWidth="2.5"
+                    className="transition-all cursor-pointer"
+                  />
+
+                  {/* Generous Invisible Hit Targets for Effortless Hover */}
+                  <circle
+                    cx="130"
+                    cy="58.9"
+                    r="20"
+                    fill="transparent"
+                    className="cursor-pointer"
+                    onMouseEnter={(e) => {
+                      handleRadarMouseMove(e);
+                      setHoveredRadarSection('Quant');
+                    }}
+                    onMouseMove={handleRadarMouseMove}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                  />
+                  <circle
+                    cx="183.7"
+                    cy="110"
+                    r="20"
+                    fill="transparent"
+                    className="cursor-pointer"
+                    onMouseEnter={(e) => {
+                      handleRadarMouseMove(e);
+                      setHoveredRadarSection('Reasoning');
+                    }}
+                    onMouseMove={handleRadarMouseMove}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                  />
+                  <circle
+                    cx="130"
+                    cy="155.2"
+                    r="20"
+                    fill="transparent"
+                    className="cursor-pointer"
+                    onMouseEnter={(e) => {
+                      handleRadarMouseMove(e);
+                      setHoveredRadarSection('English');
+                    }}
+                    onMouseMove={handleRadarMouseMove}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                  />
+                  <circle
+                    cx="88.8"
+                    cy="110"
+                    r="20"
+                    fill="transparent"
+                    className="cursor-pointer"
+                    onMouseEnter={(e) => {
+                      handleRadarMouseMove(e);
+                      setHoveredRadarSection('GA');
+                    }}
+                    onMouseMove={handleRadarMouseMove}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                  />
+
+                  {/* Interactive Section Labels positioned cleanly inside viewBox */}
+                  <text
+                    x="130"
+                    y="24"
+                    textAnchor="middle"
+                    onMouseEnter={(e) => {
+                      handleRadarMouseMove(e);
+                      setHoveredRadarSection('Quant');
+                    }}
+                    onMouseMove={handleRadarMouseMove}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                    className={`text-[10px] cursor-pointer transition-colors ${
+                      hoveredRadarSection === 'Quant' ? 'fill-amber-600 dark:fill-amber-400 font-black' : 'fill-charcoal-800 dark:fill-charcoal-200 font-bold'
+                    }`}
+                  >
+                    Quant (88%)
+                  </text>
+                  <text
+                    x="195"
+                    y="114"
+                    textAnchor="start"
+                    onMouseEnter={(e) => {
+                      handleRadarMouseMove(e);
+                      setHoveredRadarSection('Reasoning');
+                    }}
+                    onMouseMove={handleRadarMouseMove}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                    className={`text-[10px] cursor-pointer transition-colors ${
+                      hoveredRadarSection === 'Reasoning' ? 'fill-emerald-600 dark:fill-emerald-400 font-black' : 'fill-charcoal-800 dark:fill-charcoal-200 font-bold'
+                    }`}
+                  >
+                    Reasoning (92.5%)
+                  </text>
+                  <text
+                    x="130"
+                    y="196"
+                    textAnchor="middle"
+                    onMouseEnter={(e) => {
+                      handleRadarMouseMove(e);
+                      setHoveredRadarSection('English');
+                    }}
+                    onMouseMove={handleRadarMouseMove}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                    className={`text-[10px] cursor-pointer transition-colors ${
+                      hoveredRadarSection === 'English' ? 'fill-indigo-600 dark:fill-indigo-400 font-black' : 'fill-charcoal-800 dark:fill-charcoal-200 font-bold'
+                    }`}
+                  >
+                    English (78%)
+                  </text>
+                  <text
+                    x="74"
+                    y="114"
+                    textAnchor="end"
+                    onMouseEnter={(e) => {
+                      handleRadarMouseMove(e);
+                      setHoveredRadarSection('GA');
+                    }}
+                    onMouseMove={handleRadarMouseMove}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                    className={`text-[10px] cursor-pointer transition-colors ${
+                      hoveredRadarSection === 'GA' ? 'fill-rose-600 dark:fill-rose-400 font-black' : 'fill-charcoal-800 dark:fill-charcoal-200 font-bold'
+                    }`}
+                  >
+                    GA (71%)
+                  </text>
                 </svg>
               </div>
 
               {/* Radar Legend & Delta stats */}
               <div className="space-y-3 text-xs w-full sm:w-auto shrink-0 pl-1">
-                <div className="flex items-center gap-2">
+                <div
+                  onMouseEnter={() => {
+                    setHoveredRadarSection('Reasoning');
+                    setRadarTooltipPos({ x: 184, y: 110 });
+                  }}
+                  onMouseLeave={() => setHoveredRadarSection(null)}
+                  className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-charcoal-50 dark:hover:bg-charcoal-800/50 transition-colors cursor-pointer"
+                >
                   <span className="w-3 h-3 rounded-full bg-institutional-600 shrink-0" />
                   <div>
                     <span className="font-bold text-charcoal-800 dark:text-charcoal-200">Your Accuracy</span>
@@ -1150,7 +1454,14 @@ export const AnalyticsDashboardView = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div
+                  onMouseEnter={() => {
+                    setHoveredRadarSection('Quant');
+                    setRadarTooltipPos({ x: 130, y: 58 });
+                  }}
+                  onMouseLeave={() => setHoveredRadarSection(null)}
+                  className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-charcoal-50 dark:hover:bg-charcoal-800/50 transition-colors cursor-pointer"
+                >
                   <span className="w-3 h-3 rounded-full bg-amber-500 shrink-0" />
                   <div>
                     <span className="font-bold text-charcoal-800 dark:text-charcoal-200">AIR-100 Topper Avg</span>
@@ -1162,7 +1473,14 @@ export const AnalyticsDashboardView = ({
                   <div className="text-[11px] font-semibold text-charcoal-700 dark:text-charcoal-300">
                     Highest Sectional Delta:
                   </div>
-                  <div className="text-[10px] text-rose-600 dark:text-rose-400 font-bold">
+                  <div
+                    onMouseEnter={() => {
+                      setHoveredRadarSection('GA');
+                      setRadarTooltipPos({ x: 88, y: 110 });
+                    }}
+                    onMouseLeave={() => setHoveredRadarSection(null)}
+                    className="text-[10px] text-rose-600 dark:text-rose-400 font-bold cursor-pointer hover:underline p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                  >
                     ⚠️ GA & Current Affairs: -11% gap vs Toppers
                   </div>
                 </div>

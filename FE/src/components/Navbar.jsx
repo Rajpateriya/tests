@@ -20,14 +20,20 @@ import {
   CheckCircleIcon,
 } from './Icons';
 
-// Bell: unread count polled every 30s, a dropdown listing notifications, mark-read on click/"mark all".
+// Bell: unread count pushed over a server-sent-events stream (no polling), a dropdown listing
+// notifications, mark-read on click/"mark all".
 const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const ref = useRef(null);
+  const openRef = useRef(false);
 
-  const poll = async () => {
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  const refreshUnread = async () => {
     try {
       const { unread: n } = await api.notifications.getUnreadCount();
       setUnread(n);
@@ -36,15 +42,27 @@ const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
     }
   };
 
-  // Re-checks the instant a real session starts (login, or switching off the demo role),
-  // not just once at page load — otherwise logging in without a refresh never starts polling.
+  // Re-runs the instant a real session starts (login, or switching off the demo role): opens the
+  // push stream, and closes it on logout/unmount. The server sends CONNECTED once the stream is
+  // registered (and again after every reconnect), so re-reading the count then catches anything
+  // missed while offline. Every later event is a new notification: re-read the count (and the
+  // list, if the dropdown is open) rather than adding 1, so a race can never double-count.
   useEffect(() => {
     setItems([]);
     setUnread(0);
     if (!isRealSession()) return;
-    poll();
-    const interval = setInterval(poll, 60000);
-    return () => clearInterval(interval);
+    const controller = new AbortController();
+    api.notifications.stream(async (event) => {
+      refreshUnread();
+      if (event.type !== 'CONNECTED' && openRef.current) {
+        try {
+          setItems(await api.notifications.getMine());
+        } catch {
+          // keep the current list
+        }
+      }
+    }, controller.signal);
+    return () => controller.abort();
   }, [sessionKey]);
 
   useEffect(() => {
@@ -73,7 +91,7 @@ const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
     if (!n.is_read) {
       setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
       setUnread((u) => Math.max(0, u - 1));
-      api.notifications.markRead(n.id).catch(() => {}); // the next poll reconciles this either way
+      api.notifications.markRead(n.id).catch(() => { }); // the next pushed event or reconnect reconciles this either way
     }
     setOpen(false);
     if (!n.ticket_id) return;
@@ -91,7 +109,7 @@ const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
     try {
       await api.notifications.markAllRead();
     } catch {
-      // the next poll reconciles this either way
+      // the next pushed event or reconnect reconciles this either way
     }
   };
 
@@ -130,9 +148,8 @@ const NotificationBell = ({ sessionKey, isAdmin, setCurrentView }) => {
                 <button
                   key={n.id}
                   onClick={() => handleMarkRead(n)}
-                  className={`w-full text-left px-4 py-3 flex items-start gap-2.5 hover:bg-charcoal-50 dark:hover:bg-charcoal-800/60 transition-colors cursor-pointer ${
-                    !n.is_read ? 'bg-institutional-50/60 dark:bg-institutional-950/30' : ''
-                  }`}
+                  className={`w-full text-left px-4 py-3 flex items-start gap-2.5 hover:bg-charcoal-50 dark:hover:bg-charcoal-800/60 transition-colors cursor-pointer ${!n.is_read ? 'bg-institutional-50/60 dark:bg-institutional-950/30' : ''
+                    }`}
                 >
                   <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${!n.is_read ? 'bg-institutional-600' : 'bg-transparent'}`} />
                   <div className="min-w-0">
@@ -244,10 +261,10 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               PrepMagnet
             </span>
             <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full font-mono tracking-wider ${!user
-                ? 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
-                : isAdmin
-                  ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
-                  : 'bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800'
+              ? 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
+              : isAdmin
+                ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                : 'bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800'
               }`}>
               {!user ? 'PRO' : isAdmin ? 'ADMIN' : 'STUDENT'}
             </span>
@@ -262,17 +279,17 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <button
                 onClick={() => handleNavClick('discovery')}
                 className={`px-3 py-1.5 rounded-full transition-colors ${currentView === 'discovery'
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 Mock Tests
               </button>
               <button
                 onClick={() => handleNavClick('courses')}
-                className={`px-3 py-1.5 rounded-full transition-colors ${['courses','courseDetail'].includes(currentView)
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                className={`px-3 py-1.5 rounded-full transition-colors ${['courses', 'courseDetail'].includes(currentView)
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 Courses & Quizzes
@@ -280,8 +297,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <button
                 onClick={() => handleNavClick('typing')}
                 className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors ${currentView === 'typing'
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <span>⌨️ Typing Master</span>
@@ -301,8 +318,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <button
                 onClick={() => handleNavClick('dashboard')}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${currentView === 'dashboard'
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <BarChart3Icon size={14} />
@@ -323,9 +340,9 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
 
               <button
                 onClick={() => handleNavClick('courses')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${['courses','courseDetail'].includes(currentView)
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${['courses', 'courseDetail'].includes(currentView)
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <SparklesIcon size={14} className="text-amber-500" />
@@ -335,8 +352,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <button
                 onClick={() => handleNavClick('typing')}
                 className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${currentView === 'typing'
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <span>⌨️ Typing Master</span>
@@ -358,8 +375,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <button
                 onClick={() => handleNavClick('admin')}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${currentView === 'admin'
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <ShieldIcon size={14} />
@@ -369,8 +386,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <button
                 onClick={() => handleNavClick('pipeline')}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${currentView === 'pipeline'
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <CpuIcon size={14} />
@@ -379,9 +396,9 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
 
               <button
                 onClick={() => handleNavClick('courses')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${['courses','courseDetail'].includes(currentView)
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${['courses', 'courseDetail'].includes(currentView)
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <SparklesIcon size={14} />
@@ -391,8 +408,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
               <button
                 onClick={() => handleNavClick('typing')}
                 className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${currentView === 'typing'
-                    ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
+                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <span>⌨️ Typing Master</span>
@@ -547,8 +564,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                             setUserDropdownOpen(false);
                           }}
                           className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1 ${!isAdmin
-                              ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-xs'
-                              : 'text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200'
+                            ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-xs'
+                            : 'text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200'
                             }`}
                         >
                           <UserIcon size={12} />
@@ -561,8 +578,8 @@ export const Navbar = ({ currentView, setCurrentView, activeAttempt, onOpenAuthM
                             setUserDropdownOpen(false);
                           }}
                           className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1 ${isAdmin
-                              ? 'bg-purple-600 text-white shadow-xs'
-                              : 'text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200'
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200'
                             }`}
                         >
                           <ShieldIcon size={12} />

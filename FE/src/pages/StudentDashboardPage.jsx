@@ -27,6 +27,8 @@ import {
   RefreshCwIcon,
   MessageSquareIcon,
   LockIcon,
+  SearchIcon,
+  XIcon,
 } from '../components/Icons';
 import { TestRulesModal } from '../components/TestRulesModal';
 import { AnalyticsDashboardView } from '../components/AnalyticsDashboardView';
@@ -80,6 +82,8 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
   const [dashboardRulesModalTest, setDashboardRulesModalTest] = useState(null);
   const [myTickets, setMyTickets] = useState([]);
   const [myTicketsLoading, setMyTicketsLoading] = useState(false);
+  const [ticketStatusFilter, setTicketStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'RESOLVED'
+  const [ticketSearchQuery, setTicketSearchQuery] = useState('');
   // A ticket opened straight from a notification (?ticket=<id>): scrolled to and highlighted once loaded.
   const [highlightTicketId, setHighlightTicketId] = useState(() => new URLSearchParams(window.location.search).get('ticket'));
   const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
@@ -212,9 +216,19 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
 
   // Opened from a notification: once that ticket is in the loaded list, scroll it into view.
   useEffect(() => {
-    if (activeTab !== 'support' || !highlightTicketId) return;
-    const el = document.getElementById(`ticket-row-${highlightTicketId}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (activeTab !== 'support' || !highlightTicketId || myTickets.length === 0) return;
+    const target = myTickets.find((t) => t.id === highlightTicketId);
+    if (target) {
+      const isResolved = target.status === 'RESOLVED' || target.status === 'CLOSED';
+      if ((ticketStatusFilter === 'ACTIVE' && isResolved) || (ticketStatusFilter === 'RESOLVED' && !isResolved)) {
+        setTicketStatusFilter('ALL');
+      }
+    }
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`ticket-row-${highlightTicketId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 120);
+    return () => clearTimeout(timer);
   }, [activeTab, highlightTicketId, myTickets]);
 
   const fetchMyTickets = async () => {
@@ -1066,30 +1080,55 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
                 </div>
 
                 {/* 7-Day Mini Track */}
-                <div className="grid grid-cols-7 gap-1.5 text-center">
+                <div className="grid grid-cols-7 gap-1.5 text-center pt-3.5">
                   {currentWeekDays.map((step) => {
-                    const isDone = step.completed;
-                    const isToday = step.is_current;
+                    const todayDayNum = isDailyCompleted ? (streakDays <= 7 ? streakDays : 7) : (streakDays + 1);
+                    const isToday = step.day_number === todayDayNum || step.is_current;
+                    const isDone = step.completed || step.day_number <= streakDays;
+                    const isTodaySuccess = isToday && (isDone || isDailyCompleted);
                     const isJackpot = step.is_milestone;
 
                     return (
                       <div
                         key={step.day_number}
-                        className={`aspect-square p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all ${
-                          isDone
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                        className={`group relative aspect-square p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-md ${
+                          isTodaySuccess
+                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 dark:border-teal-400 shadow-md ring-2 ring-emerald-400/50 scale-[1.03] hover:scale-[1.08] hover:shadow-emerald-500/30'
+                            : isDone
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/15'
                             : isToday
-                            ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 shadow-sm'
+                            ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 shadow-xs animate-pulse hover:animate-none hover:border-amber-400'
                             : isJackpot
-                            ? 'bg-amber-500/10 border-amber-300 text-charcoal-800 dark:text-charcoal-200'
-                            : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400'
+                            ? 'bg-amber-500/10 border-amber-300 text-charcoal-800 dark:text-charcoal-200 hover:border-amber-400 hover:bg-amber-500/20'
+                            : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400 hover:border-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800/80'
                         }`}
                       >
-                        <span className="text-[9px] font-bold leading-none">D{step.day_number}</span>
-                        <div className="text-xs leading-none">
-                          {isDone ? '✓' : isToday ? '🔥' : isJackpot ? '🎁' : '•'}
+                        {/* Topup Floating Pill on Hover */}
+                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-150 z-30 whitespace-nowrap">
+                          <div className="px-2 py-0.5 rounded-md bg-charcoal-900/95 dark:bg-charcoal-100/95 text-white dark:text-charcoal-950 text-[10px] font-mono font-black shadow-xl border border-charcoal-800 dark:border-charcoal-200 backdrop-blur-xs flex items-center justify-center">
+                            +{step.coins_reward}
+                          </div>
+                          <div className="w-1.5 h-1.5 bg-charcoal-900/95 dark:bg-charcoal-100/95 rotate-45 mx-auto -mt-1 border-r border-b border-charcoal-800 dark:border-charcoal-200" />
                         </div>
-                        <span className="text-[8px] font-mono font-bold leading-none">+{step.coins_reward}</span>
+
+                        {/* Resting State: Number 1, 2, 3... + Status Icon */}
+                        <div className="flex flex-col items-center justify-center transition-all duration-200 group-hover:opacity-0 group-hover:scale-75">
+                          <span className={`text-[11px] sm:text-xs font-black leading-none ${isTodaySuccess ? 'text-white' : ''}`}>
+                            {step.day_number}
+                          </span>
+                          <div className={`text-xs sm:text-sm font-black leading-none mt-1 ${isTodaySuccess ? 'text-white' : ''}`}>
+                            {isDone ? '✓' : isToday ? '🔥' : isJackpot ? '🎁' : '•'}
+                          </div>
+                        </div>
+
+                        {/* Hover State: ONLY +5 or +20 (Clean, bold, centered, zero clutter) */}
+                        <div className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 scale-90 group-hover:scale-100 ${
+                          isTodaySuccess ? 'text-white' : 'text-amber-600 dark:text-amber-400'
+                        }`}>
+                          <span className="text-xs sm:text-sm font-black font-mono leading-none tracking-tight">
+                            +{step.coins_reward}
+                          </span>
+                        </div>
                       </div>
                     );
                   })}
@@ -1467,88 +1506,299 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest, onNavigate,
       )}
 
       {/* TAB: MY SUPPORT TICKETS (only what this account itself raised) */}
-      {activeTab === 'support' && (
-        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 shadow-xs space-y-5 animate-fade-in">
-          <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
-            <div>
-              <h2 className="text-base font-extrabold text-charcoal-950 dark:text-white flex items-center gap-2">
-                <MessageSquareIcon size={18} className="text-institutional-600" />
-                <span>My Support Tickets</span>
-              </h2>
-              <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1">
-                Every inquiry or grievance you have raised through the contact form.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={fetchMyTickets}
-              disabled={myTicketsLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-600 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors"
-            >
-              <RefreshCwIcon size={13} className={myTicketsLoading ? 'animate-spin' : ''} />
-              <span>{myTicketsLoading ? 'Refreshing...' : 'Refresh'}</span>
-            </button>
-          </div>
+      {activeTab === 'support' && (() => {
+        const activeTicketsCount = myTickets.filter((t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED').length;
+        const resolvedTicketsCount = myTickets.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
+        const totalTicketsCount = myTickets.length;
 
-          {myTicketsLoading && myTickets.length === 0 ? (
-            <div className="py-10 text-center text-charcoal-400 text-xs">Loading your tickets...</div>
-          ) : myTickets.length === 0 ? (
-            <div className="py-10 text-center text-charcoal-500 space-y-1">
-              <p className="font-bold text-sm">No tickets raised yet.</p>
-              <p className="text-xs text-charcoal-400">Use the contact form on the homepage to reach support.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {myTickets.map((t) => (
-                <div
-                  key={t.id}
-                  id={`ticket-row-${t.id}`}
-                  className={`p-4 rounded-2xl border bg-charcoal-50/50 dark:bg-charcoal-800/40 space-y-2 transition-colors ${
-                    t.id === highlightTicketId
-                      ? 'border-institutional-400 dark:border-institutional-600 ring-2 ring-institutional-300 dark:ring-institutional-700'
-                      : 'border-charcoal-200 dark:border-charcoal-800'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs font-extrabold text-institutional-600 dark:text-institutional-400">
-                          {t.ticket_number}
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                            t.status === 'RESOLVED'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                          }`}
-                        >
-                          {t.status}
-                        </span>
-                      </div>
-                      {t.subject && (
-                        <div className="text-sm font-bold text-charcoal-900 dark:text-white mt-1">{t.subject}</div>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-charcoal-400 font-mono shrink-0">
-                      {new Date(t.created_at).toLocaleDateString()}
+        const filteredTickets = myTickets.filter((t) => {
+          const isResolved = t.status === 'RESOLVED' || t.status === 'CLOSED';
+          if (ticketStatusFilter === 'ACTIVE' && isResolved) return false;
+          if (ticketStatusFilter === 'RESOLVED' && !isResolved) return false;
+          if (ticketSearchQuery.trim()) {
+            const q = ticketSearchQuery.trim().toLowerCase();
+            const matchNum = (t.ticket_number || '').toLowerCase().includes(q);
+            const matchSub = (t.subject || '').toLowerCase().includes(q);
+            const matchMsg = (t.message || '').toLowerCase().includes(q);
+            const matchRes = (t.resolution_note || '').toLowerCase().includes(q);
+            if (!matchNum && !matchSub && !matchMsg && !matchRes) return false;
+          }
+          return true;
+        });
+
+        return (
+          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-5 sm:p-7 shadow-xs space-y-5 animate-fade-in">
+            {/* Header with Title, Telemetry & Refresh */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-institutional-500/10 dark:bg-institutional-500/20 text-institutional-600 dark:text-institutional-400 flex items-center justify-center shrink-0 mt-0.5 border border-institutional-500/20">
+                  <MessageSquareIcon size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-base sm:text-lg font-black tracking-tight text-charcoal-950 dark:text-white">
+                      My Support Tickets
+                    </h2>
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-mono">
+                      {totalTicketsCount} Total
                     </span>
                   </div>
-                  <p className="text-xs text-charcoal-600 dark:text-charcoal-300 whitespace-pre-wrap">{t.message}</p>
-                  {t.status === 'RESOLVED' && t.resolution_note && (
-                    <div className="mt-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
-                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                        <CheckCircleIcon size={12} />
-                        <span>Support response</span>
-                      </div>
-                      <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1 whitespace-pre-wrap">{t.resolution_note}</p>
-                    </div>
-                  )}
+                  <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-0.5">
+                    Real-time status, grievances & official resolutions submitted from your student account.
+                  </p>
                 </div>
-              ))}
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={fetchMyTickets}
+                  disabled={myTicketsLoading}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-200 bg-white dark:bg-charcoal-850 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-all shadow-2xs hover:shadow-xs disabled:opacity-60 cursor-pointer"
+                  title="Check for newest replies or status updates"
+                >
+                  <RefreshCwIcon size={13} className={myTicketsLoading ? 'animate-spin text-institutional-600 dark:text-institutional-400' : ''} />
+                  <span>{myTicketsLoading ? 'Refreshing...' : 'Refresh Status'}</span>
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Filter Tabs & Search Controls */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+              {/* Segmented Filter Pills */}
+              <div className="inline-flex items-center p-1 rounded-2xl bg-charcoal-100/80 dark:bg-charcoal-800/80 border border-charcoal-200/80 dark:border-charcoal-750 self-start">
+                <button
+                  type="button"
+                  onClick={() => setTicketStatusFilter('ALL')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    ticketStatusFilter === 'ALL'
+                      ? 'bg-white dark:bg-charcoal-900 text-charcoal-950 dark:text-white shadow-2xs'
+                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-950 dark:hover:text-white'
+                  }`}
+                >
+                  <span>All Tickets</span>
+                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                    ticketStatusFilter === 'ALL'
+                      ? 'bg-charcoal-150 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-200'
+                      : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
+                  }`}>
+                    {totalTicketsCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTicketStatusFilter('ACTIVE')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    ticketStatusFilter === 'ACTIVE'
+                      ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/30 shadow-2xs'
+                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-amber-600 dark:hover:text-amber-400'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <span>Active & In Review</span>
+                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${
+                    ticketStatusFilter === 'ACTIVE'
+                      ? 'bg-amber-500/25 text-amber-900 dark:text-amber-100'
+                      : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
+                  }`}>
+                    {activeTicketsCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTicketStatusFilter('RESOLVED')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    ticketStatusFilter === 'RESOLVED'
+                      ? 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 border border-emerald-500/30 shadow-2xs'
+                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Resolved</span>
+                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${
+                    ticketStatusFilter === 'RESOLVED'
+                      ? 'bg-emerald-500/25 text-emerald-900 dark:text-emerald-100'
+                      : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
+                  }`}>
+                    {resolvedTicketsCount}
+                  </span>
+                </button>
+              </div>
+
+              {/* Real-time Search Box */}
+              <div className="relative w-full md:w-72">
+                <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={ticketSearchQuery}
+                  onChange={(e) => setTicketSearchQuery(e.target.value)}
+                  placeholder="Search by ID, exam, keyword..."
+                  className="w-full pl-8.5 pr-8 py-2 rounded-xl text-xs bg-charcoal-50 dark:bg-charcoal-850/80 border border-charcoal-200 dark:border-charcoal-750 text-charcoal-900 dark:text-white placeholder:text-charcoal-400 focus:outline-hidden focus:ring-2 focus:ring-institutional-500/30 focus:border-institutional-500 transition-all"
+                />
+                {ticketSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setTicketSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-charcoal-200 dark:hover:bg-charcoal-700 text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200"
+                  >
+                    <XIcon size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Bounded, Component-Only Scrollable Area */}
+            {myTicketsLoading && myTickets.length === 0 ? (
+              <div className="py-16 text-center space-y-3">
+                <div className="w-8 h-8 mx-auto border-2 border-institutional-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs font-bold text-charcoal-500 dark:text-charcoal-400">Loading your support tickets...</p>
+              </div>
+            ) : myTickets.length === 0 ? (
+              <div className="py-16 text-center space-y-3 rounded-2xl border border-dashed border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30">
+                <div className="w-12 h-12 rounded-2xl bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-400 mx-auto flex items-center justify-center">
+                  <MessageSquareIcon size={24} />
+                </div>
+                <div className="space-y-1 max-w-sm mx-auto px-4">
+                  <p className="font-extrabold text-sm text-charcoal-900 dark:text-white">No support tickets raised yet</p>
+                  <p className="text-xs text-charcoal-500 dark:text-charcoal-400">
+                    Encountered an issue with test scoring, typing certification, or account billing? You can submit an inquiry via the support portal anytime.
+                  </p>
+                </div>
+              </div>
+            ) : filteredTickets.length === 0 ? (
+              <div className="py-14 text-center space-y-3 rounded-2xl border border-dashed border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30">
+                <p className="font-extrabold text-sm text-charcoal-900 dark:text-white">
+                  No {ticketStatusFilter !== 'ALL' ? ticketStatusFilter.toLowerCase() : ''} tickets match your criteria
+                </p>
+                {ticketSearchQuery && (
+                  <p className="text-xs text-charcoal-400 font-mono">"{ticketSearchQuery}"</p>
+                )}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicketStatusFilter('ALL');
+                      setTicketSearchQuery('');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-institutional-600 dark:text-institutional-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                id="my-tickets-scroll-container"
+                className="max-h-[540px] xl:max-h-[580px] overflow-y-auto pr-1.5 sm:pr-2 space-y-3.5 overscroll-contain"
+                style={{ scrollbarGutter: 'stable' }}
+              >
+                {filteredTickets.map((t) => {
+                  const isResolved = t.status === 'RESOLVED' || t.status === 'CLOSED';
+                  const isHighlighted = t.id === highlightTicketId;
+                  const formattedDate = new Date(t.created_at).toLocaleDateString(undefined, {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  });
+
+                  return (
+                    <article
+                      key={t.id}
+                      id={`ticket-row-${t.id}`}
+                      className={`group relative p-4.5 sm:p-5 rounded-2xl border transition-all duration-200 ${
+                        isHighlighted
+                          ? 'border-institutional-500 bg-institutional-50/20 dark:bg-institutional-950/25 ring-2 ring-institutional-500/30 shadow-md'
+                          : 'border-charcoal-200/90 dark:border-charcoal-800 bg-white dark:bg-charcoal-850/70 hover:border-charcoal-350 dark:hover:border-charcoal-700 shadow-2xs hover:shadow-xs'
+                      }`}
+                    >
+                      {/* Top Meta Header: ID + Status + Date */}
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-extrabold tracking-wide px-2.5 py-1 rounded-lg bg-institutional-50 text-institutional-700 dark:bg-institutional-950/70 dark:text-institutional-300 border border-institutional-200/80 dark:border-institutional-800/80 shadow-2xs">
+                            {t.ticket_number}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border shadow-2xs ${
+                              isResolved
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/70'
+                                : 'bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/70'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isResolved ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                              }`}
+                            />
+                            <span>{isResolved ? 'Resolved' : 'Active / In Review'}</span>
+                          </span>
+                        </div>
+
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-medium text-charcoal-400 dark:text-charcoal-400">
+                          <ClockIcon size={12} className="text-charcoal-400" />
+                          <span>{formattedDate}</span>
+                        </div>
+                      </div>
+
+                      {/* Subject / Exam Title */}
+                      {t.subject && (
+                        <h3 className="text-sm sm:text-base font-extrabold text-charcoal-950 dark:text-white mt-2.5 tracking-tight">
+                          {t.subject}
+                        </h3>
+                      )}
+
+                      {/* Student's Raised Query / Message */}
+                      <div className="mt-2.5 p-3 sm:p-3.5 rounded-xl bg-charcoal-50/70 dark:bg-charcoal-900/60 border border-charcoal-150 dark:border-charcoal-800">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500 mb-1">
+                          Your Inquiry
+                        </div>
+                        <p className="text-xs sm:text-[13px] text-charcoal-800 dark:text-charcoal-200 whitespace-pre-wrap leading-relaxed">
+                          {t.message}
+                        </p>
+                      </div>
+
+                      {/* Official Support Response (if resolved) */}
+                      {isResolved && t.resolution_note && (
+                        <div className="mt-3 p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-emerald-50/90 to-teal-50/50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-200/90 dark:border-emerald-800/80 shadow-2xs space-y-1.5">
+                          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-emerald-200/60 dark:border-emerald-800/50">
+                            <div className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                              <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400" />
+                              <span>Official Support Resolution</span>
+                            </div>
+                            {t.resolved_at && (
+                              <span className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80 font-mono">
+                                {new Date(t.resolved_at).toLocaleDateString(undefined, {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-[13px] text-emerald-950 dark:text-emerald-100 font-medium whitespace-pre-wrap leading-relaxed pt-0.5">
+                            {t.resolution_note}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Active Status Live Reassurance Banner */}
+                      {!isResolved && (
+                        <div className="mt-3 px-3.5 py-2.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/50 flex items-center gap-2.5 text-xs text-amber-850 dark:text-amber-300">
+                          <ClockIcon size={14} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                          <span className="leading-snug">
+                            Your inquiry is assigned to our academic & technical desk. Status updates and resolutions will automatically synchronize here.
+                          </span>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* =========================================================================
           4. 30-DAY HABIT ROADMAP MODAL (Clean, Non-Intrusive Drawer / Modal)

@@ -71,14 +71,20 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
-    if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) return;
+    // Signed in, always the account's own name/email (the backend enforces this too) — the
+    // inputs display those, so validate them, not the form state that may never have been seeded.
+    const name = (user ? user.full_name : contactName)?.trim();
+    const email = (user ? user.email : contactEmail)?.trim();
+    if (!name || !email || !contactMessage.trim()) {
+      setContactError('Please fill in your name, email and a description before submitting.');
+      return;
+    }
     setContactError('');
     setContactSubmitting(true);
     try {
       const ticket = await api.support.submitTicket({
-        // Signed in, always the account's own name/email (the backend enforces this too).
-        name: user ? user.full_name : contactName.trim(),
-        email: user ? user.email : contactEmail.trim(),
+        name,
+        email,
         subject: `${contactCategory} — ${contactExam}`,
         message: contactMessage.trim(),
       });
@@ -472,19 +478,17 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                         setSandboxSelectedOption(opt.id);
                         setSandboxPaletteState('ANSWERED');
                       }}
-                      className={`p-3.5 rounded-xl border text-xs sm:text-sm font-medium flex items-center justify-between cursor-pointer transition-all duration-150 ${
-                        isSelected
+                      className={`p-3.5 rounded-xl border text-xs sm:text-sm font-medium flex items-center justify-between cursor-pointer transition-all duration-150 ${isSelected
                           ? 'border-institutional-500 bg-institutional-50/70 dark:bg-institutional-950/40 text-institutional-900 dark:text-institutional-100 shadow-sm ring-1 ring-institutional-500'
                           : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/40 text-charcoal-800 dark:text-charcoal-200 hover:border-charcoal-350 dark:hover:border-charcoal-700'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <span
-                          className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
-                            isSelected
+                          className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${isSelected
                               ? 'bg-institutional-600 text-white'
                               : 'bg-white dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-600 text-charcoal-700 dark:text-charcoal-300'
-                          }`}
+                            }`}
                         >
                           {opt.id}
                         </span>
@@ -650,11 +654,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 <button
                   key={tab.id}
                   onClick={() => setSelectedExamBlueprint(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-                    selectedExamBlueprint === tab.id
+                  className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${selectedExamBlueprint === tab.id
                       ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
                       : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -808,31 +811,28 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
             <div className="inline-flex p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-full text-xs font-bold gap-1 mt-4">
               <button
                 onClick={() => setActiveFeatureTab('engine')}
-                className={`px-4 py-2 rounded-full transition-all ${
-                  activeFeatureTab === 'engine'
+                className={`px-4 py-2 rounded-full transition-all ${activeFeatureTab === 'engine'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 1. PrepMagnet CBT Engine
               </button>
               <button
                 onClick={() => setActiveFeatureTab('analytics')}
-                className={`px-4 py-2 rounded-full transition-all ${
-                  activeFeatureTab === 'analytics'
+                className={`px-4 py-2 rounded-full transition-all ${activeFeatureTab === 'analytics'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 2. Deep Percentile Analytics
               </button>
               <button
                 onClick={() => setActiveFeatureTab('solutions')}
-                className={`px-4 py-2 rounded-full transition-all ${
-                  activeFeatureTab === 'solutions'
+                className={`px-4 py-2 rounded-full transition-all ${activeFeatureTab === 'solutions'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 3. Mathematical Derivations
               </button>
@@ -843,11 +843,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
             {/* Box 1 */}
             <div
-              className={`p-6 rounded-2xl border transition-all ${
-                activeFeatureTab === 'engine'
+              className={`p-6 rounded-2xl border transition-all ${activeFeatureTab === 'engine'
                   ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
                   : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
-              }`}
+                }`}
             >
               <div className="w-10 h-10 rounded-xl bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 flex items-center justify-center font-bold mb-4">
                 <ClockIcon size={20} />
@@ -867,11 +866,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
 
             {/* Box 2 */}
             <div
-              className={`p-6 rounded-2xl border transition-all ${
-                activeFeatureTab === 'analytics'
+              className={`p-6 rounded-2xl border transition-all ${activeFeatureTab === 'analytics'
                   ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
                   : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
-              }`}
+                }`}
             >
               <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold mb-4">
                 <BarChart3Icon size={20} />
@@ -891,11 +889,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
 
             {/* Box 3 */}
             <div
-              className={`p-6 rounded-2xl border transition-all ${
-                activeFeatureTab === 'solutions'
+              className={`p-6 rounded-2xl border transition-all ${activeFeatureTab === 'solutions'
                   ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
                   : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
-              }`}
+                }`}
             >
               <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold mb-4">
                 <HelpCircleIcon size={20} />
@@ -949,11 +946,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 <button
                   key={tab.id}
                   onClick={() => setCatalogTab(tab.id)}
-                  className={`px-4 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-                    catalogTab === tab.id
+                  className={`px-4 py-1.5 rounded-lg whitespace-nowrap transition-all ${catalogTab === tab.id
                       ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
                       : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -1019,147 +1015,146 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
             )
           ) : (
             <>
-          {/* Search & Subject Bar */}
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-3 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-1 md:max-w-md">
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="px-3 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500"
-              >
-                <option value="ALL">All Subjects</option>
-                <option value="Quantitative Aptitude">Quantitative Aptitude</option>
-                <option value="General Intelligence & Reasoning">General Intelligence</option>
-                <option value="English Comprehension">English Comprehension</option>
-                <option value="General Awareness">General Awareness</option>
-              </select>
+              {/* Search & Subject Bar */}
+              <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-3 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-1 md:max-w-md">
+                  <select
+                    value={selectedSubject}
+                    onChange={(e) => setSelectedSubject(e.target.value)}
+                    className="px-3 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500"
+                  >
+                    <option value="ALL">All Subjects</option>
+                    <option value="Quantitative Aptitude">Quantitative Aptitude</option>
+                    <option value="General Intelligence & Reasoning">General Intelligence</option>
+                    <option value="English Comprehension">English Comprehension</option>
+                    <option value="General Awareness">General Awareness</option>
+                  </select>
 
-              <div className="relative flex-1">
-                <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
-                <input
-                  type="text"
-                  placeholder="Search by topic (e.g. Geometry, Syllogisms)..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-institutional-500"
-                />
+                  <div className="relative flex-1">
+                    <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
+                    <input
+                      type="text"
+                      placeholder="Search by topic (e.g. Geometry, Syllogisms)..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-institutional-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Sub-filter pills: narrows the free-tests set by type */}
+                <div className="flex items-center gap-1">
+                  {[
+                    { id: 'ALL', label: 'All' },
+                    { id: 'FULL', label: 'Full' },
+                    { id: 'SUBJECT', label: 'Subject' },
+                    { id: 'TOPIC_MINI', label: 'Topic' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setSelectedType(tab.id)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${selectedType === tab.id
+                          ? 'bg-institutional-600 text-white'
+                          : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
+                        }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-xs text-charcoal-400 font-mono">
+                  Showing <strong>{filteredTests.length}</strong> free exams
+                </div>
               </div>
-            </div>
 
-            {/* Sub-filter pills: narrows the free-tests set by type */}
-            <div className="flex items-center gap-1">
-              {[
-                { id: 'ALL', label: 'All' },
-                { id: 'FULL', label: 'Full' },
-                { id: 'SUBJECT', label: 'Subject' },
-                { id: 'TOPIC_MINI', label: 'Topic' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSelectedType(tab.id)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
-                    selectedType === tab.id
-                      ? 'bg-institutional-600 text-white'
-                      : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+              {/* Test Cards Grid */}
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <div key={n} className="h-56 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
+                  ))}
+                </div>
+              ) : filteredTests.length === 0 ? (
+                <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-12 text-center space-y-3">
+                  <BookOpenIcon size={36} className="text-charcoal-400 mx-auto" />
+                  <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">
+                    No mock tests found matching criteria
+                  </h3>
+                  <p className="text-xs text-charcoal-500">
+                    Try clearing your search keyword or switching to 'All Mocks' tab above.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredTests.map((test) => (
+                    <article
+                      key={test.id}
+                      className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
+                    >
+                      <div>
+                        {/* Header: Type Pill & Difficulty */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 border border-charcoal-200 dark:border-charcoal-700">
+                            {test.test_type === 'FULL' ? 'Full Mock' : test.test_type === 'SUBJECT' ? 'Subject Mock' : 'Topic Drill'}
+                          </span>
+                          {getDifficultyBadge(test.difficulty)}
+                        </div>
 
-            <div className="text-xs text-charcoal-400 font-mono">
-              Showing <strong>{filteredTests.length}</strong> free exams
-            </div>
-          </div>
+                        {/* Title */}
+                        <h3 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                          {test.title}
+                        </h3>
 
-          {/* Test Cards Grid */}
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <div key={n} className="h-56 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
-              ))}
-            </div>
-          ) : filteredTests.length === 0 ? (
-            <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-12 text-center space-y-3">
-              <BookOpenIcon size={36} className="text-charcoal-400 mx-auto" />
-              <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">
-                No mock tests found matching criteria
-              </h3>
-              <p className="text-xs text-charcoal-500">
-                Try clearing your search keyword or switching to 'All Mocks' tab above.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTests.map((test) => (
-                <article
-                  key={test.id}
-                  className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Header: Type Pill & Difficulty */}
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 border border-charcoal-200 dark:border-charcoal-700">
-                        {test.test_type === 'FULL' ? 'Full Mock' : test.test_type === 'SUBJECT' ? 'Subject Mock' : 'Topic Drill'}
-                      </span>
-                      {getDifficultyBadge(test.difficulty)}
-                    </div>
+                        {/* Description */}
+                        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-4 leading-relaxed font-normal">
+                          {test.description || 'Full PrepMagnet CBT test simulation with negative marking and instant scorecard.'}
+                        </p>
 
-                    {/* Title */}
-                    <h3 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
-                      {test.title}
-                    </h3>
+                        {/* Subject Tags */}
+                        <div className="flex flex-wrap gap-1.5 mb-5">
+                          <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
+                            {test.subject || 'Full Syllabus'}
+                          </span>
+                          {test.topic && (
+                            <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
+                              {test.topic}
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                    {/* Description */}
-                    <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-4 leading-relaxed font-normal">
-                      {test.description || 'Full PrepMagnet CBT test simulation with negative marking and instant scorecard.'}
-                    </p>
+                      {/* Card Footer: Metadata + Actions */}
+                      <div className="pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 text-xs text-charcoal-500 font-mono">
+                          <span className="flex items-center gap-1 font-semibold">
+                            <ClockIcon size={13} className="text-charcoal-400" />
+                            {test.duration_minutes}m
+                          </span>
+                          <span>•</span>
+                          <span>{test.total_questions || 25} Qs</span>
+                        </div>
 
-                    {/* Subject Tags */}
-                    <div className="flex flex-wrap gap-1.5 mb-5">
-                      <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
-                        {test.subject || 'Full Syllabus'}
-                      </span>
-                      {test.topic && (
-                        <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
-                          {test.topic}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Card Footer: Metadata + Actions */}
-                  <div className="pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 text-xs text-charcoal-500 font-mono">
-                      <span className="flex items-center gap-1 font-semibold">
-                        <ClockIcon size={13} className="text-charcoal-400" />
-                        {test.duration_minutes}m
-                      </span>
-                      <span>•</span>
-                      <span>{test.total_questions || 25} Qs</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleTestCardClick(test)}
-                        className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors"
-                      >
-                        Rules
-                      </button>
-                      <button
-                        onClick={() => handleTestCardClick(test)}
-                        className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm"
-                      >
-                        <span>Start</span>
-                        <PlayIcon size={10} />
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleTestCardClick(test)}
+                            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors"
+                          >
+                            Rules
+                          </button>
+                          <button
+                            onClick={() => handleTestCardClick(test)}
+                            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm"
+                          >
+                            <span>Start</span>
+                            <PlayIcon size={10} />
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </section>
@@ -1353,22 +1348,20 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
             <div className="inline-flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-full border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold gap-1 mt-1 shadow-inner">
               <button
                 type="button"
-                className={`px-4 py-1.5 rounded-full transition-all duration-200 ${
-                  landingBillingCycle === 'monthly'
+                className={`px-4 py-1.5 rounded-full transition-all duration-200 ${landingBillingCycle === 'monthly'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                }`}
+                  }`}
                 onClick={() => setLandingBillingCycle('monthly')}
               >
                 Monthly Pass
               </button>
               <button
                 type="button"
-                className={`px-4 py-1.5 rounded-full transition-all duration-200 flex items-center gap-1.5 ${
-                  landingBillingCycle === 'yearly'
+                className={`px-4 py-1.5 rounded-full transition-all duration-200 flex items-center gap-1.5 ${landingBillingCycle === 'yearly'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                }`}
+                  }`}
                 onClick={() => setLandingBillingCycle('yearly')}
               >
                 <span>Annual Pass</span>
@@ -1391,11 +1384,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                 return (
                   <div
                     key={p.id}
-                    className={`group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl bg-white dark:bg-charcoal-900 border overflow-hidden ${
-                      p.badge || isAnnual
+                    className={`group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl bg-white dark:bg-charcoal-900 border overflow-hidden ${p.badge || isAnnual
                         ? 'border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted ring-1 ring-institutional-500/30'
                         : 'border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400'
-                    }`}
+                      }`}
                   >
                     {/* Badge */}
                     {(p.badge || isAnnual) && (
@@ -1447,11 +1439,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                         {(p.features && p.features.length > 0
                           ? p.features.slice(0, 4)
                           : [
-                              'Full-Length Tier-I & Tier-II Simulation Mocks',
-                              'All-India Percentile & AIR Benchmark',
-                              'Speed vs. Accuracy Tradeoff Diagnostics',
-                              'Instant Answer Keys & Mathematical Explanations',
-                            ]
+                            'Full-Length Tier-I & Tier-II Simulation Mocks',
+                            'All-India Percentile & AIR Benchmark',
+                            'Speed vs. Accuracy Tradeoff Diagnostics',
+                            'Instant Answer Keys & Mathematical Explanations',
+                          ]
                         ).map((feat, idx) => (
                           <div key={idx} className="flex items-center gap-2 text-[11px]">
                             <CheckCircleIcon size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -1464,11 +1456,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                     <div className="relative z-10 pt-2 border-t border-charcoal-100 dark:border-charcoal-800/80">
                       <button
                         onClick={() => (onNavigate ? onNavigate('subscription') : onOpenAuthModal())}
-                        className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 group/btn active:scale-[0.98] cursor-pointer ${
-                          p.badge || isAnnual
+                        className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 group/btn active:scale-[0.98] cursor-pointer ${p.badge || isAnnual
                             ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20'
                             : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
-                        }`}
+                          }`}
                       >
                         <span>Select {p.title}</span>
                         <ArrowRightIcon size={13} className="group-hover/btn:translate-x-1 transition-transform" />
@@ -1773,11 +1764,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                           onChange={(e) => setContactName(e.target.value)}
                           placeholder="e.g. Rahul Sharma"
                           title={user ? 'Signed in as this account — the ticket is raised under your own name' : undefined}
-                          className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 ${
-                            user
+                          className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 ${user
                               ? 'bg-charcoal-100 dark:bg-charcoal-800/60 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 cursor-not-allowed'
                               : 'bg-charcoal-50 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100'
-                          }`}
+                            }`}
                         />
                       </div>
 
@@ -1798,11 +1788,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal,
                           onChange={(e) => setContactEmail(e.target.value)}
                           placeholder="rahul.aspirant@gmail.com"
                           title={user ? 'Signed in as this account — the ticket is raised under your own email' : undefined}
-                          className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 ${
-                            user
+                          className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 ${user
                               ? 'bg-charcoal-100 dark:bg-charcoal-800/60 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 cursor-not-allowed'
                               : 'bg-charcoal-50 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100'
-                          }`}
+                            }`}
                         />
                       </div>
                     </div>

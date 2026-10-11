@@ -375,6 +375,59 @@ export const DEMO_QUESTIONS = [
   }
 ];
 
+// Server-Sent Events over fetch (native EventSource can't send an Authorization header).
+// Calls onEvent(event) for every pushed message, reconnects after a drop, and stops when
+// `signal` is aborted. The caller re-reads state on each (re)connect, since events sent
+// while disconnected are not replayed.
+async function streamNotifications(onEvent, signal) {
+  const RETRY_MS = 3000;
+  const wait = (ms) =>
+    new Promise((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      signal.addEventListener('abort', () => { clearTimeout(timer); resolve(); }, { once: true });
+    });
+
+  while (!signal.aborted) {
+    try {
+      const res = await fetch(`${BASE_URL}/notifications/stream`, {
+        headers: { ...getAuthHeaders(), Accept: 'text/event-stream' },
+        signal,
+      });
+      if (res.status === 401) {
+        const newToken = await refreshAccessToken();
+        if (!newToken) {
+          forceSessionExpired();
+          return;
+        }
+      } else if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let boundary;
+          while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+            const block = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+            const data = block.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim()).join('');
+            if (!data) continue; // heartbeat comment
+            try {
+              onEvent(JSON.parse(data));
+            } catch {
+              // ignore a malformed message
+            }
+          }
+        }
+      }
+    } catch {
+      if (signal.aborted) return;
+    }
+    await wait(RETRY_MS);
+  }
+}
+
 // API Endpoints Mapping
 export const api = {
   // Auth
@@ -1377,6 +1430,8 @@ export const api = {
 
   // In-app notifications (a student sees their own; an admin also sees admin-wide ones)
   notifications: {
+    stream: streamNotifications,
+
     getMine: async (unreadOnly = false) => {
       return await request(`/notifications${unreadOnly ? '?unread_only=true' : ''}`);
     },

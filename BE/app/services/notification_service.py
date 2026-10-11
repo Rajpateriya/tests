@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.core.sse_manager import sse_manager
 from app.repositories.notification_repo import NotificationRepository
 from app.schemas.notification import NotificationOut
 
@@ -23,9 +24,20 @@ class NotificationService:
             created_at=doc["created_at"],
         )
 
+    @staticmethod
+    def _to_event(doc: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "id": doc["_id"],
+            "type": doc["type"],
+            "title": doc["title"],
+            "message": doc["message"],
+            "ticket_id": doc.get("ticket_id"),
+            "created_at": doc["created_at"].isoformat(),
+        }
+
     async def notify_admins(self, type_: str, title: str, message: str, ticket_id: Optional[str] = None) -> None:
         """One shared notification every admin sees (each tracks their own read state)."""
-        await self.repo.insert({
+        doc = {
             "_id": str(uuid.uuid4()),
             "audience": "ADMIN",
             "user_id": None,
@@ -35,10 +47,12 @@ class NotificationService:
             "ticket_id": ticket_id,
             "read_by": [],
             "created_at": datetime.now(timezone.utc),
-        })
+        }
+        await self.repo.insert(doc)
+        sse_manager.push_to_admins(self._to_event(doc))
 
     async def notify_user(self, user_id: str, type_: str, title: str, message: str, ticket_id: Optional[str] = None) -> None:
-        await self.repo.insert({
+        doc = {
             "_id": str(uuid.uuid4()),
             "audience": "USER",
             "user_id": user_id,
@@ -48,7 +62,9 @@ class NotificationService:
             "ticket_id": ticket_id,
             "read_by": [],
             "created_at": datetime.now(timezone.utc),
-        })
+        }
+        await self.repo.insert(doc)
+        sse_manager.push_to_user(user_id, self._to_event(doc))
 
     async def list_mine(self, user_id: str, is_admin: bool, unread_only: bool = False) -> List[NotificationOut]:
         docs = await self.repo.list_for_viewer(user_id, is_admin, unread_only=unread_only)
