@@ -645,6 +645,16 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         </button>
                         <button
                           onClick={() => {
+                            // Admin Studio's Courses tab with the "new course" form open (/admin/courses/new).
+                            handleNavClick(`${ROUTES.admin}/courses/new`);
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
+                        >
+                          Create Course
+                        </button>
+                        <button
+                          onClick={() => {
                             handleNavClick(ROUTES.pipeline);
                             setUserDropdownOpen(false);
                           }}
