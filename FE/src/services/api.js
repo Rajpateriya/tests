@@ -446,6 +446,20 @@ export const api = {
       });
     },
 
+    sendOtp: async (email) => {
+      return await request('/auth/send-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    },
+
+    verifyOtp: async (email, otp) => {
+      return await request('/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email, otp }),
+      });
+    },
+
     forgotPassword: async (email) => {
       return await request('/auth/forgot-password', {
         method: 'POST',

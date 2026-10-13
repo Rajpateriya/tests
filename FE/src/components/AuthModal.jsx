@@ -37,7 +37,7 @@ const TARGET_EXAM_OPTIONS = [
 
 export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
   const { login, register, loading: authLoading } = useAuth();
-  const [tab, setTab] = useState(initialTab); // 'login' | 'register' | 'forgot_request' | 'forgot_reset' | 'forgot_success'
+  const [tab, setTab] = useState(initialTab); // 'login' | 'register' | 'verify_email' | 'forgot_request' | 'forgot_reset' | 'forgot_success'
   const [role, setRole] = useState('student'); // 'student' | 'admin'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +45,9 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
   const [selectedExams, setSelectedExams] = useState(['SSC CGL']);
   const [rememberMe, setRememberMe] = useState(true);
   
+  // OTP verification state
+  const [otpCode, setOtpCode] = useState('');
+
   // Forgot Password state
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -88,6 +91,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
     try {
       if (tab === 'login') {
         await login(email, password, rememberMe);
+        onClose();
       } else {
         await register({
           email,
@@ -96,8 +100,11 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
           role,
           target_exams: role === 'student' ? selectedExams : ['All Exams'],
         });
+        await api.auth.sendOtp(email);
+        setOtpCode('');
+        setTab('verify_email');
+        setSuccessMsg('A 6-digit OTP has been sent to your email.');
       }
-      onClose();
     } catch (err) {
       setErrorMsg(err.message || 'Authentication failed. Please verify your credentials.');
     }
@@ -173,7 +180,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
     }
   };
 
-  const isForgotMode = ['forgot_request', 'forgot_reset', 'forgot_success'].includes(tab);
+  const isForgotMode = ['forgot_request', 'forgot_reset', 'forgot_success', 'verify_email'].includes(tab);
 
   return (
     <div
@@ -198,6 +205,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                 <span>
                   {tab === 'login' && 'Welcome to PrepMagnet'}
                   {tab === 'register' && 'Join PrepMagnet Free'}
+                  {tab === 'verify_email' && 'Verify Your Email'}
                   {tab === 'forgot_request' && 'Forgot Password'}
                   {tab === 'forgot_reset' && 'Reset Password'}
                   {tab === 'forgot_success' && 'Password Changed!'}
@@ -206,6 +214,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {tab === 'login' && 'Role-Based Authentication Engine with Remember Me'}
                 {tab === 'register' && 'Empowering 45,000+ government job rankers'}
+                {tab === 'verify_email' && 'Enter the 6-digit OTP sent to your email'}
                 {tab === 'forgot_request' && 'Enter your email to receive a secure 6-digit OTP code'}
                 {tab === 'forgot_reset' && 'Enter the OTP verification code and choose a new password'}
                 {tab === 'forgot_success' && 'Your account security credentials have been updated'}
@@ -497,6 +506,88 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                   <span>Create Free Account & Start Mocks</span>
                 )}
               </button>
+            </form>
+          )}
+
+          {/* Email OTP Verification after Registration */}
+          {tab === 'verify_email' && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!otpCode.trim() || otpCode.length !== 6) {
+                  setErrorMsg('Please enter the 6-digit OTP.');
+                  return;
+                }
+                setErrorMsg('');
+                setIsProcessing(true);
+                try {
+                  await api.auth.verifyOtp(email, otpCode.trim());
+                  await login(email, password, rememberMe);
+                  onClose();
+                } catch (err) {
+                  setErrorMsg(err.message || 'Invalid or expired OTP. Please try again.');
+                } finally {
+                  setIsProcessing(false);
+                }
+              }}
+              className="space-y-4 text-left"
+            >
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                We sent a 6-digit OTP to <strong>{email}</strong>. Enter it below to activate your account.
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  6-Digit OTP Code
+                </label>
+                <div className="relative">
+                  <KeyIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="e.g. 483920"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full pl-9 pr-3.5 py-2.5 text-xs font-mono font-extrabold tracking-widest rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={async () => {
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                    try {
+                      await api.auth.sendOtp(email);
+                      setSuccessMsg('A new OTP has been sent to your email.');
+                    } catch (err) {
+                      setErrorMsg(err.message || 'Failed to resend OTP.');
+                    }
+                  }}
+                  className="py-2.5 px-4 rounded-xl border border-slate-300 dark:border-charcoal-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-charcoal-800 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  Resend OTP
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <span>Verify & Continue</span>
+                  )}
+                </button>
+              </div>
             </form>
           )}
 
