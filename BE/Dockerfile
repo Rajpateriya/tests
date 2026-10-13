@@ -23,6 +23,13 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
+# Pre-download the sentence-transformers model at BUILD TIME so cold starts are instant.
+# Model is cached to /opt/venv's HuggingFace cache (~90MB, baked into the image layer).
+RUN python -c "\
+from sentence_transformers import SentenceTransformer; \
+SentenceTransformer('all-MiniLM-L6-v2'); \
+print('Model downloaded and cached successfully.')"
+
 # ==========================================
 # Stage 2: Final Minimal Runtime Image
 # ==========================================
@@ -35,9 +42,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy virtualenv from builder stage (stripping gcc, build tools, & cache)
+# Copy virtualenv from builder stage (includes model cache, strips gcc/build tools)
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
+# Set HuggingFace cache dir to match where builder downloaded the model
+ENV HF_HOME="/opt/venv/huggingface"
+ENV TRANSFORMERS_CACHE="/opt/venv/huggingface"
 
 # Copy application source code
 COPY . .
