@@ -74,3 +74,11 @@ jobs:
           echo "=========================================="
           echo "Backend successfully deployed to: ${URL}"
           echo "=========================================="
+
+      - name: Fetch Cloud Run Diagnostic Logs
+        if: failure()
+        run: |
+          echo "=== Cloud Run Diagnostic Logs for ${{ env.SERVICE_NAME }} ==="
+          gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=${{ env.SERVICE_NAME }}" \
+            --limit 100 \
+            --format="value(timestamp,severity,textPayload,jsonPayload.message)" || true

@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,31 +20,49 @@ from app.middlewares.logging_middleware import RequestLoggingMiddleware
 async def lifespan(app: FastAPI):
     """
     Application lifespan context manager:
-    Initializes DB connections, Redis, and indexes on startup,
-    and closes resources on shutdown.
+    Initializes DB connections and Redis immediately so the server
+    can bind to $PORT in <1 second for Cloud Run health probes.
+    Database indexing and seeding continue safely in the background.
     """
     logger.info(f"Starting {settings.PROJECT_NAME} in '{settings.ENVIRONMENT}' mode...")
 
     # 1. Connect MongoDB
-    await db_manager.connect()
+    try:
+        await db_manager.connect()
+    except Exception as exc:
+        logger.error(f"MongoDB connect failure: {exc}")
 
     # 2. Connect Redis
-    await redis_manager.connect()
+    try:
+        await redis_manager.connect()
+    except Exception as exc:
+        logger.error(f"Redis connect failure: {exc}")
 
-    # 3. Create MongoDB indexes
-    db = db_manager.get_database()
-    await init_db_indexes(db)
+    # 3. Background task for indexing and seeding so server binds to $PORT immediately
+    async def init_data_task():
+        try:
+            db = db_manager.get_database()
+            await init_db_indexes(db)
+            await seed_database(db)
+            logger.info("Database indexes & seed completed in background.")
+        except Exception as exc:
+            logger.error(f"Background database initialization error: {exc}", exc_info=True)
 
-    # 4. Seed initial data if empty
-    await seed_database(db)
+    asyncio.create_task(init_data_task())
 
-    logger.info("Application startup sequence completed successfully.")
+    logger.info("Application startup sequence completed successfully. Server ready.")
     yield
 
     # Shutdown sequence
     logger.info("Application shutdown initiated...")
-    await redis_manager.close()
-    await db_manager.close()
+    try:
+        await redis_manager.close()
+    except Exception:
+        pass
+    try:
+        await db_manager.close()
+    except Exception:
+        pass
     logger.info("Application shutdown completed.")
 
 
@@ -104,6 +123,14 @@ def create_application() -> FastAPI:
             "docs": "/docs",
             "api_version": settings.API_V1_STR,
             "status": "operational",
+        }
+
+    @app.get("/health", tags=["Health"])
+    async def health():
+        return {
+            "status": "healthy",
+            "environment": settings.ENVIRONMENT,
+            "version": "1.0.0",
         }
 
     return app
