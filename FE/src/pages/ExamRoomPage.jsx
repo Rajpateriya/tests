@@ -31,7 +31,7 @@ import {
 const MAX_TAB_SWITCHES = 2;
 
 /**
- * Standard TCS iON / TestAce Computer Based Test (CBT) Assessment Room
+ * Standard PrepMagnet Computer Based Test (CBT) Assessment Room
  * Matches the official examination portal layout:
  * 1. Top Header: Logo, Live Assessment status, Section Timers, Candidate Node & Info.
  * 2. Sub-Header Toolbar: Section tabs, Marking scheme, Clock, Language dropdown, Q.Paper, Instructions, Font Zoom.
@@ -671,14 +671,16 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           {/* Left: Brand Emblem + Exam Title */}
           <div className="flex items-center gap-3 min-w-0">
-            {/* Hex Logo Emblem */}
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
-              <ShieldIcon size={20} />
+            {/* PrepMagnet Logo Emblem */}
+            <div className="w-9 h-9 rounded-xl bg-institutional-600 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
+              <SparklesIcon size={18} />
             </div>
 
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-extrabold text-blue-900 dark:text-blue-400 text-sm tracking-tight">TESTACE</span>
+                <span className="font-extrabold text-charcoal-900 dark:text-charcoal-100 text-sm tracking-tight">
+                  Prep<span className="text-institutional-600 dark:text-institutional-400">Magnet</span>
+                </span>
                 <span className="text-[10px] text-slate-400 font-mono">|</span>
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">ONLINE EXAM PORTAL</span>
               </div>
@@ -1226,7 +1228,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
         </div>
 
         <div className="font-mono text-[10px]">
-          © 2026 TestAce Assessment Engine. Licensed to Candidate Session. Proctored Stream Active.
+          © 2026 PrepMagnet Examination Engine. Licensed to Candidate Session. Proctored Stream Active.
         </div>
       </footer>
 
