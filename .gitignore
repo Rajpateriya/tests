@@ -35,3 +35,5 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+# Secrets notes
+GITHUB_SECRETS_COPY_PASTE.md

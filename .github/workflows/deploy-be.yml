@@ -1,0 +1,71 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'BE/**'
+      - '.github/workflows/deploy-be.yml'
+  workflow_dispatch:
+
+env:
+  GCP_REGION: us-central1
+  SERVICE_NAME: mock-exam-backend
+
+jobs:
+  deploy-backend:
+    name: Build, Push & Deploy BE
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 2. Authenticate with Google Cloud using Service Account JSON Key
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # 3. Set up Google Cloud SDK
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 4. Build and Push Backend Docker image
+      - name: Build and Push Backend to Docker Hub
+        run: |
+          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-backend:${{ github.sha }}"
+          LATEST_TAG="${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-backend:latest"
+
+          docker build -t $IMAGE_TAG -t $LATEST_TAG ./BE
+          docker push $IMAGE_TAG
+          docker push $LATEST_TAG
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # 5. Deploy to Google Cloud Run with GitHub Secrets
+      - name: Deploy Backend to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.IMAGE_TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 10 \
+            --set-env-vars "^##^ENVIRONMENT=production##DEBUG=false##MONGODB_URI=${{ secrets.MONGODB_URI }}##MONGODB_DB_NAME=mock_exam_db##JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}##RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}##RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}##RAZORPAY_WEBHOOK_SECRET=${{ secrets.RAZORPAY_WEBHOOK_SECRET }}##GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}##REDIS_FALLBACK_TO_MEMORY=true"
+
+      - name: Print Backend Service URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.GCP_REGION }} --format 'value(status.url)')
+          echo "=========================================="
+          echo "Backend successfully deployed to: ${URL}"
+          echo "=========================================="

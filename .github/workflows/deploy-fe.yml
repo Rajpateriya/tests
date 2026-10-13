@@ -1,0 +1,93 @@
+name: Deploy Frontend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'FE/**'
+      - '.github/workflows/deploy-fe.yml'
+  workflow_dispatch:
+
+env:
+  GCP_REGION: us-central1
+  BE_SERVICE_NAME: mock-exam-backend
+  FE_SERVICE_NAME: mock-exam-frontend
+
+jobs:
+  deploy-frontend:
+    name: Build, Push & Deploy FE
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 2. Authenticate with Google Cloud using Service Account JSON Key
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # 3. Set up Google Cloud SDK
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 4. Fetch the live Backend URL from Cloud Run
+      - name: Get Backend URL
+        run: |
+          BE_URL=$(gcloud run services describe ${{ env.BE_SERVICE_NAME }} --region ${{ env.GCP_REGION }} --format 'value(status.url)' 2>/dev/null || echo "")
+          if [ -n "$BE_URL" ]; then
+            echo "LIVE_API_BASE_URL=${BE_URL}/api/v1" >> $GITHUB_ENV
+            echo "Configured API URL: ${BE_URL}/api/v1"
+          else
+            echo "LIVE_API_BASE_URL=/api/v1" >> $GITHUB_ENV
+            echo "Backend service not yet found; falling back to /api/v1"
+          fi
+
+      # 5. Generate .env.production file dynamically from GitHub Secrets
+      - name: Generate .env.production file
+        run: |
+          cat <<EOF > ./FE/.env.production
+          VITE_API_BASE_URL=${{ env.LIVE_API_BASE_URL }}
+          VITE_RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}
+          EOF
+          echo "Generated .env.production successfully"
+
+      # 6. Build and Push Frontend Docker image
+      - name: Build and Push Frontend to Docker Hub
+        run: |
+          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend:${{ github.sha }}"
+          LATEST_TAG="${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend:latest"
+
+          docker build -t $IMAGE_TAG -t $LATEST_TAG ./FE
+          docker push $IMAGE_TAG
+          docker push $LATEST_TAG
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # 7. Deploy to Google Cloud Run
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.FE_SERVICE_NAME }} \
+            --image ${{ env.IMAGE_TAG }} \
+            --region ${{ env.GCP_REGION }} \
+            --port 80 \
+            --platform managed \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 10
+
+      - name: Print Frontend Service URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.FE_SERVICE_NAME }} --region ${{ env.GCP_REGION }} --format 'value(status.url)')
+          echo "=========================================="
+          echo "Frontend successfully deployed to: ${URL}"
+          echo "=========================================="
