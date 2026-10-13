@@ -48,8 +48,8 @@ jobs:
             echo "LIVE_API_BASE_URL=${BE_URL}/api/v1" >> $GITHUB_ENV
             echo "Configured API URL: ${BE_URL}/api/v1"
           else
-            echo "LIVE_API_BASE_URL=/api/v1" >> $GITHUB_ENV
-            echo "Backend service not yet found; falling back to /api/v1"
+            echo "LIVE_API_BASE_URL=https://mock-exam-backend-1029614513378.us-central1.run.app/api/v1" >> $GITHUB_ENV
+            echo "Backend service not yet found; using known fallback https://mock-exam-backend-1029614513378.us-central1.run.app/api/v1"
           fi
 
       # 5. Generate .env.production file dynamically from GitHub Secrets
