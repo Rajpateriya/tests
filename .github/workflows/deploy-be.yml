@@ -57,6 +57,10 @@ jobs:
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image ${{ env.IMAGE_TAG }} \
             --region ${{ env.GCP_REGION }} \
+            --port 8080 \
+            --memory 2Gi \
+            --cpu 1 \
+            --timeout 300 \
             --platform managed \
             --allow-unauthenticated \
             --min-instances 0 \

@@ -1,22 +1,48 @@
-FROM python:3.11-slim
+# ==========================================
+# Stage 1: Builder (Compiles & Installs Deps)
+# ==========================================
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies
+# Install build dependencies required for compiling wheels
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
+# Create isolated virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 COPY requirements.txt .
+
+# 1. Install CPU-only PyTorch (Cloud Run uses CPU; this saves ~2.2GB of NVIDIA CUDA blobs)
+# 2. Install remaining requirements cleanly into /opt/venv
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
+
+# ==========================================
+# Stage 2: Final Minimal Runtime Image
+# ==========================================
+FROM python:3.11-slim AS runner
+
+WORKDIR /app
+
+# Install only minimal runtime utilities (curl for healthchecks)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtualenv from builder stage (stripping gcc, build tools, & cache)
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application source code
 COPY . .
 
-# Expose FastAPI port
+# Expose default port
 EXPOSE 8000
 
 # Run uvicorn dynamically respecting Cloud Run's $PORT (fallback to 8000)
