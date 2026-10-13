@@ -53,6 +53,15 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+class SendOtpRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+
 class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     target_exams: Optional[List[str]] = None

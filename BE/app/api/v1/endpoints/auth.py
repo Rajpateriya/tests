@@ -10,10 +10,12 @@ from app.schemas.user import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     ResetPasswordRequest,
+    SendOtpRequest,
     TokenResponse,
     UserLoginRequest,
     UserRegisterRequest,
     UserResponse,
+    VerifyOtpRequest,
 )
 from app.services.auth_service import AuthService
 
@@ -51,6 +53,28 @@ async def login(
             "user": result["user"].model_dump(),
         },
     )
+
+
+@router.post("/send-otp", response_model=APIResponse[dict])
+async def send_otp(
+    req: SendOtpRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Send a 6-digit OTP to the user's email."""
+    auth_service = AuthService(db)
+    await auth_service.send_otp(req)
+    return APIResponse(success=True, message="OTP sent to your email", data={})
+
+
+@router.post("/verify-otp", response_model=APIResponse[dict])
+async def verify_otp(
+    req: VerifyOtpRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Verify the OTP sent to the user's email."""
+    auth_service = AuthService(db)
+    await auth_service.verify_otp(req)
+    return APIResponse(success=True, message="OTP verified successfully", data={})
 
 
 @router.post("/forgot-password", response_model=APIResponse[ForgotPasswordResponse])

@@ -164,6 +164,36 @@ class UserRepository(BaseRepository):
         )
         return await self.get_by_id(user["_id"])
 
+    async def set_otp(self, email: str, otp: str, expires_at: datetime) -> None:
+        await self.collection.update_one(
+            {"email": email.lower().strip()},
+            {"$set": {"otp": otp, "otp_expires_at": expires_at}},
+        )
+
+    async def verify_and_clear_otp(self, email: str, otp: str) -> Optional[Dict[str, Any]]:
+        user = await self.get_by_email(email)
+        if not user:
+            return None
+        stored_otp = user.get("otp")
+        expires_at = user.get("otp_expires_at")
+        if not stored_otp or not expires_at:
+            return None
+        if isinstance(expires_at, str):
+            try:
+                expires_at = datetime.fromisoformat(expires_at)
+            except Exception:
+                pass
+        now = datetime.now(timezone.utc)
+        if hasattr(expires_at, "tzinfo") and expires_at.tzinfo is None:
+            now = now.replace(tzinfo=None)
+        if stored_otp.strip() != otp.strip() or expires_at < now:
+            return None
+        await self.collection.update_one(
+            {"_id": user["_id"]},
+            {"$unset": {"otp": "", "otp_expires_at": ""}},
+        )
+        return await self.get_by_id(user["_id"])
+
     async def get_paginated_users(
         self,
         query: Dict[str, Any],

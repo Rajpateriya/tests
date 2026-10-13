@@ -1,6 +1,7 @@
 import math
 import secrets
 import uuid
+import resend
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -26,12 +27,14 @@ from app.schemas.user import (
     ForgotPasswordResponse,
     PaginatedUsersResponse,
     ResetPasswordRequest,
+    SendOtpRequest,
     TokenResponse,
     UserAdminUpdate,
     UserLoginRequest,
     UserProfileUpdate,
     UserRegisterRequest,
     UserResponse,
+    VerifyOtpRequest,
 )
 
 
@@ -152,6 +155,29 @@ class AuthService:
             "email": req.email,
             "message": "Password has been successfully updated. You may now sign in with your new password.",
         }
+
+    async def send_otp(self, req: SendOtpRequest) -> None:
+        user = await self.repo.get_by_email(req.email)
+        if not user:
+            raise NotFoundException(f"No registered account found with email '{req.email}'")
+
+        otp = f"{secrets.randbelow(900000) + 100000}"
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        await self.repo.set_otp(req.email, otp, expires_at)
+
+        resend.api_key = settings.RESEND_API_KEY
+        resend.Emails.send({
+            "from": settings.RESEND_FROM_EMAIL,
+            "to": req.email,
+            "subject": "Your OTP Code",
+            "html": f"<p>Your OTP is <strong>{otp}</strong>. Valid for 10 minutes.</p>",
+        })
+
+    async def verify_otp(self, req: VerifyOtpRequest) -> bool:
+        user = await self.repo.verify_and_clear_otp(req.email, req.otp)
+        if not user:
+            raise UnauthorizedException("Invalid or expired OTP. Please request a new one.")
+        return True
 
     async def logout(self, access_token: Optional[str], refresh_token: Optional[str] = None) -> None:
         """Blacklist the given token(s) by their `jti`, so neither can be used again even

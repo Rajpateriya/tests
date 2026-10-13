@@ -53,6 +53,8 @@ class UserInDB(BaseModel):
     role: UserRole = UserRole.STUDENT
     is_active: bool = True
     profile: UserProfile = Field(default_factory=UserProfile)
+    otp: Optional[str] = None
+    otp_expires_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
