@@ -4,6 +4,7 @@ import { ThemeProvider } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { AuthModal } from './components/AuthModal';
+import { TestRulesModal } from './components/TestRulesModal';
 import { TestDiscoveryPage } from './pages/TestDiscoveryPage';
 import { ExamRoomPage } from './pages/ExamRoomPage';
 import { ResultScorecardPage } from './pages/ResultScorecardPage';
@@ -110,6 +111,8 @@ function AppContent() {
     }
   }, [user, pendingTestToStart]);
 
+  const [rulesModalTest, setRulesModalTest] = useState(null);
+
   // Start / Resume Mock Exam
   const handleStartTest = async (input) => {
     if (!user) {
@@ -139,15 +142,33 @@ function AppContent() {
       return;
     }
 
-    // New start: ask the backend to create the attempt (server-side timer + question set).
+    // New start: Present Pre-Exam Instructions & Candidate Declaration page before starting
+    let resolvedTest = testOrAttempt;
+    const testId = testOrAttempt.id || testOrAttempt.test_id;
+    if ((!resolvedTest.title || !resolvedTest.duration_minutes) && testId) {
+      try {
+        const details = await api.tests.getDetails(testId);
+        if (details) resolvedTest = { ...details, ...resolvedTest };
+      } catch (err) {
+        console.warn('Could not fetch test details for rules modal:', err);
+      }
+    }
+    setRulesModalTest(resolvedTest);
+  };
+
+  // Candidate finished reading instructions and accepted declaration ("I am ready to begin")
+  const handleExecuteStartExam = async (test) => {
+    setRulesModalTest(null);
+    if (starting) return;
+    setStartError('');
     setStarting(true);
     try {
-      const session = await api.tests.start(testOrAttempt.id || testOrAttempt.test_id);
+      const session = await api.tests.start(test.id || test.test_id);
       setActiveAttempt({
         attempt_id: session.attempt_id,
         test_id: session.test_id,
-        test_title: session.test_title,
-        duration_minutes: session.duration_minutes,
+        test_title: session.test_title || test.title,
+        duration_minutes: session.duration_minutes || test.duration_minutes,
       });
       navigate(ROUTES.exam);
     } catch (err) {
@@ -291,6 +312,15 @@ function AppContent() {
         isOpen={authModalState.isOpen}
         initialTab={authModalState.initialTab}
         onClose={handleCloseAuthModal}
+      />
+
+      {/* Official Pre-Exam Instructions & Candidate Declaration Page Modal */}
+      <TestRulesModal
+        test={rulesModalTest}
+        isOpen={!!rulesModalTest}
+        onClose={() => setRulesModalTest(null)}
+        onStartExam={handleExecuteStartExam}
+        onOpenAuthModal={handleOpenAuthModal}
       />
     </div>
   );

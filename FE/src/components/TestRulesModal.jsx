@@ -20,11 +20,57 @@ import {
  * 2. Step 2: Declarative Page with legal undertaking, mandatory declaration checkbox,
  *    and candidate name placeholder signature that enables the "I am ready to begin" button.
  */
+const INSTRUCTIONS_DATA = {
+  English: {
+    instructionsTitle: 'Important Examination Instructions:',
+    rules: [
+      'The examination countdown timer at the top-right corner displays time remaining in real time synchronized with the server.',
+      'Click on question numbers in the Question Palette to navigate directly to any question.',
+      'To select your answer, click on one of the option buttons. To deselect, click on the Clear Response button.',
+      'Click Save & Next to save your answer and move to the next question.',
+      'Switching browser tabs or exiting fullscreen will trigger an examination integrity alert.',
+    ],
+    undertakingTitle: 'Official Candidate Undertaking:',
+    undertaking: [
+      '1. I have read, understood and agree to strictly comply with all the instructions given regarding this Computer-Based Examination.',
+      '2. I hereby declare that the computer workstation, display monitor, mouse and keyboard provided to me are in proper operational order.',
+      '3. I declare that I am not in possession of, carrying, or consulting any prohibited items such as mobile phones, smartwatches, calculators, electronic gadgets, or written paper chits.',
+      '4. I understand that attempting window switching, developer tools inspection, or unauthorized keyboard combinations will register integrity violations.',
+      '5. I agree that in case of not adhering to the examination code of conduct, I shall be liable for immediate disqualification and debarment from the platform.',
+    ],
+    declarationLabel: 'I have read and understood all the instructions above and I agree to the candidate declaration terms.',
+    readyMsg: 'Declaration accepted. You may now commence the exam.',
+    proceedBtn: 'Begin Mock Exam (Declaration)',
+    startBtn: 'I am ready to begin',
+  },
+  Hindi: {
+    instructionsTitle: 'महत्वपूर्ण परीक्षा निर्देश (Examination Instructions):',
+    rules: [
+      'ऊपरी दाएं कोने में परीक्षा उलटी गिनती घड़ी (टाइमर) सर्वर के साथ वास्तविक समय में समन्वित शेष समय प्रदर्शित करती है।',
+      'किसी भी प्रश्न पर सीधे जाने के लिए प्रश्न पैलेट (Question Palette) में प्रश्न संख्या पर क्लिक करें।',
+      'अपना उत्तर चुनने के लिए विकल्प बटन पर क्लिक करें। चयन हटाने के लिए Clear Response बटन पर क्लिक करें।',
+      'उत्तर सुरक्षित करने और अगले प्रश्न पर जाने के लिए Save & Next पर क्लिक करें।',
+      'ब्राउज़र टैब बदलना या फ़ुलस्क्रीन से बाहर निकलना परीक्षा अखंडता उल्लंघन (Integrity Alert) दर्ज करेगा।',
+    ],
+    undertakingTitle: 'उम्मीदवार का आधिकारिक वचनपत्र (Official Candidate Undertaking):',
+    undertaking: [
+      '1. मैंने इस कंप्यूटर आधारित परीक्षा (CBT) के संबंध में दिए गए सभी निर्देशों को पढ़ और समझ लिया है तथा मैं इनका कड़ाई से पालन करने के लिए सहमत हूँ।',
+      '2. मैं घोषित करता/करती हूँ कि मुझे प्रदान किया गया कंप्यूटर वर्कस्टेशन, मॉनिटर, माउस और कीबोर्ड सही ढंग से काम कर रहे हैं।',
+      '3. मैं घोषित करता/करती हूँ कि मेरे पास कोई भी प्रतिबंधित वस्तु जैसे मोबाइल, स्मार्टवॉच, कैलकुलेटर या कागज़ की पर्चियां नहीं हैं।',
+      '4. मैं समझता/समझती हूँ कि विंडो बदलना या अनधिकृत कीबोर्ड शॉर्टकट का प्रयास करना अखंडता उल्लंघन के रूप में दर्ज होगा।',
+      '5. परीक्षा आचार संहिता का उल्लंघन करने पर मुझे तत्काल अयोग्य घोषित किया जा सकता है।',
+    ],
+    declarationLabel: 'मैंने ऊपर दिए गए सभी निर्देशों को पढ़ और समझ लिया है तथा मैं घोषणा की शर्तों से सहमत हूँ।',
+    readyMsg: 'घोषणा स्वीकार कर ली गई है। अब आप परीक्षा शुरू कर सकते हैं।',
+    proceedBtn: 'निर्देश आगे बढ़ाएं (घोषणा पत्र)',
+    startBtn: 'मैं परीक्षा शुरू करने के लिए तैयार हूँ',
+  },
+};
+
 export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthModal }) => {
   const { user } = useAuth();
   const [step, setStep] = useState('instructions'); // 'instructions' | 'declaration'
   const [isDeclared, setIsDeclared] = useState(false);
-  const [candidateName, setCandidateName] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('English');
 
   // Reset state whenever modal opens for a test
@@ -32,13 +78,13 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
     if (isOpen) {
       setStep('instructions');
       setIsDeclared(false);
-      setCandidateName(user?.full_name || '');
     }
   }, [isOpen, test, user]);
 
   if (!isOpen || !test) return null;
 
-  const isStartButtonEnabled = isDeclared && candidateName.trim().length > 0;
+  const currentText = INSTRUCTIONS_DATA[selectedLanguage] || INSTRUCTIONS_DATA.English;
+  const isStartButtonEnabled = isDeclared;
 
   const handleStartExamClick = () => {
     if (!user) {
@@ -57,7 +103,7 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-750 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl space-y-5 animate-scale-in max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-750 rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl space-y-5 animate-scale-in max-h-[92vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -163,7 +209,7 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
                 <div>
                   <div className="text-[10px] text-charcoal-500 uppercase font-semibold">Questions</div>
                   <div className="text-sm font-bold text-charcoal-900 dark:text-charcoal-100 mt-0.5">
-                    📝 {test.total_questions || 25}
+                    📝 {test.total_questions || test.questions?.length || 25}
                   </div>
                 </div>
                 <div>
@@ -181,7 +227,7 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
               </div>
 
               {/* TCS iON Standard Question Palette Legend */}
-              <div className="p-3.5 rounded-2xl bg-charcoal-50 dark:bg-charcoal-800/40 border border-charcoal-200 dark:border-charcoal-750 space-y-2">
+              <div className="p-3.5 rounded-2xl bg-charcoal-50 dark:bg-charcoal-800/40 border border-charcoal-200 dark:border-charcoal-755 space-y-2">
                 <span className="text-[11px] font-black uppercase tracking-wider text-charcoal-600 dark:text-charcoal-300 block">
                   Question Palette Status Legend:
                 </span>
@@ -216,24 +262,12 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
               {/* Institutional Instructions */}
               <div className="space-y-2 text-xs leading-relaxed">
                 <h4 className="font-extrabold text-charcoal-900 dark:text-white uppercase text-[11px] tracking-wider">
-                  Important Examination Instructions:
+                  {currentText.instructionsTitle}
                 </h4>
                 <ul className="space-y-1.5 list-disc pl-4 text-charcoal-600 dark:text-charcoal-400">
-                  <li>
-                    The examination countdown timer at the top-right corner displays time remaining in real time synchronized with the server.
-                  </li>
-                  <li>
-                    Click on question numbers in the Question Palette to navigate directly to any question.
-                  </li>
-                  <li>
-                    To select your answer, click on one of the option buttons. To deselect, click on the Clear Response button.
-                  </li>
-                  <li>
-                    Click <strong>Save & Next</strong> to save your answer and move to the next question.
-                  </li>
-                  <li>
-                    Switching browser tabs or exiting fullscreen will trigger an examination integrity alert.
-                  </li>
+                  {currentText.rules.map((rule, idx) => (
+                    <li key={idx}>{rule}</li>
+                  ))}
                 </ul>
               </div>
 
@@ -288,24 +322,12 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
               <div className="p-4 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-750 space-y-2">
                 <span className="text-xs font-black uppercase tracking-wider text-charcoal-800 dark:text-charcoal-200 flex items-center gap-1.5">
                   <ShieldIcon size={14} className="text-institutional-600" />
-                  Official Candidate Undertaking:
+                  {currentText.undertakingTitle}
                 </span>
-                <div className="text-xs text-charcoal-600 dark:text-charcoal-400 space-y-2 leading-relaxed max-h-40 overflow-y-auto pr-2 border-y border-charcoal-200/60 dark:border-charcoal-750 py-2 text-justify">
-                  <p>
-                    1. I have read, understood and agree to strictly comply with all the instructions given regarding this Computer-Based Examination.
-                  </p>
-                  <p>
-                    2. I hereby declare that the computer workstation, display monitor, mouse and keyboard provided to me are in proper operational order.
-                  </p>
-                  <p>
-                    3. I declare that I am not in possession of, carrying, or consulting any prohibited items such as mobile phones, smartwatches, calculators, electronic gadgets, or written paper chits.
-                  </p>
-                  <p>
-                    4. I understand that attempting window switching, developer tools inspection, or unauthorized keyboard combinations will register integrity violations.
-                  </p>
-                  <p>
-                    5. I agree that in case of not adhering to the examination code of conduct, I shall be liable for immediate disqualification and debarment from the platform.
-                  </p>
+                <div className="text-xs text-charcoal-600 dark:text-charcoal-400 space-y-2 leading-relaxed max-h-48 overflow-y-auto pr-2 border-y border-charcoal-200/60 dark:border-charcoal-750 py-2 text-justify">
+                  {currentText.undertaking.map((item, idx) => (
+                    <p key={idx}>{item}</p>
+                  ))}
                 </div>
 
                 {/* THE DECLARATION CHECKBOX */}
@@ -318,57 +340,23 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
                     className="w-4 h-4 mt-0.5 rounded border-charcoal-300 dark:border-charcoal-600 text-institutional-600 focus:ring-institutional-500 cursor-pointer"
                   />
                   <span className="text-xs font-bold text-charcoal-900 dark:text-white group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
-                    I have read and understood all the instructions above and I agree to the candidate declaration terms.
+                    {currentText.declarationLabel}
                   </span>
                 </label>
-              </div>
-
-              {/* CANDIDATE NAME INPUT (PLACEHOLDER SIGNATURE) */}
-              <div className="p-4 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-750 space-y-2">
-                <label
-                  htmlFor="candidate-name-signature"
-                  className="block text-xs font-black uppercase tracking-wider text-charcoal-800 dark:text-charcoal-200"
-                >
-                  Candidate Digital Signature Confirmation:
-                </label>
-                <p className="text-[11px] text-charcoal-500">
-                  Please type your full name in the placeholder field below to acknowledge and enable the start button.
-                </p>
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="candidate-name-signature"
-                    value={candidateName}
-                    onChange={(e) => setCandidateName(e.target.value)}
-                    placeholder={user?.full_name ? `Enter your name (e.g. ${user.full_name})` : "Enter your full name to enable start (e.g. Rahul Sharma)"}
-                    className="w-full px-4 py-2.5 rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-900 text-sm font-semibold text-charcoal-900 dark:text-white placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all"
-                  />
-                  {candidateName.trim().length > 0 && (
-                    <span className="absolute right-3 top-2.5 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-1">
-                      <CheckCircleIcon size={14} /> Verified
-                    </span>
-                  )}
-                </div>
               </div>
 
               {/* Dynamic Validation Status Helper */}
-              {!isStartButtonEnabled && (
+              {!isStartButtonEnabled ? (
                 <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-2">
                   <AlertTriangleIcon size={14} className="shrink-0" />
                   <span>
-                    {!isDeclared && !candidateName.trim()
-                      ? 'Please check the declaration checkbox AND enter your name in the placeholder to enable the start button.'
-                      : !isDeclared
-                        ? 'Please check the declaration checkbox to proceed.'
-                        : 'Please enter your full name in the signature field above.'}
+                    Please check the declaration checkbox above to acknowledge the examination rules and enable the start button.
                   </span>
                 </div>
-              )}
-
-              {isStartButtonEnabled && (
+              ) : (
                 <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
                   <CheckCircleIcon size={14} className="shrink-0 text-emerald-600" />
-                  <span>Declaration accepted and identity confirmed. You may now commence the exam.</span>
+                  <span>{currentText.readyMsg}</span>
                 </div>
               )}
             </div>
@@ -407,7 +395,7 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
               }}
               className="px-5 py-2.5 text-xs font-extrabold text-white bg-institutional-600 hover:bg-institutional-700 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
             >
-              <span>{!user ? 'Sign In to Begin Mock Exam' : 'Begin Mock Exam (Declaration)'}</span>
+              <span>{!user ? 'Sign In to Begin Mock Exam' : currentText.proceedBtn}</span>
               <ArrowRightIcon size={14} />
             </button>
           ) : (
@@ -422,7 +410,7 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
               }`}
             >
               <PlayIcon size={13} />
-              <span>I am ready to begin</span>
+              <span>{currentText.startBtn}</span>
             </button>
           )}
         </div>

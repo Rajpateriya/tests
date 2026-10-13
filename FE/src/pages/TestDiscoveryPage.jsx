@@ -27,7 +27,6 @@ import {
   SendIcon,
   MessageSquareIcon,
 } from '../components/Icons';
-import { TestRulesModal } from '../components/TestRulesModal';
 
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
@@ -45,7 +44,6 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   const [selectedType, setSelectedType] = useState('ALL'); // ALL | FULL | SUBJECT | TOPIC_MINI
   const [selectedSubject, setSelectedSubject] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [modalTest, setModalTest] = useState(null);
   const [activeFeatureTab, setActiveFeatureTab] = useState('engine'); // 'engine' | 'analytics' | 'solutions'
 
   // Interactive Blueprint Explorer State
@@ -214,7 +212,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   };
 
   const handleTestCardClick = (test) => {
-    setModalTest(test);
+    onStartTest(test);
   };
 
   // Percentile & Rank computation for the interactive predictor
@@ -1940,15 +1938,6 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           </div>
         </section>
       </main>
-
-      {/* Rules Modal */}
-      <TestRulesModal
-        test={modalTest}
-        isOpen={!!modalTest}
-        onClose={() => setModalTest(null)}
-        onStartExam={(test) => onStartTest(test)}
-        onOpenAuthModal={onOpenAuthModal}
-      />
     </div>
   );
 };

@@ -459,8 +459,8 @@ export const CoursesPage = ({ onStartTest }) => {
                                 ) : isEnrolled ? (
                                   <button
                                     type="button"
-                                    onClick={() => onStartTest && onStartTest(quiz.id)}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shrink-0 transition-colors"
+                                    onClick={() => onStartTest && onStartTest(quiz)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shrink-0 transition-colors cursor-pointer"
                                   >
                                     <PlayIcon size={10} />
                                     Start

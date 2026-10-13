@@ -79,7 +79,7 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
       .then((profile) => {
         if (profile?.profile?.coins_balance !== undefined) setUserCoins(profile.profile.coins_balance);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [courseId]);
 
   const openPreview = (quiz) => {
@@ -366,11 +366,10 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                     <button
                       key={tab.id}
                       onClick={() => setQuizFilter(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-                        quizFilter === tab.id
+                      className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${quizFilter === tab.id
                           ? 'bg-white dark:bg-charcoal-900 text-institutional-700 dark:text-institutional-300 shadow-sm font-extrabold'
                           : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                      }`}
+                        }`}
                     >
                       {tab.label} <span className="font-mono opacity-70">{tab.count}</span>
                     </button>
@@ -394,11 +393,10 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                       className="group flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-300 dark:hover:border-institutional-700 hover:shadow-card transition-all"
                     >
                       <div
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                          isDrill
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isDrill
                             ? 'bg-institutional-50 dark:bg-institutional-950/50 text-institutional-600 dark:text-institutional-300'
                             : 'bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300'
-                        }`}
+                          }`}
                       >
                         {isDrill ? <BookOpenIcon size={16} /> : <LayersIcon size={16} />}
                       </div>
@@ -407,11 +405,10 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                         <div className="flex items-center gap-2">
                           <div className="font-bold text-sm text-charcoal-900 dark:text-white truncate">{quiz.title}</div>
                           <span
-                            className={`hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
-                              isDrill
+                            className={`hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${isDrill
                                 ? 'bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300'
                                 : 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300'
-                            }`}
+                              }`}
                           >
                             {isDrill ? 'Drill' : 'Mock'}
                           </span>
@@ -449,8 +446,8 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                       ) : isEnrolled ? (
                         <button
                           type="button"
-                          onClick={() => onStartTest && onStartTest(quiz.id)}
-                          className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-colors"
+                          onClick={() => onStartTest && onStartTest(quiz)}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
                         >
                           <PlayIcon size={11} />
                           <span>Start</span>
@@ -522,17 +519,15 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                     return (
                       <div
                         key={opt.id}
-                        className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${
-                          isCorrect
+                        className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${isCorrect
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200'
                             : 'bg-white dark:bg-charcoal-850 border-charcoal-200 dark:border-charcoal-800 text-charcoal-700 dark:text-charcoal-300'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-2.5">
                           <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${
-                              isCorrect ? 'bg-emerald-600 text-white' : 'bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-800 dark:text-charcoal-200'
-                            }`}
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${isCorrect ? 'bg-emerald-600 text-white' : 'bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-800 dark:text-charcoal-200'
+                              }`}
                           >
                             {opt.id}
                           </span>

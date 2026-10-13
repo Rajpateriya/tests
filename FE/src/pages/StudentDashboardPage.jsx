@@ -32,7 +32,6 @@ import {
   SearchIcon,
   XIcon,
 } from '../components/Icons';
-import { TestRulesModal } from '../components/TestRulesModal';
 import { AnalyticsDashboardView } from '../components/AnalyticsDashboardView';
 
 /**
@@ -82,7 +81,6 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
   const [exploreCourses, setExploreCourses] = useState([]);
   const [typingStats, setTypingStats] = useState(null);
   const [activeCourseModal, setActiveCourseModal] = useState(null);
-  const [dashboardRulesModalTest, setDashboardRulesModalTest] = useState(null);
   const [myTickets, setMyTickets] = useState([]);
   const [myTicketsLoading, setMyTicketsLoading] = useState(false);
   const [ticketStatusFilter, setTicketStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'RESOLVED'
@@ -1476,7 +1474,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                     <span>📝 {test.total_questions} Qs</span>
                   </div>
                   <button
-                    onClick={() => setDashboardRulesModalTest(test)}
+                    onClick={() => onStartTest(test)}
                     className="px-3.5 py-1.5 text-xs font-extrabold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <PlayIcon size={11} />
@@ -1968,7 +1966,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                           <button
                             onClick={() => {
                               setActiveCourseModal(null);
-                              onStartTest(currentQuiz.id);
+                              onStartTest(currentQuiz);
                             }}
                             className="px-5 py-2 rounded-xl text-xs font-bold bg-institutional-600 hover:bg-institutional-700 text-white shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5"
                           >
@@ -2114,15 +2112,6 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
         </div>
       )}
 
-      {/* =========================================================================
-          6. PRE-EXAM INSTRUCTIONS & CANDIDATE DECLARATION MODAL
-          ========================================================================= */}
-      <TestRulesModal
-        test={dashboardRulesModalTest}
-        isOpen={!!dashboardRulesModalTest}
-        onClose={() => setDashboardRulesModalTest(null)}
-        onStartExam={(test) => onStartTest(test.id || test)}
-      />
     </div>
   );
 };
