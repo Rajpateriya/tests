@@ -39,9 +39,10 @@ FROM python:3.11-slim AS runner
 
 WORKDIR /app
 
-# Install only minimal runtime utilities (curl for healthchecks)
+# Install minimal runtime utilities (curl for healthchecks, libgomp1 for torch/sentence-transformers)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtualenv from builder stage (includes model cache, strips gcc/build tools)
