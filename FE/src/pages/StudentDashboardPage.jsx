@@ -134,14 +134,19 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
   const loadStreakAndHeader = async () => {
     setLoading(true);
     try {
-      const streakRes = await api.streak.getStreak();
-      setStreakData(streakRes);
+      const [streakRes, dashRes] = await Promise.allSettled([
+        api.streak.getStreak(),
+        user?.id ? api.users.getDashboard(user.id) : Promise.resolve(null),
+      ]);
+      if (streakRes.status === 'fulfilled') setStreakData(streakRes.value);
+      if (dashRes.status === 'fulfilled' && dashRes.value) setDashboard(dashRes.value);
 
+      const streakVal = streakRes.status === 'fulfilled' ? streakRes.value : null;
       const todayStr = new Date().toISOString().slice(0, 10);
       const cacheKey = `prepmagnet_daily_${user?.id || 'user'}_${todayStr}`;
       const cachedToday = localStorage.getItem(cacheKey);
 
-      if (streakRes?.today_completed || cachedToday) {
+      if (streakVal?.today_completed || cachedToday) {
         setIsDailyCompleted(true);
         if (cachedToday) {
           try {
@@ -182,10 +187,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
   const mocksLoaded = useRef(false);
   const supportLoaded = useRef(false);
   useEffect(() => {
-    if (activeTab === 'analytics' && !analyticsLoaded.current) {
+    if (activeTab === 'analytics' && !analyticsLoaded.current && user?.id) {
       analyticsLoaded.current = true;
       api.users
-        .getDashboard(user?.id || 'student-primary-id')
+        .getDashboard(user.id)
         .then(setDashboard)
         .catch((err) => console.warn('Failed to load analytics:', err));
     }
@@ -558,28 +563,32 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
 
               {/* Target Exam Chips & Countdown */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                {(user?.profile?.target_exams && user.profile.target_exams.length > 0
-                  ? user.profile.target_exams
-                  : ['SSC CGL Tier-1 2026']
-                ).map((exam) => (
-                  <span
-                    key={exam}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-semibold bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700"
-                  >
-                    <TargetIcon size={12} className="text-amber-500" />
-                    <span>{exam}</span>
+                {user?.profile?.target_exams && user.profile.target_exams.length > 0 ? (
+                  user.profile.target_exams.map((exam) => (
+                    <span
+                      key={exam}
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-semibold bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700"
+                    >
+                      <TargetIcon size={12} className="text-amber-500" />
+                      <span>{exam}</span>
+                    </span>
+                  ))
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-semibold bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
+                    <TargetIcon size={12} className="text-institutional-500" />
+                    <span>General Aspirant</span>
                   </span>
-                ))}
+                )}
 
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                   <ClockIcon size={12} className="text-amber-600" />
-                  <span>Target Exam in 42 Days</span>
+                  <span>Daily Practice Active</span>
                 </span>
               </div>
 
               {/* Email & Feedback Toast */}
               <div className="flex items-center gap-2 text-xs text-charcoal-500 dark:text-charcoal-400">
-                <span>{user?.email || 'student@gmail.com'}</span>
+                <span>{user?.email || ''}</span>
                 {avatarToast && (
                   <span
                     className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
@@ -634,14 +643,32 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             <div className="text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">
               Predicted All-India Rank
             </div>
-            <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 flex items-baseline gap-1.5 font-mono">
-              <span>#420</span>
-              <span className="text-xs font-normal text-charcoal-400">/ 12,450</span>
-            </div>
-            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-1 flex items-center gap-1">
-              <span>↑ Top 3.4% Percentile</span>
-              <span className="text-charcoal-400 font-normal">(Safe Cutoff)</span>
-            </div>
+            {dashboard?.total_mocks_attempted > 0 && dashboard?.global_rank > 0 ? (
+              <>
+                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 flex items-baseline gap-1.5 font-mono">
+                  <span>#{dashboard.global_rank}</span>
+                  <span className="text-xs font-normal text-charcoal-400">/ {(dashboard.total_candidates || 1).toLocaleString()}</span>
+                </div>
+                <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-1 flex items-center gap-1">
+                  <span>↑ Top {Math.max(0.1, (100 - (dashboard.overall_percentile || 0))).toFixed(1)}% Percentile</span>
+                  <span className="text-charcoal-400 font-normal">
+                    {dashboard.overall_percentile >= 75 ? '(Safe Cutoff)' : '(Competitive)'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 flex items-baseline gap-1.5 font-mono">
+                  <span className="text-charcoal-400">—</span>
+                  <span className="text-xs font-normal text-charcoal-400">
+                    {dashboard?.total_candidates ? `/ ${dashboard.total_candidates.toLocaleString()} Aspirants` : ''}
+                  </span>
+                </div>
+                <div className="text-[11px] text-charcoal-400 font-medium mt-1">
+                  Complete a mock to unlock rank
+                </div>
+              </>
+            )}
           </div>
           <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
             <TrophyIcon size={20} />
@@ -654,12 +681,25 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             <div className="text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">
               Net Mock Accuracy
             </div>
-            <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono">
-              79.4%
-            </div>
-            <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium mt-1">
-              PrepMagnet Formula: +2.0 / -0.5
-            </div>
+            {dashboard?.total_mocks_attempted > 0 ? (
+              <>
+                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono">
+                  {(dashboard.average_accuracy || 0).toFixed(1)}%
+                </div>
+                <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium mt-1">
+                  Across {dashboard.total_mocks_attempted} submitted {dashboard.total_mocks_attempted === 1 ? 'mock' : 'mocks'}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono text-charcoal-400">
+                  0.0%
+                </div>
+                <div className="text-[11px] text-charcoal-400 font-medium mt-1">
+                  No mock exams submitted yet
+                </div>
+              </>
+            )}
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <TargetIcon size={20} />
@@ -672,12 +712,27 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             <div className="text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">
               Avg Speed / Question
             </div>
-            <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono">
-              48s <span className="text-xs font-normal text-charcoal-400">/ Q</span>
-            </div>
-            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-1">
-              ⚡ 12s faster than cutoff pace
-            </div>
+            {dashboard?.total_mocks_attempted > 0 && dashboard?.avg_speed_seconds > 0 ? (
+              <>
+                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono">
+                  {Math.round(dashboard.avg_speed_seconds)}s <span className="text-xs font-normal text-charcoal-400">/ Q</span>
+                </div>
+                <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-1">
+                  {dashboard.avg_speed_seconds <= 60
+                    ? `⚡ ${Math.round(60 - dashboard.avg_speed_seconds)}s faster than 60s benchmark`
+                    : `⚠️ ${Math.round(dashboard.avg_speed_seconds - 60)}s slower than 60s benchmark`}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono text-charcoal-400">
+                  — <span className="text-xs font-normal text-charcoal-400">/ Q</span>
+                </div>
+                <div className="text-[11px] text-charcoal-400 font-medium mt-1">
+                  Benchmark cutoff pace: 60s / Q
+                </div>
+              </>
+            )}
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
             <ClockIcon size={20} />

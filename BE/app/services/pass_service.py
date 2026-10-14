@@ -34,64 +34,9 @@ class PassService:
         self.orders_collection = db["orders"]
         self.payments_collection = db["payments"]
 
-    # ── Auto-seed default passes if DB is empty ──────────────────────────────
-    async def ensure_default_passes(self) -> None:
-        """Seed default Monthly and Annual Passes if no passes exist."""
-        existing = await self.pass_repo.get_all_passes()
-        if existing:
-            return
-
-        # Fetch all courses to cover them by default
-        all_courses = await self.course_repo.get_active_courses()
-        course_ids = [c["_id"] for c in all_courses]
-
-        monthly_pass = {
-            "_id": "pass_monthly",
-            "title": "Monthly Pass",
-            "tagline": "Full-length official simulations, deep error analytics, and All-India percentile tracking.",
-            "badge": "MOST POPULAR",
-            "duration_days": 30,
-            "base_price": 149.0,
-            "original_price": 249.0,
-            "max_coins_discount": 500,  # 500 coins = ₹50 max discount
-            "covered_course_ids": course_ids,
-            "features": [
-                "30 Days Full Platform Access",
-                "All Exam Courses & Tier-I/II Mocks Included",
-                "PrepMagnet CBT Simulation UI",
-                "All-India Percentile & AIR Rank",
-                "Speed vs Accuracy Diagnostics",
-            ],
-            "is_active": True,
-        }
-
-        annual_pass = {
-            "_id": "pass_annual",
-            "title": "Annual Pass",
-            "tagline": "Full-length official simulations, deep error analytics, and All-India percentile tracking.",
-            "badge": "SAVE 40%",
-            "duration_days": 365,
-            "base_price": 499.0,
-            "original_price": 899.0,
-            "max_coins_discount": 1000,  # 1000 coins = ₹100 max discount
-            "covered_course_ids": course_ids,
-            "features": [
-                "365 Days All-Access Membership",
-                "All Exam Courses & Tier-I/II Mocks Included",
-                "Multi-Exam Prep (SSC, Banking, RRB, PSC)",
-                "Deep Error Analytics & AI Weak-Area Drills",
-                "Priority Question Pipeline & Mentor Guidance",
-            ],
-            "is_active": True,
-        }
-
-        await self.pass_repo.create_pass(monthly_pass)
-        await self.pass_repo.create_pass(annual_pass)
-
     # ── Admin Operations ─────────────────────────────────────────────────────
 
     async def list_all_passes_admin(self) -> List[PassResponse]:
-        await self.ensure_default_passes()
         passes = await self.pass_repo.get_all_passes()
         return [await self._enrich_pass(p) for p in passes]
 
@@ -148,7 +93,6 @@ class PassService:
     # ── Public / Student Operations ──────────────────────────────────────────
 
     async def list_active_passes(self) -> List[PassResponse]:
-        await self.ensure_default_passes()
         passes = await self.pass_repo.get_active_passes()
         return [await self._enrich_pass(p) for p in passes]
 

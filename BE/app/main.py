@@ -12,7 +12,6 @@ from app.core.logging import logger
 from app.db.indexes import init_db_indexes
 from app.db.mongodb import db_manager
 from app.db.redis import redis_manager
-from app.db.seed_data import seed_database
 from app.middlewares.logging_middleware import RequestLoggingMiddleware
 
 
@@ -38,13 +37,12 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error(f"Redis connect failure: {exc}")
 
-    # 3. Background task for indexing and seeding so server binds to $PORT immediately
+    # 3. Background task for indexing so server binds to $PORT immediately
     async def init_data_task():
         try:
             db = db_manager.get_database()
             await init_db_indexes(db)
-            await seed_database(db)
-            logger.info("Database indexes & seed completed in background.")
+            logger.info("Database indexes completed in background.")
         except Exception as exc:
             logger.error(f"Background database initialization error: {exc}", exc_info=True)
 

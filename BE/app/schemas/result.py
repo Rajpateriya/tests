@@ -88,6 +88,8 @@ class UserDashboardStatsOut(BaseModel):
     current_streak_days: int = 0
     coins_balance: int = 0
     global_rank: int = 0
+    total_candidates: int = 0
+    avg_speed_seconds: float = 0.0
     total_solved_questions: int = 0
     total_available_questions: int = 0
     upcoming_tests_count: int = 0

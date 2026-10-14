@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '../routes';
-import { api, DEMO_TESTS } from '../services/api';
+import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   ClockIcon,
@@ -134,10 +134,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
       if (selectedType !== 'ALL') params.test_type = selectedType;
       if (selectedSubject !== 'ALL') params.subject = selectedSubject;
       const res = await api.tests.list(params);
-      setTests(res || DEMO_TESTS.filter((t) => t.is_free));
+      setTests(res || []);
     } catch (err) {
-      console.warn('Fallback to demo tests:', err);
-      setTests(DEMO_TESTS.filter((t) => t.is_free));
+      console.warn('Failed to load tests:', err);
+      setTests([]);
     } finally {
       setLoading(false);
     }
@@ -353,8 +353,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             ) : (
               <button
                 onClick={() => {
-                  const firstTest = tests[0] || DEMO_TESTS[0];
-                  onStartTest(firstTest);
+                  const firstTest = tests[0];
+                  if (firstTest) onStartTest(firstTest);
                 }}
                 className="w-full sm:w-auto px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all shadow-subtle flex items-center justify-center gap-2"
               >
@@ -1918,8 +1918,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             <div className="pt-3 flex flex-wrap justify-center gap-3">
               <button
                 onClick={() => {
-                  const firstTest = tests[0] || DEMO_TESTS[0];
-                  onStartTest(firstTest);
+                  const firstTest = tests[0];
+                  if (firstTest) onStartTest(firstTest);
                 }}
                 className="px-7 py-3.5 rounded-full bg-white text-charcoal-900 font-extrabold text-xs shadow-md hover:bg-charcoal-100 transition-colors flex items-center gap-2"
               >

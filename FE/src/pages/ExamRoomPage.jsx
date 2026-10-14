@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { api, DEMO_QUESTIONS, isRealSession } from '../services/api';
+import { api, isRealSession } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import {
@@ -96,10 +96,10 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
     setLoadError('');
     try {
       const data = await api.attempts.getQuestions(attemptId);
-      if (isRealSession() && !data?.questions?.length) {
+      if (!data?.questions?.length) {
         throw new Error('This examination has no questions.');
       }
-      setQuestions(data.questions || DEMO_QUESTIONS);
+      setQuestions(data.questions || []);
       setRemainingSeconds(
         data.remaining_seconds || (attemptSession?.duration_minutes ? attemptSession.duration_minutes * 60 : 3600)
       );
@@ -108,7 +108,7 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
       // Initialize palette
       const initialPalette = data.palette_states || {};
-      (data.questions || DEMO_QUESTIONS).forEach((q, idx) => {
+      (data.questions || []).forEach((q, idx) => {
         if (!initialPalette[q.id]) {
           initialPalette[q.id] = idx === 0 ? 'NOT_ANSWERED' : 'NOT_VISITED';
         }
@@ -126,17 +126,9 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       setTabSwitchCount(savedSwitches);
       if (savedSwitches > 0) setShowTabWarning(true);
     } catch (err) {
-      console.warn('Fallback loading active attempt questions:', err);
-      if (isRealSession()) {
-        setLoadError(err.message || 'Could not load questions for this attempt.');
-        return;
-      }
-      setQuestions(DEMO_QUESTIONS);
-      const initialPalette = {};
-      DEMO_QUESTIONS.forEach((q, idx) => {
-        initialPalette[q.id] = idx === 0 ? 'NOT_ANSWERED' : 'NOT_VISITED';
-      });
-      setPaletteStates(initialPalette);
+      console.warn('Failed loading active attempt questions:', err);
+      setLoadError(err.message || 'Could not load questions for this attempt.');
+      setQuestions([]);
     } finally {
       setLoading(false);
     }

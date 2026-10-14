@@ -58,8 +58,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
           ]
         })));
       } else {
-        const data = await api.subscriptions.getPlans();
-        setPlans(data || []);
+        setPlans([]);
       }
 
       if (myPassData?.active_pass) {
@@ -219,8 +218,18 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
         </div>
 
         {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          {plans.map((plan) => {
+        {plans.length === 0 ? (
+          <div className="text-center py-16 px-4 rounded-3xl border border-charcoal-200 dark:border-charcoal-800 bg-white/50 dark:bg-charcoal-900/50 max-w-xl mx-auto">
+            <p className="text-charcoal-600 dark:text-charcoal-400 text-sm font-semibold">
+              No active subscription passes available at the moment.
+            </p>
+            <p className="text-charcoal-400 dark:text-charcoal-500 text-xs mt-1">
+              Please check back later or explore our free mock tests.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            {plans.map((plan) => {
             const isCurrent = currentPlanId === plan.id;
             const maxCoinDiscount = plan.max_coins_discount || 500;
             const coinsEligible = applyCoins ? Math.min(coinsBalance, maxCoinDiscount) : 0;
@@ -330,6 +339,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
             );
           })}
         </div>
+        )}
 
         {/* Social Proof Banner */}
         <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-8 shadow-subtle space-y-5 text-center">

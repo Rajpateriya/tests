@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { api, DEMO_QUESTIONS } from '../services/api';
+import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Confetti } from '../components/Confetti';
 import {
@@ -76,37 +76,18 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
       setScoreData(resScore);
       setInsights(resInsights);
     } catch (err) {
-      console.warn('Fallback loading results data:', err);
-      const fallbackScore = await api.results.getResult(attemptId);
-      const fallbackInsights = await api.results.getInsights(attemptId);
-      setScoreData(fallbackScore);
-      setInsights(fallbackInsights);
+      console.error('Failed loading results data:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Safe question review breakdown list with full fallback
+  // Question review breakdown list
   const questionsList = useMemo(() => {
     if (insights?.questions_breakdown && insights.questions_breakdown.length > 0) {
       return insights.questions_breakdown;
     }
-    // Fallback based on DEMO_QUESTIONS
-    return DEMO_QUESTIONS.map((q, idx) => ({
-      question_id: q.id,
-      subject: q.subject,
-      topic: q.topic,
-      difficulty: q.difficulty || 'MEDIUM',
-      question_text: q.question_text,
-      options: q.options,
-      correct_option: q.correct_option,
-      selected_option: idx === 7 ? 'A' : q.correct_option,
-      is_correct: idx !== 7,
-      is_attempted: true,
-      marks_awarded: idx !== 7 ? 2.0 : -0.5,
-      time_taken_seconds: 65,
-      solution_explanation: q.solution_explanation,
-    }));
+    return [];
   }, [insights]);
 
   // Unique subjects for quick navigation

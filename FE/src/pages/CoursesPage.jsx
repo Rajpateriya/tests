@@ -41,7 +41,7 @@ export const CoursesPage = ({ onStartTest }) => {
   const [loading, setLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [userCoins, setUserCoins] = useState(150);
+  const [userCoins, setUserCoins] = useState(0);
   const [useCoins, setUseCoins] = useState(true);
 
   // Quick-look panel + answer preview

@@ -13,8 +13,23 @@ from app.core.config import settings
 from app.db.indexes import init_db_indexes
 from app.db.mongodb import db_manager
 from app.db.redis import InMemoryCache, redis_manager
-from app.db.seed_data import seed_database
+from unittest.mock import MagicMock, patch
+from tests.mock_test_fixtures import seed_test_database
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def mock_razorpay():
+    """Mock Razorpay Client to avoid external API calls during testing."""
+    mock_rzp = MagicMock()
+    mock_rzp.order.create.return_value = {
+        "id": "order_mock123456",
+        "amount": 4900,
+        "currency": "INR",
+        "status": "created",
+    }
+    with patch("razorpay.Client", return_value=mock_rzp):
+        yield mock_rzp
 
 
 @pytest.fixture(scope="session")
@@ -38,7 +53,7 @@ async def setup_test_db():
     redis_manager.is_fallback = True
 
     await init_db_indexes(test_db)
-    await seed_database(test_db)
+    await seed_test_database(test_db)
 
     yield test_db
 

@@ -339,6 +339,10 @@ class EvaluationService:
             for t in all_tests[2:5]
         ]
 
+        total_candidates = await self.db["users"].count_documents({"is_active": True})
+        if total_candidates == 0:
+            total_candidates = 1
+
         if not completed:
             empty_diff = {
                 "easy": {"solved": 0, "total": 0, "accuracy": 0.0, "beats_percentage": 0.0},
@@ -355,6 +359,8 @@ class EvaluationService:
                 current_streak_days=user_streak,
                 coins_balance=user_coins,
                 global_rank=0,
+                total_candidates=total_candidates,
+                avg_speed_seconds=0.0,
                 total_solved_questions=0,
                 total_available_questions=0,
                 difficulty_stats=empty_diff,
@@ -374,6 +380,17 @@ class EvaluationService:
 
         total_solved = sum(int(a.get("correct_answers_count", 0)) for a in completed)
         total_available = sum(int(a.get("total_questions", 0)) for a in completed)
+
+        total_time = sum(int(a.get("total_time_taken_seconds", 0)) for a in completed)
+        total_q = sum(int(a.get("correct_count", 0)) + int(a.get("incorrect_count", 0)) for a in completed)
+        avg_speed_seconds = round(total_time / total_q, 1) if total_q > 0 else 0.0
+
+        higher_users = await self.db["attempts"].distinct(
+            "user_id",
+            {"status": AttemptStatus.COMPLETED.value, "total_score": {"$gt": best_score}}
+        )
+        global_rank = len(higher_users) + 1
+        overall_pct = round(max(0.1, min(99.9, ((total_candidates - global_rank + 1) / total_candidates) * 100)), 1) if total_candidates > 0 else 0.0
 
         easy_s, easy_t = 0, 0
         med_s, med_t = 0, 0
@@ -425,7 +442,6 @@ class EvaluationService:
         subject_perf = {k: round(sum(v) / len(v), 1) for k, v in subj_totals.items()}
 
         recent_results = [self._to_result_out(a) for a in completed[:5]]
-        overall_pct = round(min(99.9, max(0.0, (avg_score / max(1.0, best_score)) * 100)), 1) if best_score > 0 else 0.0
 
         return UserDashboardStatsOut(
             user_id=user_id,
@@ -436,7 +452,9 @@ class EvaluationService:
             overall_percentile=overall_pct,
             current_streak_days=user_streak,
             coins_balance=user_coins,
-            global_rank=0,
+            global_rank=global_rank,
+            total_candidates=total_candidates,
+            avg_speed_seconds=avg_speed_seconds,
             total_solved_questions=total_solved,
             total_available_questions=total_available,
             difficulty_stats=difficulty_stats,
