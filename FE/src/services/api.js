@@ -779,5 +779,5 @@ export const api = {
       return await request('/typing/my-history');
     },
   },
-};
+}; //added
 
