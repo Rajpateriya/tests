@@ -59,7 +59,7 @@ async def test_admin_user_management(client: AsyncClient):
         f"/api/v1/admin/users/{student_id}",
         json={
             "role": "user",
-            "coins_balance": 150,
+            "coins_balance": 0,
             "subscription_plan": "FREE",
             "subscription_status": "INACTIVE",
         },

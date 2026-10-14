@@ -27,15 +27,13 @@ class EnrolledCourseItem(BaseModel):
 
 
 class UserProfile(BaseModel):
-    target_exams: List[str] = Field(default_factory=lambda: ["SSC CGL", "CHSL"])
-    preferred_subjects: List[str] = Field(
-        default_factory=lambda: ["Quantitative Aptitude", "General Intelligence & Reasoning"]
-    )
+    target_exams: List[str] = Field(default_factory=list)
+    preferred_subjects: List[str] = Field(default_factory=list)
     phone_number: Optional[str] = None
     avatar_url: Optional[str] = None
-    coins_balance: int = 150
-    current_streak: int = 5
-    longest_streak: int = 12
+    coins_balance: int = 0
+    current_streak: int = 0
+    longest_streak: int = 0
     last_quiz_date: Optional[str] = None
     streak_history: List[str] = Field(default_factory=list)
     subscription_plan: Optional[str] = "FREE"

@@ -105,16 +105,16 @@ class StreakService:
         user = await self.user_repo.get_by_id(user_id)
         if not user:
             profile = {
-                "coins_balance": 150,
-                "current_streak": 6,
-                "longest_streak": 14,
+                "coins_balance": 0,
+                "current_streak": 0,
+                "longest_streak": 0,
                 "last_quiz_date": None,
                 "streak_history": [],
             }
         else:
             profile = user.get("profile", {})
 
-        coins = profile.get("coins_balance", 150)
+        coins = profile.get("coins_balance", 0)
         current_streak = profile.get("current_streak", 0)
         longest_streak = profile.get("longest_streak", current_streak)
         last_quiz_date = profile.get("last_quiz_date")

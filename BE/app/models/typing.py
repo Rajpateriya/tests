@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 class TypingPassageInDB(BaseModel):
     id: str = Field(alias="_id")
     title: str
-    exam_category: str = "SSC CGL DEST"
+    exam_category: str
     content: str
     duration_seconds: int = 900
     target_wpm: float = 27.0

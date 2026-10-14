@@ -40,11 +40,11 @@ class CourseInDB(BaseModel):
     description: str
     original_price: float
     discounted_price: float
-    badge: str = "Bestseller"
-    rating: float = 4.9
-    reviews_count: int = 1420
-    enrolled_count: int = 8900
-    thumbnail_icon: str = "SparklesIcon"
+    badge: Optional[str] = None
+    rating: float = 0.0
+    reviews_count: int = 0
+    enrolled_count: int = 0
+    thumbnail_icon: str = "BookOpenIcon"
     subjects: List[str] = Field(default_factory=list)
     quizzes: List[CourseSubjectQuiz] = Field(default_factory=list)
     features: List[str] = Field(default_factory=list)

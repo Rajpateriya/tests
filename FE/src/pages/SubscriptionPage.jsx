@@ -25,7 +25,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
   const [orderLoading, setOrderLoading] = useState(false);
   const [activeFaq, setActiveFaq] = useState(null);
 
-  const coinsBalance = user?.profile?.coins_balance ?? 150;
+  const coinsBalance = user?.profile?.coins_balance ?? 0;
 
   useEffect(() => {
     loadPassesAndPlans();

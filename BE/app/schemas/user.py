@@ -9,7 +9,7 @@ class UserRegisterRequest(BaseModel):
     password: str = Field(min_length=6, max_length=100)
     full_name: str = Field(min_length=2, max_length=100)
     role: Optional[UserRole] = None
-    target_exams: Optional[List[str]] = Field(default_factory=lambda: ["SSC CGL"])
+    target_exams: Optional[List[str]] = Field(default_factory=list)
     preferred_subjects: Optional[List[str]] = Field(default_factory=list)
 
 

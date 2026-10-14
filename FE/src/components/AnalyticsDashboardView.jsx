@@ -71,119 +71,88 @@ export const AnalyticsDashboardView = ({
   };
 
   // Extract base dashboard stats or sensible academic defaults
-  const totalMocks = dashboard?.total_mocks_attempted ?? 14;
-  const avgScore = dashboard?.average_score ?? 138.5;
-  const avgAccuracy = dashboard?.average_accuracy ?? 82.4;
-  const bestScore = dashboard?.best_score ?? 168.0;
-  const percentile = dashboard?.overall_percentile ?? 91.8;
-  const globalRank = dashboard?.global_rank ?? 1420;
+  // Extract base dashboard stats with clean zero defaults
+  const totalMocks = dashboard?.total_mocks_attempted ?? 0;
+  const avgScore = dashboard?.average_score ?? 0;
+  const avgAccuracy = dashboard?.average_accuracy ?? 0;
+  const bestScore = dashboard?.best_score ?? 0;
+  const percentile = dashboard?.overall_percentile ?? 0;
+  const globalRank = dashboard?.global_rank ?? 0;
 
-  // Attempt Disposition metrics
+  // Attempt Disposition metrics computed dynamically
   const disposition = useMemo(() => {
+    const attempts = dashboard?.recent_attempts || [];
+    if (attempts.length === 0) {
+      return {
+        correct: 0,
+        correctMarks: 0,
+        negative: 0,
+        negativePenalty: 0,
+        skipped: 0,
+        total: 0,
+        accuracy: 0.0,
+      };
+    }
+    const correct = attempts.reduce((acc, a) => acc + (a.correct_answers_count || 0), 0);
+    const negative = attempts.reduce((acc, a) => acc + (a.wrong_answers_count || 0), 0);
+    const skipped = attempts.reduce((acc, a) => acc + (a.unattempted_count || 0), 0);
+    const total = correct + negative + skipped;
+    const accuracy = total > 0 ? Number(((correct / (correct + negative || 1)) * 100).toFixed(1)) : 0;
     return {
-      correct: 142,
-      correctMarks: 284,
-      negative: 24,
-      negativePenalty: 12,
-      skipped: 18,
-      total: 184,
-      accuracy: 79.3,
+      correct,
+      correctMarks: Number((correct * 2).toFixed(1)),
+      negative,
+      negativePenalty: Number((negative * 0.5).toFixed(1)),
+      skipped,
+      total,
+      accuracy,
     };
-  }, []);
+  }, [dashboard]);
 
-  // Sectional Mastery dataset
-  const sectionalMastery = useMemo(() => [
-    {
-      id: 'Quant',
-      name: 'Quantitative Aptitude',
-      accuracy: 88.0,
-      topperAccuracy: 94.0,
-      speedSec: 68,
-      topperSpeedSec: 54,
-      questions: '142 / 173',
-      status: 'Strong Area',
-      color: '#f59e0b',
-      topics: [
-        { name: 'Arithmetic (Percentages & Ratio)', score: 92 },
-        { name: 'Algebra & Equations', score: 85 },
-        { name: 'Geometry & Mensuration', score: 74 },
-      ],
-    },
-    {
-      id: 'Reasoning',
-      name: 'General Intelligence & Reasoning',
-      accuracy: 92.5,
-      topperAccuracy: 96.0,
-      speedSec: 46,
-      topperSpeedSec: 40,
-      questions: '168 / 185',
-      status: 'Mastered',
-      color: '#10b981',
-      topics: [
-        { name: 'Syllogism & Coding-Decoding', score: 96 },
-        { name: 'Analogy & Classification', score: 94 },
-        { name: 'Blood Relations & Puzzles', score: 88 },
-      ],
-    },
-    {
-      id: 'English',
-      name: 'English Comprehension',
-      accuracy: 78.0,
-      topperAccuracy: 88.0,
-      speedSec: 42,
-      topperSpeedSec: 36,
-      questions: '118 / 160',
-      status: 'Solid Pace',
-      color: '#6366f1',
-      topics: [
-        { name: 'Reading Comprehension', score: 84 },
-        { name: 'Grammar & Error Spotting', score: 76 },
-        { name: 'Vocabulary & Idioms', score: 72 },
-      ],
-    },
-    {
-      id: 'GA',
-      name: 'General Awareness & Current Affairs',
-      accuracy: 71.0,
-      topperAccuracy: 82.0,
-      speedSec: 32,
-      topperSpeedSec: 28,
-      questions: '96 / 150',
-      status: 'Focus Needed',
-      color: '#ec4899',
-      topics: [
-        { name: 'Modern History & Polity', score: 78 },
-        { name: 'Current Affairs & Schemes', score: 72 },
-        { name: 'General Science & Geography', score: 62 },
-      ],
-    },
-  ], []);
+  // Sectional Mastery dataset computed from subject performance
+  const sectionalMastery = useMemo(() => {
+    const perf = dashboard?.subject_performance || {};
+    const keys = Object.keys(perf);
+    if (keys.length === 0) {
+      return [];
+    }
+    const colorMap = {
+      'Quantitative Aptitude': '#f59e0b',
+      'Reasoning': '#10b981',
+      'General Intelligence & Reasoning': '#10b981',
+      'General Intelligence': '#10b981',
+      'English': '#6366f1',
+      'English Comprehension': '#6366f1',
+      'General Awareness': '#ec4899',
+    };
+    return keys.map((subj) => ({
+      id: subj,
+      name: subj,
+      accuracy: perf[subj] || 0,
+      topperAccuracy: Math.min(100, Math.round((perf[subj] || 0) + 8)),
+      speedSec: 45,
+      topperSpeedSec: 38,
+      questions: `${Math.round((perf[subj] || 0) * 0.8)} / 100`,
+      status: (perf[subj] || 0) >= 80 ? 'Mastered' : (perf[subj] || 0) >= 60 ? 'Solid Pace' : 'Focus Needed',
+      color: colorMap[subj] || '#3b82f6',
+      topics: [],
+    }));
+  }, [dashboard]);
 
-  // Multi-day timeline performance trend dataset
+  // Multi-day timeline performance trend dataset from real attempts
   const trendHistory = useMemo(() => {
     const rawAttempts = dashboard?.recent_attempts || [];
-    if (rawAttempts.length >= 5) {
-      return rawAttempts.map((att, idx) => ({
-        index: idx + 1,
-        title: att.test_title || `Mock #${idx + 1}`,
-        date: new Date(att.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        score: att.total_score || (120 + idx * 4.5),
-        maxScore: att.max_possible_score || 200,
-        accuracy: att.accuracy_percentage || (74 + idx * 2.2),
-        speed: Math.round((att.total_time_taken_seconds || 1800) / Math.max(1, att.total_questions || 25)),
-      }));
-    }
-
-    // Comprehensive synthetic series representing aspirant trajectory
-    return [
-      { index: 1, title: 'Diagnostic Tier-1 Mock #01', date: 'Sep 12', score: 118.5, maxScore: 200, accuracy: 71.2, speed: 78 },
-      { index: 2, title: 'Speed & Accuracy Drill #04', date: 'Sep 16', score: 126.0, maxScore: 200, accuracy: 74.8, speed: 74 },
-      { index: 3, title: 'SSC CGL Sectional Quant #02', date: 'Sep 21', score: 132.5, maxScore: 200, accuracy: 78.5, speed: 69 },
-      { index: 4, title: 'Full Length National Mock #02', date: 'Sep 26', score: 141.0, maxScore: 200, accuracy: 82.0, speed: 65 },
-      { index: 5, title: 'All India Live Mock #03', date: 'Oct 01', score: 148.5, maxScore: 200, accuracy: 84.5, speed: 62 },
-      { index: 6, title: 'History & Reasoning Marathon', date: 'Oct 05', score: 154.0, maxScore: 200, accuracy: 87.2, speed: 59 },
-      { index: 7, title: 'Latest CGL Pro Benchmark #07', date: 'Oct 10', score: 162.5, maxScore: 200, accuracy: 89.0, speed: 56 },
-    ];
+    return rawAttempts.map((att, idx) => ({
+      index: idx + 1,
+      title: att.test_title || `Mock #${idx + 1}`,
+      date: att.start_time
+        ? new Date(att.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        : `Mock ${idx + 1}`,
+      score: att.total_score || 0,
+      maxScore: att.max_possible_score || 200,
+      accuracy: att.accuracy_percentage || 0,
+      speed: Math.round((att.total_time_taken_seconds || 1800) / Math.max(1, att.total_questions || 25)),
+    }));
   }, [dashboard]);
 
   // SVG Chart Dimensions & Scale Calculations (Optimized for Headroom & Zero Scroll)
@@ -196,8 +165,12 @@ export const AnalyticsDashboardView = ({
   const currentValues = trendHistory.map((d) =>
     trendMetric === 'score' ? d.score : trendMetric === 'accuracy' ? d.accuracy : d.speed
   );
-  const minVal = trendMetric === 'speed' ? Math.min(...currentValues, 40) - 5 : Math.min(...currentValues, 50) - 10;
-  const maxVal = trendMetric === 'score' ? Math.max(...currentValues, 180) + 10 : trendMetric === 'accuracy' ? 100 : Math.max(...currentValues, 90) + 10;
+  const minVal = currentValues.length > 0
+    ? (trendMetric === 'speed' ? Math.min(...currentValues) - 5 : Math.min(...currentValues) - 10)
+    : 0;
+  const maxVal = currentValues.length > 0
+    ? (trendMetric === 'score' ? Math.max(...currentValues) + 10 : trendMetric === 'accuracy' ? 100 : Math.max(...currentValues) + 10)
+    : 100;
 
   const getX = (idx) => padding.left + (idx / Math.max(1, trendHistory.length - 1)) * graphWidth;
   const getY = (val) => {
@@ -216,48 +189,7 @@ export const AnalyticsDashboardView = ({
   const benchmarkY = getY(trendMetric === 'score' ? 140 : trendMetric === 'accuracy' ? 80 : 60);
 
   // Filtered scorecards list
-  const attemptsList = dashboard?.recent_attempts || [
-    {
-      attempt_id: 'att-1',
-      test_title: 'SSC CGL All-India Full Length Mock #07',
-      start_time: '2026-10-10T10:30:00Z',
-      total_score: 162.5,
-      max_possible_score: 200.0,
-      accuracy_percentage: 89.0,
-      status: 'QUALIFIED',
-      rank: 24,
-    },
-    {
-      attempt_id: 'att-2',
-      test_title: 'History & Reasoning Marathon Drill #02',
-      start_time: '2026-10-05T15:20:00Z',
-      total_score: 154.0,
-      max_possible_score: 200.0,
-      accuracy_percentage: 87.2,
-      status: 'QUALIFIED',
-      rank: 48,
-    },
-    {
-      attempt_id: 'att-3',
-      test_title: 'Quantitative Aptitude Advance Sectional #04',
-      start_time: '2026-10-01T12:00:00Z',
-      total_score: 42.5,
-      max_possible_score: 50.0,
-      accuracy_percentage: 85.0,
-      status: 'QUALIFIED',
-      rank: 18,
-    },
-    {
-      attempt_id: 'att-4',
-      test_title: 'English Comprehension & Vocab Drill #01',
-      start_time: '2026-09-28T09:40:00Z',
-      total_score: 34.0,
-      max_possible_score: 50.0,
-      accuracy_percentage: 68.0,
-      status: 'REVIEW',
-      rank: 112,
-    },
-  ];
+  const attemptsList = dashboard?.recent_attempts || [];
 
   const filteredScorecards = attemptsList.filter((att) => {
     const matchesSearch = att.test_title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -525,6 +457,17 @@ export const AnalyticsDashboardView = ({
             </text>
 
             {/* Area Gradient Fill */}
+            {trendHistory.length === 0 && (
+              <text
+                x={chartWidth / 2}
+                y={padding.top + graphHeight / 2}
+                textAnchor="middle"
+                className="text-xs font-semibold fill-charcoal-400 dark:fill-charcoal-500"
+              >
+                No mock tests taken yet. Attempt tests to visualize your progress trajectory.
+              </text>
+            )}
+
             {areaPathD && (
               <path d={areaPathD} fill="url(#trendGradient)" />
             )}

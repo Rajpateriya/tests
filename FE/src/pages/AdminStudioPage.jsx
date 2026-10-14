@@ -233,9 +233,9 @@ export const AdminStudioPage = () => {
   const [editForm, setEditForm] = useState({
     full_name: '',
     email: '',
-    role: 'student',
+    role: 'user',
     is_active: true,
-    coins_balance: 150,
+    coins_balance: 0,
     subscription_plan: 'FREE',
     subscription_status: 'INACTIVE',
     target_exams: [],
@@ -352,12 +352,12 @@ export const AdminStudioPage = () => {
     setEditForm({
       full_name: user.full_name || '',
       email: user.email || '',
-      role: user.role || 'student',
+      role: user.role || 'user',
       is_active: user.is_active !== undefined ? user.is_active : true,
-      coins_balance: user.profile?.coins_balance ?? 150,
+      coins_balance: user.profile?.coins_balance ?? 0,
       subscription_plan: user.profile?.subscription_plan || 'FREE',
       subscription_status: user.profile?.subscription_status || 'INACTIVE',
-      target_exams: user.profile?.target_exams || ['SSC CGL'],
+      target_exams: user.profile?.target_exams || [],
       phone_number: user.profile?.phone_number || '',
       password: '',
     });

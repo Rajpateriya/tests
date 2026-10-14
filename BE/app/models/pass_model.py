@@ -6,12 +6,12 @@ from pydantic import BaseModel, Field
 class PassInDB(BaseModel):
     id: str = Field(alias="_id")
     title: str
-    tagline: Optional[str] = "Full-length official simulations, deep error analytics, and All-India percentile tracking."
+    tagline: Optional[str] = None
     badge: Optional[str] = None
     duration_days: int = 30
-    base_price: float = 149.0
-    original_price: Optional[float] = 249.0
-    max_coins_discount: int = 500  # in coins (100 coins = 10 Rs, so 500 coins = 50 Rs)
+    base_price: float = 0.0
+    original_price: Optional[float] = None
+    max_coins_discount: int = 0
     covered_course_ids: List[str] = Field(default_factory=list)
     features: List[str] = Field(default_factory=list)
     is_active: bool = True

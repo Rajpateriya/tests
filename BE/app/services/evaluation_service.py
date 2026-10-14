@@ -315,53 +315,36 @@ class EvaluationService:
         attempts = await self.attempt_repo.get_user_attempts(user_id, limit=50)
         completed = [a for a in attempts if a.get("status") == AttemptStatus.COMPLETED.value]
 
-        # Upcoming tests mockup/active schedule
-        upcoming = [
-            {"id": "up-1", "title": "SSC CGL All-India Live National Mock #04", "date": "Tomorrow, 10:00 AM", "duration_minutes": 60, "subject": "Full Mock", "difficulty": "HARD"},
-            {"id": "up-2", "title": "Quantitative Aptitude Advanced Speed Drill", "date": "Oct 5, 06:00 PM", "duration_minutes": 30, "subject": "Quantitative Aptitude", "difficulty": "MEDIUM"},
-            {"id": "up-3", "title": "General Intelligence & Reasoning Sectional", "date": "Oct 7, 02:00 PM", "duration_minutes": 25, "subject": "Reasoning", "difficulty": "EASY"},
-        ]
-
-        # 7-day activity streak tracker
-        activity = [
-            {"day": "Mon", "date": "Sep 26", "active": True, "mocks": 2},
-            {"day": "Tue", "date": "Sep 27", "active": True, "mocks": 1},
-            {"day": "Wed", "date": "Sep 28", "active": True, "mocks": 3},
-            {"day": "Thu", "date": "Sep 29", "active": False, "mocks": 0},
-            {"day": "Fri", "date": "Sep 30", "active": True, "mocks": 2},
-            {"day": "Sat", "date": "Oct 01", "active": True, "mocks": 4},
-            {"day": "Sun", "date": "Today", "active": True, "mocks": 1},
-        ]
-
         # Fetch user's profile for real coins and streak
         user_doc = await self.db["users"].find_one({"_id": user_id})
         profile = user_doc.get("profile", {}) if user_doc else {}
-        user_coins = profile.get("coins_balance", 150)
-        user_streak = profile.get("current_streak", 6)
+        user_coins = profile.get("coins_balance", 0)
+        user_streak = profile.get("current_streak", 0)
 
-        # Standard LeetCode-style difficulty breakdown
-        difficulty_stats = {
-            "easy": {
-                "solved": 42,
-                "total": 50,
-                "accuracy": 91.5,
-                "beats_percentage": 94.2,
-            },
-            "medium": {
-                "solved": 31,
-                "total": 40,
-                "accuracy": 82.0,
-                "beats_percentage": 88.6,
-            },
-            "hard": {
-                "solved": 12,
-                "total": 20,
-                "accuracy": 65.0,
-                "beats_percentage": 76.4,
-            },
-        }
+        # Active tests from DB for recommended/upcoming
+        all_tests = await self.test_repo.find_filtered(limit=5)
+        recommended = [
+            {"id": t["_id"], "title": t.get("title", ""), "type": t.get("test_type", "FULL")}
+            for t in all_tests[:2]
+        ]
+        upcoming = [
+            {
+                "id": t["_id"],
+                "title": t.get("title", ""),
+                "date": "Available Now",
+                "duration_minutes": t.get("duration_minutes", 60),
+                "subject": t.get("subject") or "Full Syllabus",
+                "difficulty": "MEDIUM",
+            }
+            for t in all_tests[2:5]
+        ]
 
         if not completed:
+            empty_diff = {
+                "easy": {"solved": 0, "total": 0, "accuracy": 0.0, "beats_percentage": 0.0},
+                "medium": {"solved": 0, "total": 0, "accuracy": 0.0, "beats_percentage": 0.0},
+                "hard": {"solved": 0, "total": 0, "accuracy": 0.0, "beats_percentage": 0.0},
+            }
             return UserDashboardStatsOut(
                 user_id=user_id,
                 total_mocks_attempted=0,
@@ -371,19 +354,16 @@ class EvaluationService:
                 overall_percentile=0.0,
                 current_streak_days=user_streak,
                 coins_balance=user_coins,
-                global_rank=1420,
-                total_solved_questions=85,
-                total_available_questions=110,
-                difficulty_stats=difficulty_stats,
+                global_rank=0,
+                total_solved_questions=0,
+                total_available_questions=0,
+                difficulty_stats=empty_diff,
                 upcoming_tests_count=len(upcoming),
                 upcoming_tests=upcoming,
-                activity_history=activity,
-                subject_performance={"Quantitative Aptitude": 88.0, "Reasoning": 92.5, "English": 78.0, "General Awareness": 71.0},
+                activity_history=[],
+                subject_performance={},
                 recent_attempts=[],
-                recommended_tests=[
-                    {"id": "rec-1", "title": "SSC CGL Full Mock 01", "type": "FULL"},
-                    {"id": "rec-2", "title": "Quantitative Aptitude Mini Test", "type": "TOPIC_MINI"},
-                ],
+                recommended_tests=recommended,
             )
 
         scores = [a.get("total_score", 0.0) for a in completed]
@@ -392,7 +372,60 @@ class EvaluationService:
         avg_accuracy = round(sum(accuracies) / len(accuracies), 2)
         best_score = max(scores)
 
+        total_solved = sum(int(a.get("correct_answers_count", 0)) for a in completed)
+        total_available = sum(int(a.get("total_questions", 0)) for a in completed)
+
+        easy_s, easy_t = 0, 0
+        med_s, med_t = 0, 0
+        hard_s, hard_t = 0, 0
+        for a in completed:
+            for q in a.get("questions_breakdown", []):
+                diff = (q.get("difficulty") or "MEDIUM").upper()
+                is_correct = bool(q.get("is_correct"))
+                if diff == "EASY":
+                    easy_t += 1
+                    if is_correct:
+                        easy_s += 1
+                elif diff == "HARD":
+                    hard_t += 1
+                    if is_correct:
+                        hard_s += 1
+                else:
+                    med_t += 1
+                    if is_correct:
+                        med_s += 1
+
+        difficulty_stats = {
+            "easy": {
+                "solved": easy_s,
+                "total": easy_t,
+                "accuracy": round((easy_s / easy_t * 100), 1) if easy_t > 0 else 0.0,
+                "beats_percentage": round(min(99.0, (easy_s / easy_t * 100)), 1) if easy_t > 0 else 0.0,
+            },
+            "medium": {
+                "solved": med_s,
+                "total": med_t,
+                "accuracy": round((med_s / med_t * 100), 1) if med_t > 0 else 0.0,
+                "beats_percentage": round(min(99.0, (med_s / med_t * 100)), 1) if med_t > 0 else 0.0,
+            },
+            "hard": {
+                "solved": hard_s,
+                "total": hard_t,
+                "accuracy": round((hard_s / hard_t * 100), 1) if hard_t > 0 else 0.0,
+                "beats_percentage": round(min(99.0, (hard_s / hard_t * 100)), 1) if hard_t > 0 else 0.0,
+            },
+        }
+
+        subj_totals = {}
+        for a in completed:
+            for s in a.get("section_scores", []):
+                sec = s.get("section_name")
+                if sec and "accuracy_percentage" in s:
+                    subj_totals.setdefault(sec, []).append(float(s["accuracy_percentage"]))
+        subject_perf = {k: round(sum(v) / len(v), 1) for k, v in subj_totals.items()}
+
         recent_results = [self._to_result_out(a) for a in completed[:5]]
+        overall_pct = round(min(99.9, max(0.0, (avg_score / max(1.0, best_score)) * 100)), 1) if best_score > 0 else 0.0
 
         return UserDashboardStatsOut(
             user_id=user_id,
@@ -400,22 +433,19 @@ class EvaluationService:
             average_score=avg_score,
             average_accuracy=avg_accuracy,
             best_score=best_score,
-            overall_percentile=84.5,
+            overall_percentile=overall_pct,
             current_streak_days=user_streak,
             coins_balance=user_coins,
-            global_rank=1420,
-            total_solved_questions=85,
-            total_available_questions=110,
+            global_rank=0,
+            total_solved_questions=total_solved,
+            total_available_questions=total_available,
             difficulty_stats=difficulty_stats,
             upcoming_tests_count=len(upcoming),
             upcoming_tests=upcoming,
-            activity_history=activity,
-            subject_performance={"Quantitative Aptitude": 78.0, "Reasoning": 82.5, "English": 71.0, "General Awareness": 74.0},
+            activity_history=[],
+            subject_performance=subject_perf,
             recent_attempts=recent_results,
-            recommended_tests=[
-                {"id": "rec-1", "title": "Speed Test: Geometry & Mensuration", "type": "TOPIC_MINI"},
-                {"id": "rec-2", "title": "SSC CGL Tier-1 Full Length Mock 2", "type": "FULL"},
-            ],
+            recommended_tests=recommended,
         )
 
     def _to_result_out(self, doc: Dict[str, Any]) -> AttemptResultOut:

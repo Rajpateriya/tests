@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.models.attempt import AttemptStatus
 from app.models.question import Difficulty, OptionItem
 
@@ -80,21 +80,21 @@ class DetailedInsightsOut(BaseModel):
 
 class UserDashboardStatsOut(BaseModel):
     user_id: str
-    total_mocks_attempted: int
-    average_score: float
-    average_accuracy: float
-    best_score: float
-    overall_percentile: float
-    current_streak_days: int = 5
-    coins_balance: int = 150
-    global_rank: int = 1420
-    total_solved_questions: int = 85
-    total_available_questions: int = 100
-    upcoming_tests_count: int = 3
-    subject_performance: Dict[str, float]  # subject -> accuracy
+    total_mocks_attempted: int = 0
+    average_score: float = 0.0
+    average_accuracy: float = 0.0
+    best_score: float = 0.0
+    overall_percentile: float = 0.0
+    current_streak_days: int = 0
+    coins_balance: int = 0
+    global_rank: int = 0
+    total_solved_questions: int = 0
+    total_available_questions: int = 0
+    upcoming_tests_count: int = 0
+    subject_performance: Dict[str, float] = Field(default_factory=dict)
     difficulty_stats: Optional[Dict[str, Any]] = None  # easy/medium/hard breakdown
-    recent_attempts: List[AttemptResultOut]
-    recommended_tests: List[Dict[str, Any]]
+    recent_attempts: List[AttemptResultOut] = Field(default_factory=list)
+    recommended_tests: List[Dict[str, Any]] = Field(default_factory=list)
     upcoming_tests: Optional[List[Dict[str, Any]]] = None
     activity_history: Optional[List[Dict[str, Any]]] = None
 

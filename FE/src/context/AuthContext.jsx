@@ -284,8 +284,8 @@ export const AuthProvider = ({ children }) => {
   const isRealAdmin = user?.role === 'admin';
   const canSwitchRole = false;
   const isPreviewingAsStudent = false;
-  const coinsBalance = user?.profile?.coins_balance ?? 150;
-  const currentStreak = user?.profile?.current_streak ?? 6;
+  const coinsBalance = user?.profile?.coins_balance ?? 0;
+  const currentStreak = user?.profile?.current_streak ?? 0;
 
   return (
     <AuthContext.Provider

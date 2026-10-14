@@ -442,8 +442,8 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
     );
   }
 
-  const streakDays = streakData?.current_streak ?? 6;
-  const coinsBalance = user?.profile?.coins_balance ?? streakData?.coins_balance ?? 150;
+  const streakDays = streakData?.current_streak ?? user?.profile?.current_streak ?? 0;
+  const coinsBalance = user?.profile?.coins_balance ?? streakData?.coins_balance ?? 0;
 
   // 30-Day Timeline Generator for Habit Roadmap
   const timelineList = (streakData?.timeline && streakData.timeline.length === 30)

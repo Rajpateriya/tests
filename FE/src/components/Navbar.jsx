@@ -450,7 +450,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
               title="Your GovCoins wallet: Redeem for instant discount on exam courses!"
             >
               <span className="text-xs group-hover:scale-110 transition-transform">🪙</span>
-              <span className="font-mono font-extrabold">{user?.profile?.coins_balance ?? 150}</span>
+              <span className="font-mono font-extrabold">{user?.profile?.coins_balance ?? 0}</span>
               <span className="text-[10px] text-amber-750 dark:text-amber-400 font-semibold">Coins</span>
             </button>
           )}
@@ -542,7 +542,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
 
                       {!isAdmin && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1 font-mono">
-                          🪙 {user?.profile?.coins_balance ?? 150} Coins
+                          🪙 {user?.profile?.coins_balance ?? 0} Coins
                         </span>
                       )}
 

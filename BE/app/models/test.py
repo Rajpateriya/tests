@@ -15,7 +15,7 @@ class TestInDB(BaseModel):
     title: str
     description: Optional[str] = ""
     test_type: TestType = TestType.FULL
-    target_exam: str = "SSC CGL"
+    target_exam: str
     subject: Optional[str] = None
     sub_subject: Optional[str] = None
     topic: Optional[str] = None
