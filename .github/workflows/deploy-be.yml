@@ -66,7 +66,7 @@ jobs:
             --min-instances 0 \
             --max-instances 10 \
             --cpu-boost \
-            --set-env-vars "^##^ENVIRONMENT=production##DEBUG=false##MONGODB_URI=${{ secrets.MONGODB_URI }}##MONGODB_DB_NAME=mock_exam_db##JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}##RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}##RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}##RAZORPAY_WEBHOOK_SECRET=${{ secrets.RAZORPAY_WEBHOOK_SECRET }}##GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}##REDIS_FALLBACK_TO_MEMORY=true"
+            --set-env-vars "^##^ENVIRONMENT=production##DEBUG=false##MONGODB_URI=${{ secrets.MONGODB_URI }}##MONGODB_DB_NAME=mock_exam_db##JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}##RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}##RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}##RAZORPAY_WEBHOOK_SECRET=${{ secrets.RAZORPAY_WEBHOOK_SECRET }}##GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}##RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}##RESEND_FROM_EMAIL=noreply@prepmagnet.in##REDIS_FALLBACK_TO_MEMORY=true"
 
       - name: Print Backend Service URL
         run: |
