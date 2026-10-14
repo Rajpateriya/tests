@@ -1073,7 +1073,7 @@ export const AdminStudioPage = () => {
       </div>
 
       {/* Main Studio Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-charcoal-200 dark:border-charcoal-800 pb-2 text-xs font-bold overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-charcoal-200 dark:border-charcoal-800 pb-2.5 text-xs font-bold overflow-x-auto scrollbar-none max-w-full">
         <button
           onClick={() => setActiveTab('users')}
           className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
@@ -1230,8 +1230,8 @@ export const AdminStudioPage = () => {
           </div>
 
           {/* Tabulate Dashboard Table */}
-          <div className="overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800 scrollbar-thin">
+            <table className="w-full min-w-[760px] text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">Candidate Profile</th>
@@ -1502,7 +1502,7 @@ export const AdminStudioPage = () => {
           onClick={() => setSelectedUser(null)}
         >
           <div
-            className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-scale-in relative overflow-hidden max-h-[92vh] flex flex-col"
+            className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-xl w-full p-4 sm:p-7 shadow-2xl space-y-4 sm:space-y-5 animate-scale-in relative overflow-hidden max-h-[92vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -1761,7 +1761,7 @@ export const AdminStudioPage = () => {
             onScroll={coursesTab.onScroll}
             className="max-h-[34rem] overflow-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800 scrollbar-thin"
           >
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full min-w-[760px] text-left border-collapse text-xs">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-charcoal-50 dark:bg-charcoal-800/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">Course</th>
@@ -2183,7 +2183,7 @@ export const AdminStudioPage = () => {
             </div>
 
             <div className="overflow-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800 scrollbar-thin">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full min-w-[540px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-charcoal-50 dark:bg-charcoal-800/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                     <th className="py-3 px-4">User</th>
@@ -2271,7 +2271,7 @@ export const AdminStudioPage = () => {
             onScroll={testsTab.onScroll}
             className="max-h-[34rem] overflow-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800 scrollbar-thin"
           >
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full min-w-[760px] text-left border-collapse text-xs">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-charcoal-50 dark:bg-charcoal-800 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">Test</th>
@@ -3039,7 +3039,7 @@ export const AdminStudioPage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-950/60 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-scale-in">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-charcoal-150 dark:border-charcoal-800">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-charcoal-150 dark:border-charcoal-800">
               <div className="flex items-center gap-2">
                 <CrownIcon size={20} className="text-amber-500" />
                 <h3 className="text-base font-black text-charcoal-950 dark:text-white">
@@ -3055,7 +3055,7 @@ export const AdminStudioPage = () => {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSavePass} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+            <form onSubmit={handleSavePass} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-charcoal-700 dark:text-charcoal-300 mb-1">

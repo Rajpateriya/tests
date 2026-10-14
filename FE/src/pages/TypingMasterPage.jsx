@@ -913,8 +913,8 @@ export const TypingMasterPage = () => {
                 <h3 className="text-base font-extrabold tracking-tight text-charcoal-900 dark:text-white">Past typing mock attempts</h3>
 
                 {historyData?.attempts && historyData.attempts.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                  <div className="overflow-x-auto scrollbar-thin">
+                    <table className="w-full min-w-[620px] text-left text-xs">
                       <thead>
                         <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-400 uppercase tracking-wider text-[10px]">
                           <th className="pb-3 font-semibold">Exam / Passage</th>

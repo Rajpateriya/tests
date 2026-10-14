@@ -255,13 +255,27 @@ body.dark {
 }
 
 html, body {
-  height: 100%;
+  min-height: 100%;
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
   transition: background-color var(--transition-normal), color var(--transition-normal);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Prevent unwanted mobile horizontal drift and auto-zoom on iOS */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 #root {
@@ -1661,6 +1675,21 @@ input, select, textarea {
 }
 
 @media (max-width: 760px) {
+  .pp-stepper {
+    display: flex;
+    overflow-x: auto;
+    padding: 0.85rem 0.75rem;
+    gap: 1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pp-step {
+    flex-shrink: 0;
+    min-width: 76px;
+  }
+  .pp-step::before {
+    display: none;
+  }
   .pp-step-desc { display: none; }
 }
 

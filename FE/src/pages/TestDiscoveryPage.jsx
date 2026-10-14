@@ -307,8 +307,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* ========================================================================= */}
         <section className="text-center max-w-4xl mx-auto space-y-6 pt-4 sm:pt-6 animate-fade-in">
           {/* Live Activity & Pulse Indicator */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 text-xs font-bold shadow-subtle hover:border-institutional-400 transition-colors cursor-default select-none animate-float-slow">
-            <span className="flex h-2.5 w-2.5 relative">
+          <div className="inline-flex flex-wrap sm:flex-nowrap items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-2xl sm:rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 text-xs font-bold shadow-subtle hover:border-institutional-400 transition-colors cursor-default select-none animate-float-slow max-w-full text-center">
+            <span className="flex h-2.5 w-2.5 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600" />
             </span>
@@ -758,11 +758,16 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                 onChange={(e) => setTargetScore(Number(e.target.value))}
                 className="w-full h-2.5 bg-charcoal-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer accent-institutional-600"
               />
-              <div className="flex justify-between text-[11px] text-charcoal-400 font-mono">
+              <div className="hidden sm:flex justify-between text-[11px] text-charcoal-400 font-mono">
                 <span>80 (Cutoff baseline)</span>
                 <span>135 (Qualified)</span>
                 <span>165 (Top 500)</span>
                 <span>195 (AIR 1 Territory)</span>
+              </div>
+              <div className="flex sm:hidden justify-between text-[10px] text-charcoal-400 font-mono">
+                <span>80 (Cutoff)</span>
+                <span>135 (Qualified)</span>
+                <span>195 (AIR 1)</span>
               </div>
             </div>
 
@@ -809,10 +814,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </p>
 
             {/* Interactive Capability Tabs */}
-            <div className="inline-flex p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-full text-xs font-bold gap-1 mt-4">
+            <div className="flex max-w-full overflow-x-auto p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl sm:rounded-full text-xs font-bold gap-1 mt-4 scrollbar-none justify-start sm:justify-center">
               <button
                 onClick={() => setActiveFeatureTab('engine')}
-                className={`px-4 py-2 rounded-full transition-all ${activeFeatureTab === 'engine'
+                className={`px-4 py-2 rounded-full whitespace-nowrap shrink-0 transition-all ${activeFeatureTab === 'engine'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -821,7 +826,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </button>
               <button
                 onClick={() => setActiveFeatureTab('analytics')}
-                className={`px-4 py-2 rounded-full transition-all ${activeFeatureTab === 'analytics'
+                className={`px-4 py-2 rounded-full whitespace-nowrap shrink-0 transition-all ${activeFeatureTab === 'analytics'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -830,7 +835,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </button>
               <button
                 onClick={() => setActiveFeatureTab('solutions')}
-                className={`px-4 py-2 rounded-full transition-all ${activeFeatureTab === 'solutions'
+                className={`px-4 py-2 rounded-full whitespace-nowrap shrink-0 transition-all ${activeFeatureTab === 'solutions'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -1018,11 +1023,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             <>
               {/* Search & Subject Bar */}
               <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-3 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 flex-1 md:max-w-md">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 md:max-w-md">
                   <select
                     value={selectedSubject}
                     onChange={(e) => setSelectedSubject(e.target.value)}
-                    className="px-3 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500"
+                    className="px-3 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 shrink-0"
                   >
                     <option value="ALL">All Subjects</option>
                     <option value="Quantitative Aptitude">Quantitative Aptitude</option>
@@ -1035,7 +1040,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                     <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
                     <input
                       type="text"
-                      placeholder="Search by topic (e.g. Geometry, Syllogisms)..."
+                      placeholder="Search by topic (e.g. Geometry)..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-institutional-500"
@@ -1044,7 +1049,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                 </div>
 
                 {/* Sub-filter pills: narrows the free-tests set by type */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none flex-wrap">
                   {[
                     { id: 'ALL', label: 'All' },
                     { id: 'FULL', label: 'Full' },

@@ -495,7 +495,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
           {/* Aspirant Identity & Exam Goals */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 min-w-0">
             {/* Avatar with Camera Hover */}
             <div className="relative group shrink-0">
               <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-tr from-institutional-600 via-indigo-600 to-amber-500 p-0.5 shadow-md">
@@ -548,9 +548,9 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             </div>
 
             {/* Candidate Metadata */}
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-charcoal-900 dark:text-white tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-black text-charcoal-900 dark:text-white tracking-tight break-words">
                   {user?.full_name || 'Alex Aspirant'}
                 </h1>
 
@@ -562,7 +562,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
               </div>
 
               {/* Target Exam Chips & Countdown */}
-              <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
                 {user?.profile?.target_exams && user.profile.target_exams.length > 0 ? (
                   user.profile.target_exams.map((exam) => (
                     <span
@@ -587,8 +587,8 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
               </div>
 
               {/* Email & Feedback Toast */}
-              <div className="flex items-center gap-2 text-xs text-charcoal-500 dark:text-charcoal-400">
-                <span>{user?.email || ''}</span>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-charcoal-500 dark:text-charcoal-400">
+                <span className="truncate">{user?.email || ''}</span>
                 {avatarToast && (
                   <span
                     className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
@@ -605,16 +605,16 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
           </div>
 
           {/* Wallet & Quick Action Center */}
-          <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
             {/* GovCoins Wallet Card */}
             <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 text-charcoal-900 dark:text-white shadow-xs">
-              <span className="text-2xl">🪙</span>
-              <div>
+              <span className="text-2xl shrink-0">🪙</span>
+              <div className="min-w-0">
                 <div className="text-xs font-black tracking-tight leading-tight flex items-center gap-1.5">
                   <span className="font-mono text-base font-extrabold text-amber-700 dark:text-amber-300">{coinsBalance}</span>
                   <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">GovCoins</span>
                 </div>
-                <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium">
+                <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium truncate">
                   = ₹{(coinsBalance * 0.10).toFixed(1)} exam discount (100 coins = ₹10)
                 </div>
               </div>
@@ -623,7 +623,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             {/* Redeem CTA */}
             <button
               onClick={() => navigate(ROUTES.courses)}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-extrabold rounded-2xl bg-institutional-600 hover:bg-institutional-700 active:bg-institutional-800 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-extrabold rounded-2xl bg-institutional-600 hover:bg-institutional-700 active:bg-institutional-800 text-white shadow-md hover:shadow-lg transition-all cursor-pointer shrink-0"
             >
               <SparklesIcon size={14} />
               <span>Redeem on Courses</span>

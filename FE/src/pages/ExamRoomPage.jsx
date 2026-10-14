@@ -868,6 +868,17 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
                 A+
               </button>
             </div>
+
+            {/* Mobile Question Palette Drawer Trigger */}
+            <button
+              type="button"
+              onClick={() => setShowMobileDrawer(true)}
+              className="lg:hidden flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors shrink-0"
+              aria-label="Open Question Palette"
+            >
+              <LayersIcon size={12} />
+              <span>Palette ({counts.answered}/{questions.length})</span>
+            </button>
           </div>
         </div>
       </nav>
@@ -1004,49 +1015,52 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
             </div>
           </div>
 
-          {/* QUESTION ACTION FOOTER (Sticky Navigation Controls) */}
-          <footer className="p-3.5 sm:p-4 bg-slate-50 dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 flex flex-wrap items-center justify-between gap-3">
+          {/* QUESTION ACTION FOOTER (Sticky Navigation Controls - Fluid 2x2 on Mobile) */}
+          <footer className="p-3 sm:p-4 bg-slate-50 dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-between gap-2 sm:gap-3">
             {/* Left Actions */}
-            <div className="flex items-center gap-2">
+            <div className="contents sm:flex sm:items-center sm:gap-2">
               <button
                 type="button"
                 onClick={handleMarkForReviewAndNext}
-                className="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-700 hover:bg-slate-800 text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-2.5 sm:px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-700 hover:bg-slate-800 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
               >
-                <FlagIcon size={12} />
-                <span>Mark for Review & Next</span>
+                <FlagIcon size={12} className="shrink-0" />
+                <span className="hidden sm:inline">Mark for Review & Next</span>
+                <span className="sm:hidden">Review & Next</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleClearResponse}
                 disabled={!answers[currentQuestion?.id]}
-                className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-2.5 sm:px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
               >
-                <RefreshCwIcon size={12} />
-                <span>Clear Response</span>
+                <RefreshCwIcon size={12} className="shrink-0" />
+                <span className="hidden sm:inline">Clear Response</span>
+                <span className="sm:hidden">Clear</span>
               </button>
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2">
+            <div className="contents sm:flex sm:items-center sm:gap-2">
               <button
                 type="button"
                 onClick={goToPrevQuestion}
                 disabled={currentIndex === 0}
-                className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-2.5 sm:px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
               >
-                <ChevronLeftIcon size={14} />
-                <span>Save & Previous</span>
+                <ChevronLeftIcon size={14} className="shrink-0" />
+                <span className="hidden sm:inline">Save & Previous</span>
+                <span className="sm:hidden">Previous</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleSaveAndNext}
-                className="px-5 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-3 sm:px-5 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
               >
                 <span>Save & Next</span>
-                <ChevronRightIcon size={14} />
+                <ChevronRightIcon size={14} className="shrink-0" />
               </button>
             </div>
           </footer>
@@ -1680,6 +1694,116 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
             >
               Resume Assessment Now
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 9. MOBILE QUESTION PALETTE DRAWER (Full interactive bottom sheet) */}
+      {showMobileDrawer && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-slate-950/70 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowMobileDrawer(false)}
+        >
+          <div
+            className="bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-750 rounded-t-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                  <LayersIcon size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    Question Palette
+                  </h3>
+                  <div className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold font-mono">
+                    {counts.answered} of {questions.length} Answered ({Math.round((counts.answered / (questions.length || 1)) * 100)}%)
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowMobileDrawer(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white font-bold"
+                aria-label="Close question palette"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Palette Body */}
+            <div className="p-4 overflow-y-auto space-y-4 flex-1">
+              {/* Legend */}
+              <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-charcoal-800/60 border border-slate-200 dark:border-charcoal-750 text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-emerald-600 text-white font-mono font-bold text-[9px] flex items-center justify-center">
+                    {counts.answered}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">Answered</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-rose-600 text-white font-mono font-bold text-[9px] flex items-center justify-center">
+                    {counts.notAnswered}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">Not Answered</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-slate-200 dark:bg-charcoal-700 text-slate-700 dark:text-slate-300 font-mono font-bold text-[9px] flex items-center justify-center">
+                    {counts.notVisited}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">Not Visited</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded bg-slate-700 text-white font-mono font-bold text-[9px] flex items-center justify-center">
+                    {counts.markedReview}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">Marked Review</span>
+                </div>
+              </div>
+
+              {/* Questions Grid */}
+              <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 pt-1">
+                {questions.map((q, idx) => {
+                  const state = paletteStates[q.id] || 'NOT_VISITED';
+                  const isCurrent = idx === currentIndex;
+                  const isAnsReview = state === 'ANSWERED_AND_MARKED_FOR_REVIEW';
+
+                  return (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => {
+                        jumpToQuestion(idx);
+                        setShowMobileDrawer(false);
+                      }}
+                      className={`h-10 rounded-xl flex items-center justify-center font-mono font-bold text-xs select-none transition-all cursor-pointer relative ${getTileClasses(state, isCurrent)}`}
+                    >
+                      <span>{idx + 1}</span>
+                      {isAnsReview && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute top-1 right-1" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="p-3 border-t border-slate-200 dark:border-charcoal-800 bg-slate-50 dark:bg-charcoal-850 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileDrawer(false);
+                  setShowSubmitModal(true);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs text-center"
+              >
+                Proceed to Submit Exam
+              </button>
+            </div>
           </div>
         </div>
       )}

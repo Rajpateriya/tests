@@ -135,7 +135,7 @@ const NotificationBell = ({ sessionKey, isAdmin }) => {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-xl z-50 animate-fade-in">
+        <div className="absolute right-0 sm:right-0 mt-2 w-[calc(100vw-32px)] max-w-xs sm:w-80 max-h-96 overflow-y-auto bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-xl z-50 animate-fade-in">
           <div className="flex items-center justify-between px-4 py-3 border-b border-charcoal-150 dark:border-charcoal-800">
             <span className="text-xs font-extrabold text-charcoal-900 dark:text-white">Notifications</span>
             {unread > 0 && (
@@ -271,7 +271,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
             <span className="font-extrabold text-sm sm:text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
               PrepMagnet
             </span>
-            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full font-mono tracking-wider ${!user
+            <span className={`hidden xs:inline-block text-[10px] font-extrabold px-1.5 py-0.5 rounded-full font-mono tracking-wider ${!user
               ? 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
               : isAdmin
                 ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
@@ -282,7 +282,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           </div>
         </div>
 
-        {/* 2. CENTER NAVIGATION ITEMS (Tailored strictly by user role) */}
+        {/* 2. CENTER NAVIGATION ITEMS (Tailored strictly by user role - Desktop only) */}
         <div className="hidden md:flex items-center gap-1 text-xs font-semibold">
           {/* --- GUEST VIEW (Before Login) --- */}
           {!user && (
@@ -336,18 +336,6 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                 <BarChart3Icon size={14} />
                 <span>Dashboard</span>
               </button>
-
-              {/* <button
-              onClick={() => handleNavClick(ROUTES.home)}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${
-                isOn(ROUTES.home, true)
-                  ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
-                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
-              }`}
-            >
-              <BookOpenIcon size={14} />
-              <span>Test Library</span>
-            </button> */}
 
               <button
                 onClick={() => handleNavClick(ROUTES.courses)}
@@ -429,9 +417,9 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           )}
         </div>
 
-        {/* 3. RIGHT ACTIONS (Auth trigger, Theme toggle, Avatar / Dropdown) */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Active Attempt Warning / Quick Resume Button */}
+        {/* 3. RIGHT ACTIONS (Auth trigger, Theme toggle, Avatar / Dropdown / Hamburger) */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Active Attempt Warning / Quick Resume Button (Desktop) */}
           {activeAttempt && !isOn(ROUTES.exam) && (
             <button
               onClick={() => handleNavClick(ROUTES.exam)}
@@ -442,7 +430,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
             </button>
           )}
 
-          {/* Student GovCoins Wallet Pill */}
+          {/* Student GovCoins Wallet Pill (Desktop) */}
           {user && !isAdmin && (
             <button
               onClick={() => handleNavClick(ROUTES.courses)}
@@ -455,7 +443,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
             </button>
           )}
 
-          {/* Notifications */}
+          {/* Notifications Bell */}
           <NotificationBell sessionKey={user?.id} isAdmin={isAdmin} />
 
           {/* Theme Toggle Button */}
@@ -467,9 +455,9 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
             {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
           </button>
 
-          {/* --- IF GUEST: Show Sign In & Register Buttons --- */}
+          {/* --- IF GUEST: Desktop Sign In & Register Buttons --- */}
           {!user ? (
-            <div className="flex items-center gap-1.5">
+            <div className="hidden md:flex items-center gap-1.5">
               <button
                 onClick={() => onOpenAuthModal('login')}
                 className="px-3 py-1.5 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:text-charcoal-950 dark:hover:text-white transition-colors cursor-pointer"
@@ -484,8 +472,8 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
               </button>
             </div>
           ) : (
-            /* --- IF LOGGED IN: Profile Avatar & Role Menu Dropdown --- */
-            <div className="relative" ref={dropdownRef}>
+            /* --- IF LOGGED IN: Desktop Profile Avatar & Role Menu Dropdown --- */
+            <div className="relative hidden md:block" ref={dropdownRef}>
               <button
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 className="flex items-center gap-2 p-1 pl-2 sm:pl-2.5 rounded-full border border-charcoal-200 dark:border-charcoal-750 bg-charcoal-50/80 dark:bg-charcoal-800/80 hover:bg-charcoal-100 dark:hover:bg-charcoal-750 transition-colors text-xs font-semibold focus:outline-none cursor-pointer"
@@ -546,7 +534,6 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         </span>
                       )}
 
-                      {/* Active Subscription Pass: Strictly for students only, NEVER for admin */}
                       {!isAdmin && subscription?.status === 'ACTIVE' && subscription?.plan && subscription?.plan !== 'FREE' && subscription?.plan !== 'NONE' && (
                         <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1">
                           <CrownIcon size={10} className="text-amber-500" />
@@ -555,8 +542,6 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                       )}
                     </div>
                   </div>
-
-
 
                   {/* Navigation Shortcuts */}
                   <div className="space-y-1 pt-1 border-t border-charcoal-150 dark:border-charcoal-800">
@@ -603,7 +588,6 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         </button>
                         <button
                           onClick={() => {
-                            // Admin Studio's Courses tab with the "new course" form open (/admin/courses/new).
                             handleNavClick(`${ROUTES.admin}/courses/new`);
                             setUserDropdownOpen(false);
                           }}
@@ -643,134 +627,344 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
             </div>
           )}
 
-          {/* Mobile Hamburger Menu Toggle */}
+          {/* Mobile Hamburger Menu Toggle Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-1.5 rounded-lg text-charcoal-600 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800"
+            className="md:hidden p-1.5 sm:p-2 rounded-full text-charcoal-600 dark:text-charcoal-300 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors focus:outline-none"
             aria-label="Toggle mobile menu"
+            aria-expanded={mobileMenuOpen}
           >
             <div className="w-4 h-3.5 flex flex-col justify-between">
-              <span className="w-full h-0.5 bg-current rounded" />
-              <span className="w-full h-0.5 bg-current rounded" />
-              <span className="w-full h-0.5 bg-current rounded" />
+              <span className={`w-full h-0.5 bg-current rounded transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+              <span className={`w-full h-0.5 bg-current rounded transition-opacity ${mobileMenuOpen ? 'opacity-0' : ''}`} />
+              <span className={`w-full h-0.5 bg-current rounded transition-transform ${mobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
             </div>
           </button>
         </div>
+      </nav>
 
-        {/* 4. MOBILE DROPDOWN DRAWER */}
-        {mobileMenuOpen && (
-          <div className="md:hidden absolute top-14 left-0 right-0 mx-auto w-full bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-4 shadow-lifted space-y-2 text-xs font-semibold animate-fade-in">
-            {!user ? (
-              <>
-                <button
-                  onClick={() => handleNavClick(ROUTES.home)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  Mock Tests Library
-                </button>
-                <button
-                  onClick={() => handleNavClick(ROUTES.courses)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  Courses & Quizzes
-                </button>
-                <button
-                  onClick={() => handleNavClick(ROUTES.typing)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  ⌨️ Typing Master Mock Test
-                </button>
-                <button
-                  onClick={handleContactClick}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  Contact Support Desk
-                </button>
-                <div className="pt-2 border-t border-charcoal-200 dark:border-charcoal-800 flex gap-2">
+      {/* 4. MODERN MOBILE FULL-FEATURED NAVIGATION DRAWER */}
+      {mobileMenuOpen && (
+        <>
+          {/* Backdrop Overlay */}
+          <div
+            className="md:hidden fixed inset-0 z-50 bg-charcoal-950/60 backdrop-blur-sm animate-fade-in"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer Sheet */}
+          <div
+            className="md:hidden fixed top-3 inset-x-3 sm:inset-x-6 max-w-md mx-auto z-50 bg-white dark:bg-charcoal-900 border border-charcoal-200/90 dark:border-charcoal-800 rounded-3xl p-5 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto animate-scale-in"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile Navigation Menu"
+          >
+            {/* Header: Brand & Close Button */}
+            <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-institutional-600 text-white flex items-center justify-center font-bold text-xs">
+                  <SparklesIcon size={14} />
+                </div>
+                <span className="font-extrabold text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
+                  PrepMagnet
+                </span>
+                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full font-mono tracking-wider ${
+                  !user
+                    ? 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
+                    : isAdmin
+                      ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                      : 'bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800'
+                }`}>
+                  {!user ? 'PRO' : isAdmin ? 'ADMIN' : 'USER'}
+                </span>
+              </div>
+
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors font-bold text-sm"
+                aria-label="Close menu"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* If Active Attempt: Persistent Resume Button */}
+            {activeAttempt && !isOn(ROUTES.exam) && (
+              <button
+                onClick={() => handleNavClick(ROUTES.exam)}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 font-bold text-xs shadow-xs animate-pulse"
+              >
+                <div className="flex items-center gap-2">
+                  <ZapIcon size={16} className="text-amber-600 fill-amber-600 shrink-0" />
+                  <span>Resume Active Exam Simulation</span>
+                </div>
+                <span className="text-[11px] font-extrabold bg-amber-500 text-white px-2 py-0.5 rounded-full">
+                  Live →
+                </span>
+              </button>
+            )}
+
+            {/* Logged In User Profile Card */}
+            {user ? (
+              <div className="p-3.5 rounded-2xl bg-charcoal-50/80 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-institutional-600 text-white font-extrabold flex items-center justify-center text-base shrink-0 overflow-hidden shadow-xs border border-charcoal-200 dark:border-charcoal-700">
+                    {user?.profile?.avatar_url ? (
+                      <img src={user.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : user.full_name ? (
+                      user.full_name.charAt(0).toUpperCase()
+                    ) : (
+                      'U'
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-extrabold text-sm text-charcoal-900 dark:text-charcoal-100 truncate">
+                      {user.full_name}
+                    </div>
+                    <div className="text-xs text-charcoal-500 truncate">{user.email}</div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-charcoal-200/60 dark:border-charcoal-800">
+                  {isAdmin ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/50 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                      <ShieldIcon size={11} />
+                      <span>Administrator</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-100 dark:bg-institutional-950/50 text-institutional-800 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
+                      <UserIcon size={11} />
+                      <span>Verified Aspirant</span>
+                    </span>
+                  )}
+
+                  {!isAdmin && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1 font-mono">
+                      🪙 {user?.profile?.coins_balance ?? 0} Coins
+                    </span>
+                  )}
+
+                  {!isAdmin && subscription?.status === 'ACTIVE' && subscription?.plan && subscription?.plan !== 'FREE' && subscription?.plan !== 'NONE' && (
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                      <CrownIcon size={10} className="text-amber-500" />
+                      <span>{formatPlanTitle(subscription.plan)}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Guest Welcome Banner & Action Buttons */
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-institutional-50 to-indigo-50/50 dark:from-institutional-950/40 dark:to-indigo-950/20 border border-institutional-200 dark:border-institutional-800/60 space-y-3">
+                <div>
+                  <h4 className="font-black text-sm text-charcoal-900 dark:text-white">
+                    Ace Your Exam Preparation
+                  </h4>
+                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 mt-0.5">
+                    Real TCS iON simulations, live percentiles & smart drills.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     onClick={() => {
-                      onOpenAuthModal('login');
                       setMobileMenuOpen(false);
+                      onOpenAuthModal('login');
                     }}
-                    className="flex-1 py-2 text-center rounded-lg border border-charcoal-300 dark:border-charcoal-700 font-bold text-charcoal-800 dark:text-charcoal-200"
+                    className="py-2.5 px-3 rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-100 font-bold text-xs hover:bg-charcoal-50 text-center transition-colors"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => {
-                      onOpenAuthModal('register');
                       setMobileMenuOpen(false);
+                      onOpenAuthModal('register');
                     }}
-                    className="flex-1 py-2 text-center rounded-lg bg-institutional-600 text-white font-bold"
+                    className="py-2.5 px-3 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-md text-center transition-colors"
                   >
                     Join Free
                   </button>
                 </div>
-              </>
-            ) : !isAdmin ? (
-              <>
+              </div>
+            )}
+
+            {/* Navigation Links */}
+            <div className="space-y-1 text-xs font-semibold">
+              <div className="text-[10px] font-black uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500 px-3 pt-2">
+                Navigation
+              </div>
+
+              {/* Student or Guest Navigation Links */}
+              {!isAdmin ? (
+                <>
+                  {user && (
+                    <button
+                      onClick={() => handleNavClick(ROUTES.dashboard)}
+                      className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                        isOn(ROUTES.dashboard)
+                          ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
+                          : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <BarChart3Icon size={16} />
+                        <span>Performance Dashboard</span>
+                      </div>
+                      <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleNavClick(ROUTES.home)}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.home, true)
+                        ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <BookOpenIcon size={16} />
+                      <span>Mock Tests Library</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={() => handleNavClick(ROUTES.courses)}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.courses)
+                        ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <SparklesIcon size={16} className="text-amber-500" />
+                      <span>Courses & Quizzes</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={() => handleNavClick(ROUTES.typing)}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.typing)
+                        ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span>⌨️</span>
+                      <span>Typing Master Test</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={handleContactClick}
+                    className="w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <MailIcon size={16} />
+                      <span>Contact Support Desk</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+                </>
+              ) : (
+                /* Admin Navigation Links */
+                <>
+                  <button
+                    onClick={() => handleNavClick(ROUTES.admin)}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.admin)
+                        ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <ShieldIcon size={16} />
+                      <span>Admin Studio Hub</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={() => handleNavClick(ROUTES.pipeline)}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.pipeline)
+                        ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <CpuIcon size={16} />
+                      <span>AI Question Pipeline</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={() => handleNavClick(ROUTES.courses)}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.courses)
+                        ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <SparklesIcon size={16} />
+                      <span>Courses Management</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={() => handleNavClick(ROUTES.typing)}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.typing)
+                        ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span>⌨️</span>
+                      <span>Typing Master</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={handleContactClick}
+                    className="w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <MailIcon size={16} />
+                      <span>Contact Support Desk</span>
+                    </div>
+                    <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* User Logged-in Actions / Sign Out */}
+            {user && (
+              <div className="pt-3 border-t border-charcoal-150 dark:border-charcoal-800 space-y-2">
                 <button
-                  onClick={() => handleNavClick(ROUTES.dashboard)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                    navigate(ROUTES.home);
+                  }}
+                  className="w-full py-2.5 px-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  Dashboard
+                  <LogOutIcon size={15} />
+                  <span>Sign Out of PrepMagnet</span>
                 </button>
-                <button
-                  onClick={() => handleNavClick(ROUTES.home)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  Test Library
-                </button>
-                <button
-                  onClick={() => handleNavClick(ROUTES.courses)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  Courses & Quizzes
-                </button>
-                <button
-                  onClick={() => handleNavClick(ROUTES.typing)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  ⌨️ Typing Master
-                </button>
-                <button
-                  onClick={handleContactClick}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  Contact Support Desk
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => handleNavClick(ROUTES.admin)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  Admin Studio
-                </button>
-                <button
-                  onClick={() => handleNavClick(ROUTES.pipeline)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  AI Pipeline
-                </button>
-                <button
-                  onClick={() => handleNavClick(ROUTES.courses)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  Courses
-                </button>
-                <button
-                  onClick={() => handleNavClick(ROUTES.typing)}
-                  className="w-full text-left py-2 px-3 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800"
-                >
-                  ⌨️ Typing Master
-                </button>
-              </>
+              </div>
             )}
           </div>
-        )}
-      </nav>
+        </>
+      )}
     </>
   );
 };

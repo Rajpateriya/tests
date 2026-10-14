@@ -352,10 +352,10 @@ export const AnalyticsDashboardView = ({
           </div>
 
           {/* Metric Selector Buttons */}
-          <div className="flex items-center gap-1.5 bg-charcoal-100 dark:bg-charcoal-800 p-1 rounded-xl self-start sm:self-auto text-xs font-bold">
+          <div className="flex items-center gap-1.5 bg-charcoal-100 dark:bg-charcoal-800 p-1 rounded-xl self-start sm:self-auto text-xs font-bold max-w-full overflow-x-auto scrollbar-none">
             <button
               onClick={() => setTrendMetric('score')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                 trendMetric === 'score'
                   ? 'bg-white dark:bg-charcoal-700 text-institutional-600 dark:text-institutional-300 shadow-xs'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
@@ -365,7 +365,7 @@ export const AnalyticsDashboardView = ({
             </button>
             <button
               onClick={() => setTrendMetric('accuracy')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                 trendMetric === 'accuracy'
                   ? 'bg-white dark:bg-charcoal-700 text-emerald-600 dark:text-emerald-300 shadow-xs'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
@@ -375,7 +375,7 @@ export const AnalyticsDashboardView = ({
             </button>
             <button
               onClick={() => setTrendMetric('speed')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                 trendMetric === 'speed'
                   ? 'bg-white dark:bg-charcoal-700 text-amber-600 dark:text-amber-300 shadow-xs'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900'
@@ -387,7 +387,7 @@ export const AnalyticsDashboardView = ({
         </div>
 
         {/* Interactive SVG Area/Line Graph (Full Width, Zero Horizontal Scroll) */}
-        <div className="relative pt-2 pb-1 w-full" onMouseLeave={() => setActiveTooltip(null)}>
+        <div className="relative pt-2 pb-1 w-full overflow-hidden" onMouseLeave={() => setActiveTooltip(null)}>
           <svg
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
             className="w-full h-56 sm:h-64 overflow-visible select-none"
@@ -1685,8 +1685,8 @@ export const AnalyticsDashboardView = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto scrollbar-thin rounded-xl">
+          <table className="w-full text-left text-xs border-collapse min-w-[620px]">
             <thead>
               <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 uppercase tracking-wider font-bold text-[10px]">
                 <th className="pb-3 pr-4">Mock Test Title</th>

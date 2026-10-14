@@ -178,53 +178,53 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
         {/* ========================================================================= */}
         {/* TOP VIEW NAVIGATION BAR (Scorecard Analytics vs CBT Solution Review)     */}
         {/* ========================================================================= */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-md border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-3 sm:p-4 shadow-subtle">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-md border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-3 sm:p-4 shadow-subtle">
           {/* View Mode Toggle Buttons */}
-          <div className="flex items-center gap-1.5 p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl border border-charcoal-200 dark:border-charcoal-700">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl border border-charcoal-200 dark:border-charcoal-700 w-full sm:w-auto">
             <button
               id="view-overview-tab"
               onClick={() => setActiveView('overview')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                 activeView === 'overview'
                   ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-white shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
               }`}
             >
-              <BarChart3Icon size={15} />
-              <span>Scorecard & Analytics</span>
+              <BarChart3Icon size={15} className="shrink-0" />
+              <span className="truncate">Scorecard</span>
             </button>
 
             <button
               id="view-cbt-review-tab"
               onClick={() => setActiveView('review')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                 activeView === 'review'
                   ? 'bg-institutional-600 text-white shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
               }`}
             >
-              <LayersIcon size={15} />
-              <span>CBT Exam Room Review</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-institutional-100 text-institutional-800 dark:bg-institutional-900 dark:text-institutional-200 font-mono">
+              <LayersIcon size={15} className="shrink-0" />
+              <span className="truncate">CBT Review</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-institutional-100 text-institutional-800 dark:bg-institutional-900 dark:text-institutional-200 font-mono shrink-0">
                 {questionsList.length}Q
               </span>
             </button>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={onBackToDiscovery}
-              className="px-4 py-2 text-xs font-semibold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-750 transition-colors cursor-pointer"
+              className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2 text-xs font-semibold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-750 transition-colors cursor-pointer text-center"
             >
               All Tests
             </button>
             <button
               onClick={onGoToDashboard}
-              className="px-4 py-2 text-xs font-bold rounded-xl text-white bg-institutional-600 hover:bg-institutional-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+              className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-xl text-white bg-institutional-600 hover:bg-institutional-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer text-center"
             >
-              <TrophyIcon size={14} />
-              <span>Candidate Dashboard</span>
+              <TrophyIcon size={14} className="shrink-0" />
+              <span className="truncate">Dashboard</span>
             </button>
           </div>
         </div>
@@ -282,27 +282,27 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
           </div>
 
           {/* Hero Score Highlights (Data-Rich, Academic Layout) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 sm:p-6 bg-charcoal-50/70 dark:bg-charcoal-850/50 rounded-2xl border border-charcoal-200/80 dark:border-charcoal-750">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6 bg-charcoal-50/70 dark:bg-charcoal-850/50 rounded-2xl border border-charcoal-200/80 dark:border-charcoal-750">
             {/* Final Score */}
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-charcoal-500">Marks Secured</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl sm:text-4xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-charcoal-500">Marks Secured</span>
+              <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
+                <span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
                   {scoreData?.total_score !== undefined ? scoreData.total_score.toFixed(1) : '13.5'}
                 </span>
-                <span className="text-sm font-mono text-charcoal-400">
+                <span className="text-xs sm:text-sm font-mono text-charcoal-400">
                   / {scoreData?.max_possible_score !== undefined ? scoreData.max_possible_score.toFixed(1) : '16.0'}
                 </span>
               </div>
               <div className="text-[11px] text-charcoal-500 font-medium">
-                Net Percentage: <strong>{scoreData?.percentage?.toFixed(1) || 84.4}%</strong>
+                Net: <strong>{scoreData?.percentage?.toFixed(1) || 84.4}%</strong>
               </div>
             </div>
 
             {/* All India Estimated Rank */}
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-charcoal-500">Estimated Rank</span>
-              <div className="text-3xl sm:text-4xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-charcoal-500">Estimated Rank</span>
+              <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
                 #{insights?.rank || '18'}
               </div>
               <div className="text-[11px] text-charcoal-500 font-medium">
@@ -312,23 +312,23 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
 
             {/* All India Percentile */}
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-charcoal-500">National Percentile</span>
-              <div className="text-3xl sm:text-4xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-charcoal-500">Percentile</span>
+              <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
                 {insights?.percentile ? insights.percentile.toFixed(1) : '94.2'}%
               </div>
               <div className="text-[11px] text-charcoal-500 font-medium">
-                Top <strong>{(100 - (insights?.percentile || 94.2)).toFixed(1)}%</strong> nationwide
+                Top <strong>{(100 - (insights?.percentile || 94.2)).toFixed(1)}%</strong>
               </div>
             </div>
 
             {/* Total Time Taken */}
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-charcoal-500">Time Taken</span>
-              <div className="text-3xl sm:text-4xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-charcoal-500">Time Taken</span>
+              <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
                 {formatSeconds(scoreData?.total_time_taken_seconds || 540)}
               </div>
               <div className="text-[11px] text-charcoal-500 font-medium">
-                Avg dwell: <strong>{insights?.avg_time_per_question ? Math.round(insights.avg_time_per_question) : 68}s</strong> / Q
+                Avg: <strong>{insights?.avg_time_per_question ? Math.round(insights.avg_time_per_question) : 68}s</strong> / Q
               </div>
             </div>
           </div>
@@ -886,37 +886,39 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
                 </div>
 
                 {/* Question Navigation Action Footer */}
-                <footer className="p-4 bg-charcoal-50 dark:bg-charcoal-850 border-t border-charcoal-200 dark:border-charcoal-800 flex flex-wrap items-center justify-between gap-3">
-                  {/* Left: Previous Button */}
-                  <button
-                    type="button"
-                    onClick={() => setReviewIndex((prev) => Math.max(0, prev - 1))}
-                    disabled={reviewIndex === 0}
-                    className="px-4 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-charcoal-100 text-charcoal-700 dark:text-charcoal-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <ChevronLeftIcon size={14} />
-                    <span>Previous Question</span>
-                  </button>
+                <footer className="p-3 sm:p-4 bg-charcoal-50 dark:bg-charcoal-850 border-t border-charcoal-200 dark:border-charcoal-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center justify-between gap-2 order-2 sm:order-1">
+                    {/* Left: Previous Button */}
+                    <button
+                      type="button"
+                      onClick={() => setReviewIndex((prev) => Math.max(0, prev - 1))}
+                      disabled={reviewIndex === 0}
+                      className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:bg-charcoal-100 text-charcoal-700 dark:text-charcoal-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ChevronLeftIcon size={14} />
+                      <span>Previous</span>
+                    </button>
+
+                    {/* Right: Next Button */}
+                    <button
+                      type="button"
+                      onClick={() => setReviewIndex((prev) => Math.min(questionsList.length - 1, prev + 1))}
+                      disabled={reviewIndex === questionsList.length - 1}
+                      className="flex-1 sm:flex-none px-4 sm:px-5 py-2 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 active:bg-institutional-800 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Next</span>
+                      <ChevronRightIcon size={14} />
+                    </button>
+                  </div>
 
                   {/* Center: Jump to Next Mistake (Pro Feature for Aspirants) */}
                   <button
                     type="button"
                     onClick={handleJumpToNextMistake}
-                    className="px-3.5 py-2 text-xs font-bold rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="order-1 sm:order-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     title="Jump to the next incorrect answer"
                   >
                     <span>⚡ Jump to Next Mistake</span>
-                  </button>
-
-                  {/* Right: Next Button */}
-                  <button
-                    type="button"
-                    onClick={() => setReviewIndex((prev) => Math.min(questionsList.length - 1, prev + 1))}
-                    disabled={reviewIndex === questionsList.length - 1}
-                    className="px-5 py-2 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 active:bg-institutional-800 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Next Question</span>
-                    <ChevronRightIcon size={14} />
                   </button>
                 </footer>
               </section>

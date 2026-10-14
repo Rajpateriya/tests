@@ -220,12 +220,12 @@ export const CoursesPage = ({ onStartTest }) => {
 
         {/* Toolbar: exam tabs · search · refresh · coins */}
         <section className="bg-white/80 dark:bg-charcoal-900/80 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 rounded-2xl p-3 shadow-subtle flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold overflow-x-auto scrollbar-none">
+          <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold overflow-x-auto scrollbar-none max-w-full">
             {EXAM_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedExam(cat.id)}
-                className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${
+                className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all ${
                   selectedExam === cat.id
                     ? 'bg-white dark:bg-charcoal-900 text-institutional-700 dark:text-institutional-300 shadow-sm font-extrabold'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
@@ -263,12 +263,14 @@ export const CoursesPage = ({ onStartTest }) => {
 
             {/* GovCoins pill */}
             <label
-              className="inline-flex items-center gap-2 pl-3 pr-2.5 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer select-none"
+              className="w-full sm:w-auto inline-flex items-center justify-between sm:justify-start gap-2 pl-3 pr-2.5 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer select-none"
               title="100 GovCoins = ₹10 off. Applied automatically when you enroll."
             >
-              <span>🪙</span>
-              <span className="font-mono">{userCoins}</span>
-              <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">≈ ₹{Math.round(userCoins * 0.1)}</span>
+              <div className="flex items-center gap-1.5">
+                <span>🪙</span>
+                <span className="font-mono">{userCoins}</span>
+                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">≈ ₹{Math.round(userCoins * 0.1)}</span>
+              </div>
               <span className="relative inline-flex items-center">
                 <input
                   type="checkbox"

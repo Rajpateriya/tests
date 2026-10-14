@@ -188,9 +188,9 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
           </p>
 
           {/* GovCoins Discount Feature Card */}
-          <div className="max-w-md mx-auto p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-institutional-500/10 border border-amber-300 dark:border-amber-700/80 shadow-sm flex items-center justify-between gap-4 text-left">
+          <div className="max-w-md mx-auto p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-institutional-500/10 border border-amber-300 dark:border-amber-700/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-xl shadow-md shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg sm:text-xl shadow-md shrink-0">
                 🪙
               </div>
               <div>
@@ -203,16 +203,21 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
               </div>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer select-none shrink-0">
-              <input
-                type="checkbox"
-                checked={applyCoins}
-                onChange={(e) => setApplyCoins(e.target.checked)}
-                className="w-4 h-4 rounded text-institutional-600 focus:ring-institutional-500 cursor-pointer"
-              />
-              <span className="text-xs font-bold text-charcoal-800 dark:text-charcoal-200">
-                Apply Coins
+            <label className="flex items-center justify-between sm:justify-start gap-2 cursor-pointer select-none shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-200/60 dark:border-amber-800/60">
+              <span className="text-xs font-bold text-charcoal-800 dark:text-charcoal-200 sm:hidden">
+                Use GovCoins for Discount
               </span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={applyCoins}
+                  onChange={(e) => setApplyCoins(e.target.checked)}
+                  className="w-4 h-4 rounded text-institutional-600 focus:ring-institutional-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-charcoal-800 dark:text-charcoal-200 hidden sm:inline">
+                  Apply Coins
+                </span>
+              </div>
             </label>
           </div>
         </div>

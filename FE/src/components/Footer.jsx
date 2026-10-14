@@ -478,13 +478,13 @@ export const Footer = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-6 border-b border-charcoal-150 dark:border-charcoal-800 flex items-start justify-between gap-4 bg-charcoal-50/50 dark:bg-charcoal-950/50">
-              <div className="space-y-1">
+            <div className="p-4 sm:p-6 border-b border-charcoal-150 dark:border-charcoal-800 flex items-start justify-between gap-3 bg-charcoal-50/50 dark:bg-charcoal-950/50">
+              <div className="space-y-1 min-w-0 flex-1">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 uppercase tracking-wider font-mono">
-                  <ShieldIcon size={11} />
-                  <span>{LEGAL_DOCS[activeLegalModal].badge}</span>
+                  <ShieldIcon size={11} className="shrink-0" />
+                  <span className="truncate">{LEGAL_DOCS[activeLegalModal].badge}</span>
                 </div>
-                <h3 id="legal-modal-title" className="text-lg sm:text-xl font-extrabold text-charcoal-950 dark:text-white">
+                <h3 id="legal-modal-title" className="text-base sm:text-xl font-extrabold text-charcoal-950 dark:text-white leading-tight">
                   {LEGAL_DOCS[activeLegalModal].title}
                 </h3>
                 <p className="text-[11px] text-charcoal-500 dark:text-charcoal-400">
@@ -494,7 +494,7 @@ export const Footer = () => {
 
               <button
                 onClick={() => setActiveLegalModal(null)}
-                className="w-8 h-8 rounded-full bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-500 hover:text-charcoal-900 dark:hover:text-white flex items-center justify-center transition-colors shrink-0"
+                className="w-8 h-8 rounded-full bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-500 hover:text-charcoal-900 dark:hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                 aria-label="Close modal"
               >
                 <XIcon size={16} />
@@ -502,7 +502,7 @@ export const Footer = () => {
             </div>
 
             {/* Modal Content Scroll Area */}
-            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-5 text-xs text-charcoal-600 dark:text-charcoal-300 leading-relaxed">
+            <div className="p-4 sm:p-6 max-h-[60vh] overflow-y-auto space-y-4 sm:space-y-5 text-xs text-charcoal-600 dark:text-charcoal-300 leading-relaxed scrollbar-thin">
               {LEGAL_DOCS[activeLegalModal].sections.map((sec, idx) => (
                 <div key={idx} className="space-y-1.5">
                   <h4 className="font-bold text-sm text-charcoal-900 dark:text-charcoal-100">
@@ -516,13 +516,13 @@ export const Footer = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 sm:p-5 border-t border-charcoal-150 dark:border-charcoal-800 bg-charcoal-50/50 dark:bg-charcoal-950/50 flex items-center justify-between gap-3 text-xs">
+            <div className="p-4 sm:p-5 border-t border-charcoal-150 dark:border-charcoal-800 bg-charcoal-50/50 dark:bg-charcoal-950/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <span className="text-charcoal-500 dark:text-charcoal-400 text-[11px]">
                 Governing Law: Republic of India
               </span>
               <button
                 onClick={() => setActiveLegalModal(null)}
-                className="px-4 py-2 rounded-xl bg-charcoal-900 dark:bg-charcoal-100 text-white dark:text-charcoal-900 font-bold hover:bg-charcoal-800 dark:hover:bg-white transition-colors shadow-sm"
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-charcoal-900 dark:bg-charcoal-100 text-white dark:text-charcoal-900 font-bold hover:bg-charcoal-800 dark:hover:bg-white transition-colors shadow-sm cursor-pointer text-center"
               >
                 Understood & Close
               </button>

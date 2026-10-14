@@ -137,10 +137,10 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
         </div>
 
         {/* Modal Stepper Indicator */}
-        <div className="flex items-center justify-between px-1 shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <span
-              className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-all ${
+              className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-all shrink-0 ${
                 step === 'instructions'
                   ? 'bg-institutional-600 text-white shadow-xs'
                   : 'bg-emerald-600 text-white'
@@ -155,13 +155,13 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
                   : 'text-charcoal-500'
               }`}
             >
-              1. Exam Guidelines
+              1. Guidelines
             </span>
 
-            <span className="text-charcoal-300 dark:text-charcoal-700 mx-1">──</span>
+            <span className="text-charcoal-300 dark:text-charcoal-700 mx-0.5 sm:mx-1">──</span>
 
             <span
-              className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-all ${
+              className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-all shrink-0 ${
                 step === 'declaration'
                   ? 'bg-institutional-600 text-white shadow-xs'
                   : 'bg-charcoal-200 dark:bg-charcoal-800 text-charcoal-500'
@@ -176,11 +176,11 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
                   : 'text-charcoal-500'
               }`}
             >
-              2. Candidate Declaration
+              2. Declaration
             </span>
           </div>
 
-          <div className="flex items-center gap-1 text-xs text-charcoal-500 font-medium">
+          <div className="flex items-center gap-1 text-xs text-charcoal-500 font-medium self-end sm:self-auto">
             <span>Language:</span>
             <select
               value={selectedLanguage}
@@ -199,7 +199,7 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
           {step === 'instructions' && (
             <div className="space-y-4 animate-fade-in">
               {/* Key Metrics Grid */}
-              <div className="grid grid-cols-4 gap-2.5 p-3.5 bg-charcoal-50 dark:bg-charcoal-800/60 rounded-2xl border border-charcoal-200 dark:border-charcoal-700 text-center font-mono">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3.5 bg-charcoal-50 dark:bg-charcoal-800/60 rounded-2xl border border-charcoal-200 dark:border-charcoal-700 text-center font-mono">
                 <div>
                   <div className="text-[10px] text-charcoal-500 uppercase font-semibold">Duration</div>
                   <div className="text-sm font-bold text-charcoal-900 dark:text-charcoal-100 mt-0.5">

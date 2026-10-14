@@ -229,20 +229,20 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                 <p className="text-sm text-charcoal-600 dark:text-charcoal-400 leading-relaxed">{course.description}</p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-charcoal-200 dark:divide-charcoal-800 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 py-2.5">
-                <div className="text-center px-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800">
+                <div className="text-center p-2 rounded-lg bg-white/60 dark:bg-charcoal-900/60 border border-charcoal-200/50 dark:border-charcoal-800/50">
                   <div className="text-base font-extrabold font-mono text-charcoal-900 dark:text-white">{drills.length}</div>
                   <div className="text-[10px] uppercase tracking-wider font-semibold text-charcoal-500">Drills</div>
                 </div>
-                <div className="text-center px-2">
+                <div className="text-center p-2 rounded-lg bg-white/60 dark:bg-charcoal-900/60 border border-charcoal-200/50 dark:border-charcoal-800/50">
                   <div className="text-base font-extrabold font-mono text-charcoal-900 dark:text-white">{mockTests.length}</div>
                   <div className="text-[10px] uppercase tracking-wider font-semibold text-charcoal-500">Mock tests</div>
                 </div>
-                <div className="text-center px-2 max-sm:pt-2.5 max-sm:border-t max-sm:border-charcoal-200 dark:max-sm:border-charcoal-800">
+                <div className="text-center p-2 rounded-lg bg-white/60 dark:bg-charcoal-900/60 border border-charcoal-200/50 dark:border-charcoal-800/50">
                   <div className="text-base font-extrabold font-mono text-charcoal-900 dark:text-white">{subjects.length}</div>
                   <div className="text-[10px] uppercase tracking-wider font-semibold text-charcoal-500">Subjects</div>
                 </div>
-                <div className="text-center px-2 max-sm:pt-2.5 max-sm:border-t max-sm:border-charcoal-200 dark:max-sm:border-charcoal-800">
+                <div className="text-center p-2 rounded-lg bg-white/60 dark:bg-charcoal-900/60 border border-charcoal-200/50 dark:border-charcoal-800/50">
                   <div className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400">₹{savings}</div>
                   <div className="text-[10px] uppercase tracking-wider font-semibold text-charcoal-500">You save</div>
                 </div>

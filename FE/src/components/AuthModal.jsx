@@ -180,20 +180,20 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl space-y-4 animate-scale-in relative overflow-hidden transition-all duration-300 ease-out max-h-[92vh] flex flex-col"
+        className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-3xl max-w-lg w-full p-4 sm:p-7 shadow-2xl space-y-3.5 sm:space-y-4 animate-scale-in relative overflow-hidden transition-all duration-300 ease-out max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Ambient Top Glow */}
         <div className="absolute -top-12 -right-12 w-44 h-44 bg-blue-500/15 rounded-full blur-2xl pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-150 dark:border-charcoal-800 relative z-10 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-blue-500 text-white flex items-center justify-center shadow-md shrink-0">
-              {isForgotMode ? <KeyIcon size={18} /> : <SparklesIcon size={18} />}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-150 dark:border-charcoal-800 relative z-10 shrink-0 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-blue-500 text-white flex items-center justify-center shadow-md shrink-0">
+              {isForgotMode ? <KeyIcon size={17} /> : <SparklesIcon size={17} />}
             </div>
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5 truncate">
                 <span>
                   {tab === 'login' && 'Welcome to PrepMagnet'}
                   {tab === 'register' && 'Join PrepMagnet Free'}
@@ -203,7 +203,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                   {tab === 'forgot_success' && 'Password Changed!'}
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 sm:line-clamp-none">
                 {tab === 'login' && 'Role-Based Authentication Engine with Remember Me'}
                 {tab === 'register' && 'Empowering 45,000+ government job rankers'}
                 {tab === 'verify_email' && 'Enter the 6-digit OTP sent to your email'}
@@ -215,7 +215,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-800 transition-colors cursor-pointer"
+            className="p-1.5 shrink-0 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-800 transition-colors cursor-pointer"
             aria-label="Close authentication modal"
           >
             <XCircleIcon size={20} />
@@ -310,7 +310,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
                       {TARGET_EXAM_OPTIONS.map((exam) => {
                         const isSelected = selectedExams.includes(exam.id);
                         return (
@@ -318,7 +318,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                             key={exam.id}
                             type="button"
                             onClick={() => toggleExam(exam.id)}
-                            className={`p-2 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between gap-1.5 cursor-pointer transform active:scale-95 ${
+                            className={`p-1.5 sm:p-2 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between gap-1 cursor-pointer transform active:scale-95 min-w-0 ${
                               isSelected
                                 ? 'border-blue-600 bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/40'
                                 : 'border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-800 dark:text-slate-200 hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-charcoal-750'
