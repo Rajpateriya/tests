@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class UserRole(str, Enum):
+    USER = "user"
     STUDENT = "student"
     ADMIN = "admin"
 
@@ -50,7 +51,7 @@ class UserInDB(BaseModel):
     email: str
     full_name: str
     hashed_password: str
-    role: UserRole = UserRole.STUDENT
+    role: UserRole = UserRole.USER
     is_active: bool = True
     profile: UserProfile = Field(default_factory=UserProfile)
     otp: Optional[str] = None

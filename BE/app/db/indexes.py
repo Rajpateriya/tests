@@ -108,4 +108,13 @@ async def init_db_indexes(db: AsyncIOMotorDatabase) -> None:
     except Exception as e:
         logger.warning(f"Could not create token_blacklist indexes: {e}")
 
+    # Pending registrations (awaiting OTP verification): TTL index auto-deletes expired records
+    try:
+        await db.pending_registrations.create_indexes([
+            IndexModel([("email", ASCENDING)], unique=True, name="idx_pending_registrations_email"),
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=0, name="idx_pending_registrations_ttl"),
+        ])
+    except Exception as e:
+        logger.warning(f"Could not create pending_registrations indexes: {e}")
+
     logger.info("MongoDB indexes successfully initialized.")

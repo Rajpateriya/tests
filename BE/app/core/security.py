@@ -27,7 +27,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(
     subject: Union[str, Any],
-    role: str = "student",
+    role: str = "user",
     expires_delta: Optional[timedelta] = None,
     extra_claims: Optional[Dict[str, Any]] = None,
 ) -> str:
@@ -59,7 +59,7 @@ def create_access_token(
 
 def create_refresh_token(
     subject: Union[str, Any],
-    role: str = "student",
+    role: str = "user",
     expires_delta: Optional[timedelta] = None,
 ) -> str:
     """Create a signed JWT refresh token."""

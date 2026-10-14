@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
     if (cachedUser) {
       try {
         const u = JSON.parse(cachedUser);
-        return u.role === 'admin' || u.email === 'admin@gmail.com' ? 'admin' : 'student';
+        return u.role === 'admin' ? 'admin' : (u.role || 'user');
       } catch {
         return null;
       }
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const u = JSON.parse(cachedUser);
         // Administrators never have student passes
-        if (u.role === 'admin' || u.email === 'admin@gmail.com') {
+        if (u.role === 'admin') {
           return { plan: 'NONE', status: 'INACTIVE' };
         }
       } catch {
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
 
   // Sync subscription to localStorage (only for non-admin accounts)
   useEffect(() => {
-    if (user?.role === 'admin' || user?.email === 'admin@gmail.com') {
+    if (user?.role === 'admin') {
       localStorage.removeItem('govexam_subscription');
     } else if (subscription && subscription.status === 'ACTIVE') {
       localStorage.setItem('govexam_subscription', JSON.stringify(subscription));
@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
           profile: { ...(prev?.profile || {}), ...(me.profile || {}) },
         }));
 
-        if (me.role === 'admin' || me.email === 'admin@gmail.com') {
+        if (me.role === 'admin') {
           setSubscription({ plan: 'NONE', status: 'INACTIVE' });
           localStorage.removeItem('govexam_subscription');
         } else if (me.profile?.subscription_plan && me.profile?.subscription_status === 'ACTIVE') {
@@ -137,9 +137,8 @@ export const AuthProvider = ({ children }) => {
       const res = await api.auth.login(email, password, rememberMe);
       const loggedUser = res.user;
       const accessToken = res.tokens?.access_token || 'demo-jwt-access-token';
-      const isAdminAccount = loggedUser.role === 'admin' || loggedUser.email === 'admin@gmail.com';
-
-      const realRole = isAdminAccount ? 'admin' : 'student';
+      const isAdminAccount = loggedUser.role === 'admin';
+      const realRole = isAdminAccount ? 'admin' : (loggedUser.role || 'user');
       setBaseRole(realRole);
       localStorage.setItem('govexam_base_role', realRole);
 
@@ -191,8 +190,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      await api.auth.register(data);
-      return await login(data.email, data.password);
+      const res = await api.auth.register(data);
+      return res;
     } catch (err) {
       setError(err.message || 'Registration failed');
       throw err;
@@ -220,55 +219,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('govexam_base_role');
   };
 
-  // Only allowed if authenticated account is an administrator
-  const switchRole = async (newRole) => {
-    const isRealAdmin = baseRole === 'admin' || user?.email === 'admin@gmail.com';
-    if (!isRealAdmin) {
-      console.warn('Unauthorized role switch attempt blocked: only admin accounts can preview student mode.');
-      return;
-    }
-
-    if (newRole === 'admin') {
-      try {
-        await login('admin@gmail.com', 'admin123');
-      } catch {
-        const adminUser = {
-          id: 'admin-primary-id',
-          email: 'admin@gmail.com',
-          full_name: 'Platform Administrator',
-          role: 'admin',
-          is_active: true,
-          profile: { target_exams: ['All Exams'], preferred_subjects: [], coins_balance: 500, current_streak: 10 },
-        };
-        setUser(adminUser);
-        setToken('demo-admin-token');
-      }
-      setSubscription({ plan: 'NONE', status: 'INACTIVE' });
-      localStorage.removeItem('govexam_subscription');
-    } else {
-      try {
-        await login('student@gmail.com', 'student123');
-      } catch {
-        const studentUser = {
-          id: 'student-primary-id',
-          email: 'student@gmail.com',
-          full_name: 'Alex Aspirant',
-          role: 'student',
-          is_active: true,
-          profile: {
-            target_exams: ['SSC CGL', 'SSC CHSL'],
-            preferred_subjects: ['Quantitative Aptitude', 'General Intelligence & Reasoning'],
-            coins_balance: 150,
-            current_streak: 6,
-            longest_streak: 14,
-            subscription_plan: 'FREE',
-            subscription_status: 'INACTIVE',
-          },
-        };
-        setUser(studentUser);
-        setToken('demo-student-token');
-      }
-    }
+  const switchRole = async () => {
+    // Role switching disabled in production RBAC mode
+    console.warn('Role switching is disabled. User roles are strictly managed via backend.');
+    return;
   };
 
   const updateProfile = async (updates) => {
@@ -327,9 +281,9 @@ export const AuthProvider = ({ children }) => {
     setSubscription(updated);
   };
 
-  const isRealAdmin = baseRole === 'admin' || user?.email === 'admin@gmail.com';
-  const canSwitchRole = isRealAdmin;
-  const isPreviewingAsStudent = isRealAdmin && user?.role === 'student';
+  const isRealAdmin = user?.role === 'admin';
+  const canSwitchRole = false;
+  const isPreviewingAsStudent = false;
   const coinsBalance = user?.profile?.coins_balance ?? 150;
   const currentStreak = user?.profile?.current_streak ?? 6;
 
@@ -354,7 +308,7 @@ export const AuthProvider = ({ children }) => {
         currentStreak,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
-        isStudent: user?.role === 'student',
+        isStudent: user?.role !== 'admin',
         canSwitchRole,
         isPreviewingAsStudent,
         isPremium: !isRealAdmin && subscription?.status === 'ACTIVE' && subscription?.plan !== 'FREE' && subscription?.plan !== 'NONE',

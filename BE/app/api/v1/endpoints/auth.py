@@ -9,6 +9,7 @@ from app.schemas.common import APIResponse
 from app.schemas.user import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
+    RegisterInitiateResponse,
     ResetPasswordRequest,
     SendOtpRequest,
     TokenResponse,
@@ -22,18 +23,18 @@ from app.services.auth_service import AuthService
 router = APIRouter(prefix="/auth", tags=["Authentication"], dependencies=[Depends(check_rate_limit)])
 
 
-@router.post("/register", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=APIResponse[RegisterInitiateResponse], status_code=status.HTTP_200_OK)
 async def register(
     req: UserRegisterRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Register a new student or admin user."""
+    """Initiate registration: validate input, temporarily stage registration, and send verification OTP."""
     auth_service = AuthService(db)
-    user = await auth_service.register(req)
+    res = await auth_service.register(req)
     return APIResponse(
         success=True,
-        message="User registered successfully",
-        data=user,
+        message=res.message,
+        data=res,
     )
 
 
@@ -60,21 +61,29 @@ async def send_otp(
     req: SendOtpRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Send a 6-digit OTP to the user's email."""
+    """Send or resend a 6-digit OTP to the user's email."""
     auth_service = AuthService(db)
-    await auth_service.send_otp(req)
-    return APIResponse(success=True, message="OTP sent to your email", data={})
+    res = await auth_service.send_otp(req)
+    return APIResponse(
+        success=True,
+        message=res.get("message", "OTP sent to your email"),
+        data=res,
+    )
 
 
-@router.post("/verify-otp", response_model=APIResponse[dict])
+@router.post("/verify-otp", response_model=APIResponse[UserResponse])
 async def verify_otp(
     req: VerifyOtpRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Verify the OTP sent to the user's email."""
+    """Verify OTP and create the user in the database upon successful verification."""
     auth_service = AuthService(db)
-    await auth_service.verify_otp(req)
-    return APIResponse(success=True, message="OTP verified successfully", data={})
+    user = await auth_service.verify_otp(req)
+    return APIResponse(
+        success=True,
+        message="OTP verified successfully. Your account has been created.",
+        data=user,
+    )
 
 
 @router.post("/forgot-password", response_model=APIResponse[ForgotPasswordResponse])

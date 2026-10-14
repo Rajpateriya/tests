@@ -54,11 +54,11 @@ async def test_admin_user_management(client: AsyncClient):
     assert updated_data["profile"]["coins_balance"] == 750
     assert updated_data["profile"]["subscription_plan"] == "ELITE"
 
-    # 6. Admin reverts user back to student
+    # 6. Admin reverts user back to regular user role
     revert_resp = await client.put(
         f"/api/v1/admin/users/{student_id}",
         json={
-            "role": "student",
+            "role": "user",
             "coins_balance": 150,
             "subscription_plan": "FREE",
             "subscription_status": "INACTIVE",
@@ -66,7 +66,7 @@ async def test_admin_user_management(client: AsyncClient):
         headers=admin_headers,
     )
     assert revert_resp.status_code == 200
-    assert revert_resp.json()["data"]["role"] == "student"
+    assert revert_resp.json()["data"]["role"] == "user"
 
     # 7. Admin cannot demote self
     admin_id = admin_login.json()["data"]["user"]["id"]

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { ROUTES } from '../routes';
 import {
   UserIcon,
   ShieldIcon,
@@ -36,9 +38,9 @@ const TARGET_EXAM_OPTIONS = [
 ];
 
 export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
+  const navigate = useNavigate();
   const { login, register, loading: authLoading } = useAuth();
   const [tab, setTab] = useState(initialTab); // 'login' | 'register' | 'verify_email' | 'forgot_request' | 'forgot_reset' | 'forgot_success'
-  const [role, setRole] = useState('student'); // 'student' | 'admin'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -90,20 +92,23 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
     setSuccessMsg('');
     try {
       if (tab === 'login') {
-        await login(email, password, rememberMe);
+        const loggedUser = await login(email, password, rememberMe);
         onClose();
+        if (loggedUser?.role === 'admin') {
+          navigate(ROUTES.admin);
+        } else {
+          navigate(ROUTES.dashboard);
+        }
       } else {
-        await register({
+        const res = await register({
           email,
           password,
           full_name: fullName,
-          role,
-          target_exams: role === 'student' ? selectedExams : ['All Exams'],
+          target_exams: selectedExams,
         });
-        await api.auth.sendOtp(email);
         setOtpCode('');
         setTab('verify_email');
-        setSuccessMsg('A 6-digit OTP has been sent to your email.');
+        setSuccessMsg(res?.message || 'A 6-digit verification code has been sent to your email.');
       }
     } catch (err) {
       setErrorMsg(err.message || 'Authentication failed. Please verify your credentials.');
@@ -165,20 +170,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
     }
   };
 
-  const handle1ClickDemo = async (selectedRole) => {
-    setErrorMsg('');
-    setSuccessMsg('');
-    const demoEmail = selectedRole === 'student' ? 'student@gmail.com' : 'admin@gmail.com';
-    const demoPass = selectedRole === 'student' ? 'student123' : 'admin123';
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    try {
-      await login(demoEmail, demoPass, rememberMe);
-      onClose();
-    } catch (err) {
-      setErrorMsg(`Could not log in as demo ${selectedRole}: ${err.message}`);
-    }
-  };
+
 
   const isForgotMode = ['forgot_request', 'forgot_reset', 'forgot_success', 'verify_email'].includes(tab);
 
@@ -284,92 +276,11 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
 
         {/* Scrollable Form Body */}
         <div className="overflow-y-auto pr-1 space-y-3.5 scrollbar-thin">
-          {/* 1-Click Instant Demo Credentials Access */}
-          {tab === 'login' && (
-            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-charcoal-850/80 border border-slate-200 dark:border-charcoal-750 space-y-2 relative z-10 transition-all">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <span>⚡ Quick Demo Credentials</span>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-normal">
-                    (1-Click Access)
-                  </span>
-                </span>
-                <span className="text-[10px] text-slate-400">Auto-routes to flow</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handle1ClickDemo('student')}
-                  className="group p-2.5 rounded-xl border border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-900 hover:border-blue-500 hover:bg-blue-50/40 dark:hover:bg-charcoal-800 text-left transition-all hover:shadow-xs cursor-pointer"
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                    <UserIcon size={13} className="text-blue-600 shrink-0" />
-                    <span>Student Aspirant</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
-                    student@gmail.com
-                  </div>
-                  <div className="text-[9px] text-slate-400 font-mono">pass: student123</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handle1ClickDemo('admin')}
-                  className="group p-2.5 rounded-xl border border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-900 hover:border-purple-500 hover:bg-purple-50/40 dark:hover:bg-charcoal-800 text-left transition-all hover:shadow-xs cursor-pointer"
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                    <ShieldIcon size={13} className="text-purple-600 shrink-0" />
-                    <span>Admin Studio</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
-                    admin@gmail.com
-                  </div>
-                  <div className="text-[9px] text-slate-400 font-mono">pass: admin123</div>
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Standard Login & Register Form */}
           {!isForgotMode && (
             <form onSubmit={handleAuthSubmit} className="space-y-3">
               {tab === 'register' && (
                 <>
-                  {/* Role Selection */}
-                  <div className="space-y-1 text-left">
-                    <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Select Account Role
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setRole('student')}
-                        className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                          role === 'student'
-                            ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 ring-1 ring-blue-500/30 shadow-xs'
-                            : 'border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-                        }`}
-                      >
-                        <UserIcon size={13} className={role === 'student' ? 'text-blue-600' : ''} />
-                        <span>Student Aspirant</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setRole('admin')}
-                        className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                          role === 'admin'
-                            ? 'border-purple-600 bg-purple-50/80 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 ring-1 ring-purple-500/30 shadow-xs'
-                            : 'border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-                        }`}
-                      >
-                        <ShieldIcon size={13} className={role === 'admin' ? 'text-purple-600' : ''} />
-                        <span>Administrator</span>
-                      </button>
-                    </div>
-                  </div>
-
                   {/* Full Name */}
                   <div className="space-y-1 text-left">
                     <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
@@ -385,47 +296,45 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                     />
                   </div>
 
-                  {/* Multi-Select Target Exam (Student only) */}
-                  {role === 'student' && (
-                    <div className="space-y-1.5 text-left">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                          <span>Target Examinations</span>
-                          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
-                            (Select 1 or more)
-                          </span>
-                        </label>
-                        <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
-                          {selectedExams.length} selected
+                  {/* Multi-Select Target Exam */}
+                  <div className="space-y-1.5 text-left">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                        <span>Target Examinations</span>
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                          (Select 1 or more)
                         </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {TARGET_EXAM_OPTIONS.map((exam) => {
-                          const isSelected = selectedExams.includes(exam.id);
-                          return (
-                            <button
-                              key={exam.id}
-                              type="button"
-                              onClick={() => toggleExam(exam.id)}
-                              className={`p-2 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between gap-1.5 cursor-pointer transform active:scale-95 ${
-                                isSelected
-                                  ? 'border-blue-600 bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/40'
-                                  : 'border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-800 dark:text-slate-200 hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-charcoal-750'
-                              }`}
-                            >
-                              <span className="truncate">{exam.label}</span>
-                              {isSelected && (
-                                <span className="w-4 h-4 rounded-full bg-white/20 text-white flex items-center justify-center shrink-0 text-[10px]">
-                                  ✓
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      </label>
+                      <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                        {selectedExams.length} selected
+                      </span>
                     </div>
-                  )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {TARGET_EXAM_OPTIONS.map((exam) => {
+                        const isSelected = selectedExams.includes(exam.id);
+                        return (
+                          <button
+                            key={exam.id}
+                            type="button"
+                            onClick={() => toggleExam(exam.id)}
+                            className={`p-2 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between gap-1.5 cursor-pointer transform active:scale-95 ${
+                              isSelected
+                                ? 'border-blue-600 bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/40'
+                                : 'border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-800 dark:text-slate-200 hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-charcoal-750'
+                            }`}
+                          >
+                            <span className="truncate">{exam.label}</span>
+                            {isSelected && (
+                              <span className="w-4 h-4 rounded-full bg-white/20 text-white flex items-center justify-center shrink-0 text-[10px]">
+                                ✓
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -522,8 +431,18 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                 setIsProcessing(true);
                 try {
                   await api.auth.verifyOtp(email, otpCode.trim());
-                  await login(email, password, rememberMe);
-                  onClose();
+                  if (password) {
+                    const loggedUser = await login(email, password, rememberMe);
+                    onClose();
+                    if (loggedUser?.role === 'admin') {
+                      navigate(ROUTES.admin);
+                    } else {
+                      navigate(ROUTES.dashboard);
+                    }
+                  } else {
+                    setTab('login');
+                    setSuccessMsg('Email verified successfully! Please sign in with your credentials.');
+                  }
                 } catch (err) {
                   setErrorMsg(err.message || 'Invalid or expired OTP. Please try again.');
                 } finally {
@@ -586,6 +505,21 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                   ) : (
                     <span>Verify & Continue</span>
                   )}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab('register');
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                  }}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <ArrowLeftIcon size={13} />
+                  <span>Change details / Re-register</span>
                 </button>
               </div>
             </form>

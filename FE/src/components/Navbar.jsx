@@ -277,7 +277,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                 ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
                 : 'bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800'
               }`}>
-              {!user ? 'PRO' : isAdmin ? 'ADMIN' : 'STUDENT'}
+              {!user ? 'PRO' : isAdmin ? 'ADMIN' : 'USER'}
             </span>
           </div>
         </div>
@@ -536,7 +536,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-100 dark:bg-institutional-950/50 text-institutional-800 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
                           <UserIcon size={11} />
-                          <span>Student Aspirant</span>
+                          <span>User</span>
                         </span>
                       )}
 
@@ -556,49 +556,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                     </div>
                   </div>
 
-                  {/* Role Switcher: Strictly ONLY visible if this account is a real Administrator! Never for regular students */}
-                  {canSwitchRole && (
-                    <div className="space-y-1.5 p-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200/80 dark:border-charcoal-750">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase font-bold text-charcoal-500 dark:text-charcoal-400 tracking-wider">
-                          Admin Preview Mode
-                        </span>
-                        <span className="text-[9px] text-purple-600 dark:text-purple-400 font-bold uppercase">
-                          Superuser
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1 bg-charcoal-200/60 dark:bg-charcoal-800 p-1 rounded-lg text-center font-bold text-[11px]">
-                        <button
-                          onClick={() => {
-                            switchRole('student');
-                            navigate(ROUTES.dashboard);
-                            setUserDropdownOpen(false);
-                          }}
-                          className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1 ${!isAdmin
-                            ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-xs'
-                            : 'text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200'
-                            }`}
-                        >
-                          <UserIcon size={12} />
-                          <span>Student View</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            switchRole('admin');
-                            navigate(ROUTES.admin);
-                            setUserDropdownOpen(false);
-                          }}
-                          className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1 ${isAdmin
-                            ? 'bg-purple-600 text-white shadow-xs'
-                            : 'text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200'
-                            }`}
-                        >
-                          <ShieldIcon size={12} />
-                          <span>Admin Studio</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* Navigation Shortcuts */}
                   <div className="space-y-1 pt-1 border-t border-charcoal-150 dark:border-charcoal-800">

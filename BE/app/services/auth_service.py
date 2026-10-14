@@ -21,11 +21,14 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import UserRole
+from app.core.logging import logger
+from app.repositories.pending_registration_repo import PendingRegistrationRepository
 from app.repositories.token_blacklist_repo import TokenBlacklistRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.user import (
     ForgotPasswordResponse,
     PaginatedUsersResponse,
+    RegisterInitiateResponse,
     ResetPasswordRequest,
     SendOtpRequest,
     TokenResponse,
@@ -42,37 +45,52 @@ class AuthService:
     def __init__(self, db: AsyncIOMotorDatabase):
         self.repo = UserRepository(db)
         self.blacklist_repo = TokenBlacklistRepository(db)
+        self.pending_repo = PendingRegistrationRepository(db)
 
-    async def register(self, req: UserRegisterRequest) -> UserResponse:
-        existing = await self.repo.get_by_email(req.email)
+    def _send_otp_email(self, email: str, otp: str) -> None:
+        try:
+            if settings.RESEND_API_KEY:
+                resend.api_key = settings.RESEND_API_KEY
+                resend.Emails.send({
+                    "from": settings.RESEND_FROM_EMAIL,
+                    "to": email,
+                    "subject": "Your PrepMagnet Verification Code",
+                    "html": f"<p>Your 6-digit verification code is <strong>{otp}</strong>. This code is valid for 10 minutes.</p>",
+                })
+        except Exception as e:
+            logger.warning(f"Failed to send OTP email to {email} via Resend: {e}")
+
+    async def register(self, req: UserRegisterRequest) -> RegisterInitiateResponse:
+        email = req.email.lower().strip()
+        existing = await self.repo.get_by_email(email)
         if existing:
-            raise ConflictException(f"User with email '{req.email}' already exists")
+            raise ConflictException(f"User with email '{email}' already exists")
 
-        user_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
-        user_doc = {
-            "_id": user_id,
-            "email": req.email.lower().strip(),
+        otp = f"{secrets.randbelow(900000) + 100000}"
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+        pending_doc = {
+            "email": email,
             "full_name": req.full_name.strip(),
             "hashed_password": hash_password(req.password),
-            "role": req.role.value,
-            "is_active": True,
-            "profile": {
-                "target_exams": req.target_exams or ["SSC CGL"],
-                "preferred_subjects": req.preferred_subjects or [],
-                "phone_number": None,
-                "avatar_url": None,
-                "coins_balance": 150,
-                "current_streak": 0,
-                "longest_streak": 0,
-                "subscription_plan": "FREE",
-                "subscription_status": "INACTIVE",
-            },
-            "created_at": now,
-            "updated_at": now,
+            "role": UserRole.USER.value,
+            "target_exams": req.target_exams or ["SSC CGL"],
+            "preferred_subjects": req.preferred_subjects or [],
+            "otp": otp,
+            "attempts": 0,
+            "expires_at": expires_at,
+            "created_at": datetime.now(timezone.utc),
         }
-        await self.repo.insert(user_doc)
-        return self._to_user_response(user_doc)
+        await self.pending_repo.upsert_pending(email, pending_doc)
+        self._send_otp_email(email, otp)
+
+        is_dev = settings.ENVIRONMENT in ("development", "test") or settings.DEBUG
+        return RegisterInitiateResponse(
+            email=email,
+            message="A 6-digit verification code has been sent to your email. Please verify to complete registration.",
+            expires_in=600,
+            otp=otp if is_dev else None,
+        )
 
     async def login(self, req: UserLoginRequest) -> Dict[str, Any]:
         user = await self.repo.get_by_email(req.email)
@@ -97,13 +115,13 @@ class AuthService:
 
         access_token = create_access_token(
             subject=user["_id"],
-            role=user.get("role", "student"),
+            role=user.get("role", "user"),
             expires_delta=access_delta,
             extra_claims={"email": user["email"], "remember_me": req.remember_me},
         )
         refresh_token = create_refresh_token(
             subject=user["_id"],
-            role=user.get("role", "student"),
+            role=user.get("role", "user"),
             expires_delta=refresh_delta,
         )
 
@@ -156,28 +174,109 @@ class AuthService:
             "message": "Password has been successfully updated. You may now sign in with your new password.",
         }
 
-    async def send_otp(self, req: SendOtpRequest) -> None:
-        user = await self.repo.get_by_email(req.email)
-        if not user:
-            raise NotFoundException(f"No registered account found with email '{req.email}'")
+    async def send_otp(self, req: SendOtpRequest) -> Dict[str, Any]:
+        email = req.email.lower().strip()
+        pending = await self.pending_repo.get_by_email(email)
+        if pending:
+            otp = f"{secrets.randbelow(900000) + 100000}"
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+            pending["otp"] = otp
+            pending["attempts"] = 0
+            pending["expires_at"] = expires_at
+            await self.pending_repo.upsert_pending(email, pending)
+            self._send_otp_email(email, otp)
+            is_dev = settings.ENVIRONMENT in ("development", "test") or settings.DEBUG
+            return {
+                "email": email,
+                "message": "A new verification code has been sent to your email.",
+                "expires_in": 600,
+                "otp": otp if is_dev else None,
+            }
 
-        otp = f"{secrets.randbelow(900000) + 100000}"
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-        await self.repo.set_otp(req.email, otp, expires_at)
+        user = await self.repo.get_by_email(email)
+        if user:
+            otp = f"{secrets.randbelow(900000) + 100000}"
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+            await self.repo.set_otp(email, otp, expires_at)
+            self._send_otp_email(email, otp)
+            is_dev = settings.ENVIRONMENT in ("development", "test") or settings.DEBUG
+            return {
+                "email": email,
+                "message": "A new verification code has been sent to your email.",
+                "expires_in": 600,
+                "otp": otp if is_dev else None,
+            }
 
-        resend.api_key = settings.RESEND_API_KEY
-        resend.Emails.send({
-            "from": settings.RESEND_FROM_EMAIL,
-            "to": req.email,
-            "subject": "Your OTP Code",
-            "html": f"<p>Your OTP is <strong>{otp}</strong>. Valid for 10 minutes.</p>",
-        })
+        raise NotFoundException(f"No pending registration or account found with email '{email}'")
 
-    async def verify_otp(self, req: VerifyOtpRequest) -> bool:
-        user = await self.repo.verify_and_clear_otp(req.email, req.otp)
-        if not user:
-            raise UnauthorizedException("Invalid or expired OTP. Please request a new one.")
-        return True
+    async def verify_otp(self, req: VerifyOtpRequest) -> UserResponse:
+        email = req.email.lower().strip()
+        otp = req.otp.strip()
+
+        pending = await self.pending_repo.get_by_email(email)
+        if not pending:
+            user = await self.repo.get_by_email(email)
+            if user:
+                verified_user = await self.repo.verify_and_clear_otp(email, otp)
+                if not verified_user:
+                    raise UnauthorizedException("Invalid or expired OTP. Please request a new one.")
+                return self._to_user_response(verified_user)
+            raise BadRequestException("No pending registration found for this email, or the OTP has expired. Please register again.")
+
+        now = datetime.now(timezone.utc)
+        expires_at = pending.get("expires_at")
+        if expires_at:
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if now > expires_at:
+                await self.pending_repo.delete_by_email(email)
+                raise BadRequestException("Verification code has expired. Please request a new OTP.")
+
+        attempts = pending.get("attempts", 0)
+        if attempts >= 5:
+            await self.pending_repo.delete_by_email(email)
+            raise BadRequestException("Too many incorrect attempts. Please register again to get a new code.")
+
+        if pending.get("otp") != otp:
+            await self.pending_repo.increment_attempts(email)
+            remaining = 5 - (attempts + 1)
+            if remaining <= 0:
+                await self.pending_repo.delete_by_email(email)
+                raise UnauthorizedException("Incorrect verification code. Maximum attempts exceeded. Please register again.")
+            raise UnauthorizedException(f"Incorrect verification code. {remaining} attempt(s) remaining.")
+
+        existing = await self.repo.get_by_email(email)
+        if existing:
+            await self.pending_repo.delete_by_email(email)
+            raise ConflictException(f"User with email '{email}' already exists")
+
+        # Create user record in database strictly upon successful OTP verification
+        user_id = str(uuid.uuid4())
+        user_doc = {
+            "_id": user_id,
+            "email": pending["email"],
+            "full_name": pending["full_name"],
+            "hashed_password": pending["hashed_password"],
+            "role": UserRole.USER.value,
+            "is_active": True,
+            "profile": {
+                "target_exams": pending.get("target_exams") or ["SSC CGL"],
+                "preferred_subjects": pending.get("preferred_subjects") or [],
+                "phone_number": None,
+                "avatar_url": None,
+                "coins_balance": 150,
+                "current_streak": 0,
+                "longest_streak": 0,
+                "subscription_plan": "FREE",
+                "subscription_status": "INACTIVE",
+            },
+            "created_at": now,
+            "updated_at": now,
+        }
+        await self.repo.insert(user_doc)
+        await self.pending_repo.delete_by_email(email)
+
+        return self._to_user_response(user_doc)
 
     async def logout(self, access_token: Optional[str], refresh_token: Optional[str] = None) -> None:
         """Blacklist the given token(s) by their `jti`, so neither can be used again even
@@ -214,12 +313,12 @@ class AuthService:
 
             new_access_token = create_access_token(
                 subject=user["_id"],
-                role=user.get("role", "student"),
+                role=user.get("role", "user"),
                 extra_claims={"email": user["email"]},
             )
             new_refresh_token = create_refresh_token(
                 subject=user["_id"],
-                role=user.get("role", "student"),
+                role=user.get("role", "user"),
             )
             return TokenResponse(
                 access_token=new_access_token,
@@ -260,7 +359,10 @@ class AuthService:
                 {"full_name": {"$regex": s, "$options": "i"}},
             ]
         if role:
-            query["role"] = role
+            if role in ("user", "student"):
+                query["role"] = {"$in": ["user", "student"]}
+            else:
+                query["role"] = role
         if is_active is not None:
             query["is_active"] = is_active
 
@@ -331,7 +433,7 @@ class AuthService:
             id=doc["_id"],
             email=doc["email"],
             full_name=doc["full_name"],
-            role=UserRole(doc.get("role", "student")),
+            role=UserRole(doc.get("role", "user")),
             is_active=doc.get("is_active", True),
             profile=doc.get("profile", {}),
             created_at=doc["created_at"],

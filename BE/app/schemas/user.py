@@ -8,7 +8,7 @@ class UserRegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6, max_length=100)
     full_name: str = Field(min_length=2, max_length=100)
-    role: UserRole = UserRole.STUDENT
+    role: Optional[UserRole] = None
     target_exams: Optional[List[str]] = Field(default_factory=lambda: ["SSC CGL"])
     preferred_subjects: Optional[List[str]] = Field(default_factory=list)
 
@@ -60,6 +60,13 @@ class SendOtpRequest(BaseModel):
 class VerifyOtpRequest(BaseModel):
     email: EmailStr
     otp: str
+
+
+class RegisterInitiateResponse(BaseModel):
+    email: EmailStr
+    message: str
+    expires_in: int = 600
+    otp: Optional[str] = None
 
 
 class UserProfileUpdate(BaseModel):

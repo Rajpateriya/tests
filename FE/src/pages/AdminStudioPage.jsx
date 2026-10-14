@@ -396,15 +396,15 @@ export const AdminStudioPage = () => {
     }
   };
 
-  // Quick toggle role between student and admin
+  // Quick toggle role between user and admin
   const handleToggleRole = async (user) => {
     const isSelf = currentAdmin?.id === user.id || currentAdmin?.email === user.email;
     if (isSelf) {
       showToast('error', 'You cannot alter your own administrator role.');
       return;
     }
-    const newRole = user.role === 'admin' ? 'student' : 'admin';
-    const actionLabel = newRole === 'admin' ? 'promote to Administrator' : 'demote to Student';
+    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    const actionLabel = newRole === 'admin' ? 'promote to Administrator' : 'demote to Regular User';
     if (!window.confirm(`Are you sure you want to ${actionLabel} for "${user.full_name}"?`)) {
       return;
     }
@@ -1192,7 +1192,7 @@ export const AdminStudioPage = () => {
                   className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer"
                 >
                   <option value="">All Roles</option>
-                  <option value="student">Student Aspirants</option>
+                  <option value="user">Regular Users</option>
                   <option value="admin">Administrators</option>
                 </select>
 
@@ -1312,14 +1312,14 @@ export const AdminStudioPage = () => {
                             {!isSelf && (
                               <button
                                 onClick={() => handleToggleRole(u)}
-                                title={u.role === 'admin' ? 'Demote to Student' : 'Make Administrator'}
+                                title={u.role === 'admin' ? 'Demote to User' : 'Make Administrator'}
                                 className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
                                   u.role === 'admin'
                                     ? 'border-charcoal-300 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
                                     : 'border-institutional-300 dark:border-institutional-700 bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 hover:bg-institutional-100 dark:hover:bg-institutional-900'
                                 }`}
                               >
-                                {u.role === 'admin' ? 'Make Student' : '⚡ Make Admin'}
+                                {u.role === 'admin' ? 'Make User' : '⚡ Make Admin'}
                               </button>
                             )}
                           </div>
@@ -1568,7 +1568,8 @@ export const AdminStudioPage = () => {
                     disabled={currentAdmin?.id === selectedUser.id}
                     className="w-full px-3 py-2 rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500 font-bold"
                   >
-                    <option value="student">Student Aspirant</option>
+                    <option value="user">Regular User</option>
+                    <option value="student">Student Aspirant (Legacy)</option>
                     <option value="admin">Administrator (Admin Studio Access)</option>
                   </select>
                 </div>
