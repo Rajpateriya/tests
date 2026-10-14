@@ -42,8 +42,8 @@ jobs:
       # 4. Build and Push Backend Docker image
       - name: Build and Push Backend to Docker Hub
         run: |
-          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-backend:${{ github.sha }}"
-          LATEST_TAG="${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-backend:latest"
+          IMAGE_TAG="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-backend:${{ github.sha }}"
+          LATEST_TAG="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-backend:latest"
 
           docker build -t $IMAGE_TAG -t $LATEST_TAG ./BE
           docker push $IMAGE_TAG
