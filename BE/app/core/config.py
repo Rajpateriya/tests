@@ -44,6 +44,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8000",
         "https://prepmagnet.in",
         "https://www.prepmagnet.in",
+        "https://mock-exam-frontend-1029614513378.us-central1.run.app"
     ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
