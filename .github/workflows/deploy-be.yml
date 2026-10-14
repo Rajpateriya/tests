@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  GCP_REGION: us-central1
+  GCP_REGION: asia-south1
   SERVICE_NAME: mock-exam-backend
 
 jobs:
