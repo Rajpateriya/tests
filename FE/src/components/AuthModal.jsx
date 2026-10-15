@@ -19,6 +19,7 @@ import {
   EyeIcon,
   EyeOffIcon,
   RefreshCwIcon,
+  FileTextIcon,
 } from './Icons';
 
 /**
@@ -49,6 +50,8 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
   const [fullName, setFullName] = useState('');
   const [selectedExams, setSelectedExams] = useState(['SSC CGL']);
   const [rememberMe, setRememberMe] = useState(true);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [legalModalType, setLegalModalType] = useState(null); // 'terms' | 'privacy' | null
   
   // OTP verification state
   const [otpCode, setOtpCode] = useState('');
@@ -83,6 +86,8 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
       setTab(initialTab);
       setErrorMsg('');
       setSuccessMsg('');
+      setAgreedToTerms(false);
+      setLegalModalType(null);
       const savedEmail = localStorage.getItem('govexam_remember_email');
       if (savedEmail) {
         setEmail(savedEmail);
@@ -107,6 +112,12 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
+
+    if (tab === 'register' && !agreedToTerms) {
+      setErrorMsg('You must agree to the Terms & Conditions and Privacy Policy to create an account.');
+      return;
+    }
+
     try {
       if (tab === 'login') {
         const loggedUser = await login(email, password, rememberMe);
@@ -454,6 +465,61 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                   >
                     Forgot password?
                   </button>
+                </div>
+              )}
+
+              {/* Mandatory Terms & Conditions / Privacy Policy Checkbox for Registration */}
+              {tab === 'register' && (
+                <div
+                  className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-all ${
+                    errorMsg && !agreedToTerms
+                      ? 'bg-rose-50/90 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-900/60 ring-1 ring-rose-400/30'
+                      : 'bg-slate-50/80 dark:bg-charcoal-800/50 border border-slate-200/80 dark:border-charcoal-700/60'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    id="registerTermsAgree"
+                    checked={agreedToTerms}
+                    onChange={(e) => {
+                      setAgreedToTerms(e.target.checked);
+                      if (e.target.checked && errorMsg.includes('agree')) {
+                        setErrorMsg('');
+                      }
+                    }}
+                    required
+                    className="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-charcoal-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600 shrink-0"
+                  />
+                  <label
+                    htmlFor="registerTermsAgree"
+                    className="text-xs text-slate-700 dark:text-slate-300 leading-snug cursor-pointer select-none text-left"
+                  >
+                    I agree to PrepMagnet's{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLegalModalType('terms');
+                      }}
+                      className="font-bold text-blue-600 dark:text-blue-400 hover:underline inline cursor-pointer"
+                    >
+                      Terms &amp; Conditions
+                    </button>{' '}
+                    and{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLegalModalType('privacy');
+                      }}
+                      className="font-bold text-blue-600 dark:text-blue-400 hover:underline inline cursor-pointer"
+                    >
+                      Privacy Policy
+                    </button>
+                    . <span className="text-rose-500 font-bold" title="Mandatory requirement">*</span>
+                  </label>
                 </div>
               )}
 
@@ -896,6 +962,210 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
           </div>
         )}
       </div>
+
+      {/* Legal Document Popup Modal (Terms & Conditions / Privacy Policy) */}
+      {legalModalType && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-charcoal-950/80 backdrop-blur-md animate-fade-in font-sans"
+          onClick={() => setLegalModalType(null)}
+        >
+          <div
+            className="bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-2xl sm:rounded-3xl max-w-lg sm:max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4 animate-scale-in relative overflow-hidden transition-all duration-300 ease-out max-h-[88vh] flex flex-col text-slate-800 dark:text-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-150 dark:border-charcoal-800 shrink-0 gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-blue-500 text-white flex items-center justify-center shadow-md shrink-0">
+                  {legalModalType === 'terms' ? <FileTextIcon size={18} /> : <ShieldIcon size={18} />}
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    {legalModalType === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    PrepMagnet Legal Policy • Last updated October 2026
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLegalModalType(null)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-800 transition-colors cursor-pointer"
+                aria-label="Close policy popup"
+              >
+                <XCircleIcon size={20} />
+              </button>
+            </div>
+
+            {/* Quick Document Switcher */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold text-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setLegalModalType('terms')}
+                className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+                  legalModalType === 'terms'
+                    ? 'bg-white dark:bg-charcoal-900 text-blue-600 dark:text-blue-400 shadow-sm font-extrabold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Terms &amp; Conditions
+              </button>
+              <button
+                type="button"
+                onClick={() => setLegalModalType('privacy')}
+                className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+                  legalModalType === 'privacy'
+                    ? 'bg-white dark:bg-charcoal-900 text-blue-600 dark:text-blue-400 shadow-sm font-extrabold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Privacy Policy
+              </button>
+            </div>
+
+            {/* Document Content Scrollable Body */}
+            <div className="overflow-y-auto pr-2 space-y-3.5 scrollbar-thin text-xs text-slate-700 dark:text-slate-300 leading-relaxed text-left flex-1">
+              {legalModalType === 'terms' ? (
+                <>
+                  <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-xs">
+                    <p className="font-semibold mb-1">Key Summary</p>
+                    <p className="text-[11px] text-blue-800/90 dark:text-blue-300/90">
+                      By registering an account with PrepMagnet, you agree to access testing materials solely for personal competitive exam preparation, maintain single-user credential security, and respect platform intellectual property.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">1. Acceptance &amp; Eligibility</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      By creating an account or accessing tests, you represent that you are at least 18 years old (or have parental/guardian consent if a minor) and legally competent to enter into binding agreements under the Indian Contract Act, 1872.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">2. User Account &amp; Single-Candidate Security</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      Your account credentials are confidential and strictly for single-user use. Simultaneous multi-device exam sessions or credential sharing may lead to automated session termination and security flags.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">3. Mock Tests &amp; AI Analytics</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      PrepMagnet provides computer-based mock tests, live scoring, percentile calculators, and AI diagnostic feedback. While curated according to official exam patterns (SSC, Banking, Railways, State PSC, Defence), tests are simulations and do not guarantee final government selection.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">4. Payments &amp; Razorpay Gateway</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      All subscription payments are securely transacted through Razorpay. Due to immediate digital delivery and unlock of test series content, purchases are subject to PrepMagnet's strict digital access and refund policy.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">5. Intellectual Property &amp; Honor Code</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      All mock questions, explanations, typing master passages, algorithms, and interface elements are proprietary to PrepMagnet. Scraping, redistributing, or using unauthorized automated bots is strictly prohibited.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">6. Governing Law &amp; Grievance Redressal</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      These Terms are governed by the laws of India. For any grievances, reach out to grievance@prepmagnet.in or support@prepmagnet.in.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-xs">
+                    <p className="font-semibold mb-1">Privacy &amp; Data Protection (DPDPA 2023)</p>
+                    <p className="text-[11px] text-blue-800/90 dark:text-blue-300/90">
+                      PrepMagnet respects your privacy and complies with the Digital Personal Data Protection Act, 2023. We never sell your personal information or test history to third parties.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">1. Information We Collect</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      We collect your name, email address, password hash (bcrypt), selected target examinations, mock test answer submissions, typing speed scores, and login timestamps to personalize your learning trajectory.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">2. How We Use Your Data</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      Your data is utilized to calculate all-India ranks, compute speed &amp; accuracy metrics, send email OTP verifications, and provide AI-driven weakness recommendations.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">3. Payment Information &amp; Razorpay</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      PrepMagnet does not capture or store debit/credit card numbers or UPI MPINs. All transactions are processed through Razorpay's PCI-DSS Level 1 compliant secure tokenized infrastructure.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">4. Data Encryption &amp; Security</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      All data in transit is encrypted with TLS 1.3. User passwords and confidential credentials are cryptographic hashes stored securely in our PostgreSQL database with strict role-based access.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">5. Your Rights &amp; Data Deletion</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      Under DPDPA, you have the right to access your personal data, request corrections, or request account deletion by emailing privacy@prepmagnet.in.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* View Full Page in New Tab Link */}
+              <div className="pt-2 border-t border-slate-150 dark:border-charcoal-800 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Need complete unabridged legal text?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.open(legalModalType === 'terms' ? ROUTES.terms : ROUTES.privacy, '_blank');
+                  }}
+                  className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Open Full Page</span>
+                  <span>↗</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="pt-3 border-t border-slate-150 dark:border-charcoal-800 flex items-center justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setLegalModalType(null)}
+                className="py-2 px-4 rounded-xl border border-slate-300 dark:border-charcoal-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-charcoal-800 transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAgreedToTerms(true);
+                  setErrorMsg('');
+                  setLegalModalType(null);
+                }}
+                className="py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckIcon size={14} />
+                <span>Agree &amp; Continue</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

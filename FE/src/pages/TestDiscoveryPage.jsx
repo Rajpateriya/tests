@@ -325,9 +325,9 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           </div>
 
           {/* Master Headline - Responsively Scaled with Modern Typographic Contrast */}
-          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] font-black tracking-tight text-charcoal-950 dark:text-white leading-[1.15] sm:leading-[1.1] text-balance">
-            <span>Practice Smarter.</span>{' '}
-            <span className="block sm:inline lg:block mt-1 sm:mt-0 lg:mt-1 text-[0.8em] sm:text-[0.78em] font-extrabold bg-gradient-to-r from-institutional-600 via-sky-500 to-indigo-600 dark:from-institutional-400 dark:via-sky-300 dark:to-indigo-300 bg-clip-text text-transparent">
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-black tracking-tight text-charcoal-950 dark:text-white leading-[1.12] sm:leading-[1.08]">
+            <span className="block">Practice Smarter.</span>
+            <span className="inline-block mt-1 sm:mt-1.5 pb-2 pt-0.5 bg-gradient-to-r from-institutional-600 via-sky-500 to-indigo-600 dark:from-sky-300 dark:via-blue-300 dark:to-indigo-300 bg-clip-text text-transparent">
               Get Exam-Ready.
             </span>
           </h1>

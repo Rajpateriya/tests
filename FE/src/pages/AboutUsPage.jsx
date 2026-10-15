@@ -203,26 +203,24 @@ export const AboutUsPage = () => {
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 text-xs text-charcoal-600 dark:text-charcoal-300">
-
-            <div className="space-y-2">
+          <div className="grid sm:grid-cols-2 gap-5 text-xs text-charcoal-600 dark:text-charcoal-300">
+            <div className="p-4 rounded-2xl bg-charcoal-50/70 dark:bg-charcoal-850/60 border border-charcoal-200/70 dark:border-charcoal-800 space-y-2.5">
               <div className="flex items-center gap-2 font-bold text-charcoal-900 dark:text-white text-sm">
                 <MailIcon size={16} className="text-institutional-600 dark:text-institutional-400" />
                 <span>Contact Channels</span>
               </div>
-              <p className="space-y-1">
-                <div>General Enquiries: <strong className="text-charcoal-900 dark:text-white select-all">support.prepmagnet@gmail.com</strong></div>
-                {/* <div>Legal & Grievance: <strong className="text-charcoal-900 dark:text-white select-all">legal@prepmagnet.com</strong></div> */}
-                {/* <div>Student Helpline: <strong className="text-charcoal-900 dark:text-white font-mono select-all">+91 (011) 4892-0190</strong></div> */}
-              </p>
+              <div className="space-y-1.5 text-xs">
+                <div>General & Support Enquiries: <strong className="text-charcoal-900 dark:text-white select-all">support.prepmagnet@gmail.com</strong></div>
+                <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400">Response SLA: Within 24–48 business hours</div>
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="p-4 rounded-2xl bg-charcoal-50/70 dark:bg-charcoal-850/60 border border-charcoal-200/70 dark:border-charcoal-800 space-y-2.5">
               <div className="flex items-center gap-2 font-bold text-charcoal-900 dark:text-white text-sm">
                 <LockIcon size={16} className="text-institutional-600 dark:text-institutional-400" />
                 <span>Payment & Compliance Standards</span>
               </div>
-              <p className="leading-relaxed text-charcoal-500 dark:text-charcoal-400">
+              <p className="leading-relaxed text-charcoal-500 dark:text-charcoal-400 text-xs">
                 All subscriptions are billed in INR with full GST compliance (18%). Online payments are processed through Razorpay Software Private Ltd. under 256-bit SSL encryption.
               </p>
             </div>
