@@ -13,7 +13,21 @@ async def test_typing_mock_test_and_analysis_flow(client: AsyncClient):
     token = student_login_resp.json()["data"]["tokens"]["access_token"]
     student_headers = {"Authorization": f"Bearer {token}"}
 
-    # 2. List typing passages
+    # 2. Seed a sample passage if not present
+    await client.post(
+        "/api/v1/typing/passages",
+        json={
+            "title": "SSC CGL Typing Drill Standard",
+            "exam_track": "SSC CGL Tier-II",
+            "difficulty": "MEDIUM",
+            "content": "The civil services examination in India is conducted annually to recruit candidates for various prestigious government positions.",
+            "target_wpm": 35,
+            "duration_seconds": 300,
+            "total_marks": 20,
+            "word_count": 20,
+        },
+    )
+
     passages_resp = await client.get("/api/v1/typing/passages")
     assert passages_resp.status_code == 200
     passages = passages_resp.json()["data"]

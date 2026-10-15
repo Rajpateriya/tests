@@ -16,6 +16,9 @@ import {
   KeyIcon,
   ArrowLeftIcon,
   MailIcon,
+  EyeIcon,
+  EyeOffIcon,
+  RefreshCwIcon,
 } from './Icons';
 
 /**
@@ -54,11 +57,25 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [devResetCode, setDevResetCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Resend OTP countdown timer
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   // Pre-fill remembered email and sync tab on modal open
   useEffect(() => {
@@ -117,22 +134,65 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
 
   const handleForgotPasswordRequest = async (e) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) {
+    const cleanEmail = email.toLowerCase().trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
       setErrorMsg('Please enter a valid email address.');
       return;
     }
     setErrorMsg('');
     setIsProcessing(true);
     try {
-      const res = await api.auth.forgotPassword(email);
+      const res = await api.auth.forgotPassword(cleanEmail);
       if (res?.reset_code) {
         setDevResetCode(res.reset_code);
-        setResetCode(res.reset_code); // Auto-fill for convenience
+        setResetCode(res.reset_code); // Auto-fill in dev
+      } else {
+        setResetCode('');
       }
-      setSuccessMsg(res?.message || 'Verification code generated! Please check your email.');
-      setTab('forgot_reset');
+      setResendCooldown(30);
+      setSuccessMsg(res?.message || 'A 6-digit verification code has been dispatched to your email.');
+      setTab('forgot_otp');
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to request password reset code.');
+      setErrorMsg(err.message || 'Failed to request password reset code. Please ensure this email is registered.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleVerifyResetOtp = async (e) => {
+    e.preventDefault();
+    const cleanCode = resetCode.trim();
+    if (!cleanCode || cleanCode.length !== 6) {
+      setErrorMsg('Please enter the 6-digit verification code.');
+      return;
+    }
+    setErrorMsg('');
+    setIsProcessing(true);
+    try {
+      const res = await api.auth.verifyResetCode(email.toLowerCase().trim(), cleanCode);
+      setSuccessMsg(res?.message || 'Verification code confirmed. Please set your new password.');
+      setTab('forgot_new_password');
+    } catch (err) {
+      setErrorMsg(err.message || 'Invalid or expired 6-digit verification code. Please request a new code.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleResendResetOtp = async () => {
+    if (resendCooldown > 0 || isProcessing) return;
+    setErrorMsg('');
+    setIsProcessing(true);
+    try {
+      const res = await api.auth.forgotPassword(email.toLowerCase().trim());
+      if (res?.reset_code) {
+        setDevResetCode(res.reset_code);
+        setResetCode(res.reset_code);
+      }
+      setResendCooldown(30);
+      setSuccessMsg('A new 6-digit OTP verification code has been dispatched to your email.');
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to resend verification code.');
     } finally {
       setIsProcessing(false);
     }
@@ -140,10 +200,6 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
 
   const handlePasswordResetSubmit = async (e) => {
     e.preventDefault();
-    if (!resetCode.trim()) {
-      setErrorMsg('Please enter the 6-digit verification code.');
-      return;
-    }
     if (newPassword.length < 6) {
       setErrorMsg('New password must be at least 6 characters long.');
       return;
@@ -157,22 +213,21 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
     setIsProcessing(true);
     try {
       const res = await api.auth.resetPassword({
-        email,
+        email: email.toLowerCase().trim(),
         reset_code: resetCode.trim(),
         new_password: newPassword,
       });
-      setSuccessMsg(res?.message || 'Password updated successfully!');
+      setSuccessMsg(res?.message || 'Password successfully updated in database!');
       setTab('forgot_success');
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to reset password. Please check your code.');
+      setErrorMsg(err.message || 'Failed to reset password. Please verify your OTP code and try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const isForgotMode = ['forgot_request', 'forgot_otp', 'forgot_new_password', 'forgot_reset', 'forgot_success', 'verify_email'].includes(tab);
 
-
-  const isForgotMode = ['forgot_request', 'forgot_reset', 'forgot_success', 'verify_email'].includes(tab);
 
   return (
     <div
@@ -199,6 +254,8 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                   {tab === 'register' && 'Join PrepMagnet Free'}
                   {tab === 'verify_email' && 'Verify Your Email'}
                   {tab === 'forgot_request' && 'Forgot Password'}
+                  {tab === 'forgot_otp' && 'Verify OTP Code'}
+                  {tab === 'forgot_new_password' && 'Set New Password'}
                   {tab === 'forgot_reset' && 'Reset Password'}
                   {tab === 'forgot_success' && 'Password Changed!'}
                 </span>
@@ -208,8 +265,10 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                 {tab === 'register' && 'Empowering 45,000+ government job rankers'}
                 {tab === 'verify_email' && 'Enter the 6-digit OTP sent to your email'}
                 {tab === 'forgot_request' && 'Enter your email to receive a secure 6-digit OTP code'}
+                {tab === 'forgot_otp' && 'Enter the 6-digit verification code sent to your email'}
+                {tab === 'forgot_new_password' && 'Enter your new password to update your account in the database'}
                 {tab === 'forgot_reset' && 'Enter the OTP verification code and choose a new password'}
-                {tab === 'forgot_success' && 'Your account security credentials have been updated'}
+                {tab === 'forgot_success' && 'Your password has been updated in database. Please sign in.'}
               </p>
             </div>
           </div>
@@ -580,13 +639,17 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
             </form>
           )}
 
-          {/* Forgot Password Flow — Step 2: Enter Code & New Password */}
-          {tab === 'forgot_reset' && (
-            <form onSubmit={handlePasswordResetSubmit} className="space-y-3.5 text-left">
+          {/* Forgot Password Flow — Step 2: Verify OTP Code */}
+          {tab === 'forgot_otp' && (
+            <form onSubmit={handleVerifyResetOtp} className="space-y-4 text-left">
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                We sent a 6-digit verification code to <strong className="text-slate-900 dark:text-white">{email}</strong>. Enter it below to verify your identity.
+              </div>
+
               {devResetCode && (
                 <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 flex items-center justify-between text-xs">
                   <div className="text-emerald-900 dark:text-emerald-200">
-                    <span className="font-bold">Test Code: </span>
+                    <span className="font-bold">Test OTP: </span>
                     <code className="font-mono bg-white dark:bg-charcoal-900 px-2 py-0.5 rounded font-extrabold text-emerald-600 dark:text-emerald-400">
                       {devResetCode}
                     </code>
@@ -603,7 +666,7 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  6-Digit Verification Code
+                  6-Digit OTP Verification Code
                 </label>
                 <div className="relative">
                   <KeyIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -613,42 +676,8 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                     maxLength={6}
                     placeholder="e.g. 704320"
                     value={resetCode}
-                    onChange={(e) => setResetCode(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 text-xs font-mono font-extrabold tracking-widest rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  New Password (min 6 characters)
-                </label>
-                <div className="relative">
-                  <LockIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="password"
-                    required
-                    placeholder="Enter new password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <LockIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="password"
-                    required
-                    placeholder="Re-enter new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                    onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full pl-9 pr-3.5 py-2.5 text-xs font-mono font-extrabold tracking-[0.3em] rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
                   />
                 </div>
               </div>
@@ -667,35 +696,132 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                 </button>
 
                 <button
+                  type="button"
+                  disabled={resendCooldown > 0 || isProcessing}
+                  onClick={handleResendResetOtp}
+                  className="py-2.5 px-3 rounded-xl border border-slate-300 dark:border-charcoal-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-charcoal-800 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCwIcon size={13} className={isProcessing ? "animate-spin" : ""} />
+                  <span>{resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend OTP'}</span>
+                </button>
+
+                <button
                   type="submit"
-                  disabled={isProcessing}
+                  disabled={isProcessing || resetCode.trim().length !== 6}
                   className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isProcessing ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Updating Password...</span>
+                      <span>Verifying OTP...</span>
                     </>
                   ) : (
-                    <span>Set New Password</span>
+                    <span>Verify OTP Code</span>
                   )}
                 </button>
               </div>
             </form>
           )}
 
-          {/* Forgot Password Flow — Step 3: Success Screen */}
+          {/* Forgot Password Flow — Step 3: New Password Popup/Screen */}
+          {(tab === 'forgot_new_password' || tab === 'forgot_reset') && (
+            <form onSubmit={handlePasswordResetSubmit} className="space-y-3.5 text-left">
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 leading-relaxed flex items-center gap-2">
+                <CheckCircleIcon size={16} className="text-emerald-600 shrink-0" />
+                <span>OTP Verified! Choose a new, secure password for <strong className="text-slate-900 dark:text-white">{email}</strong>.</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  New Password (min 6 characters)
+                </label>
+                <div className="relative">
+                  <LockIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-9 pr-10 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    {showNewPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <LockIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    placeholder="Re-enter new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full pl-9 pr-10 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab('forgot_otp');
+                    setErrorMsg('');
+                  }}
+                  className="py-2.5 px-4 rounded-xl border border-slate-300 dark:border-charcoal-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-charcoal-800 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <ArrowLeftIcon size={14} />
+                  <span>Back</span>
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isProcessing || newPassword.length < 6 || newPassword !== confirmPassword}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Updating Password in DB...</span>
+                    </>
+                  ) : (
+                    <span>Update Password & Save</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Forgot Password Flow — Step 4: Success Screen */}
           {tab === 'forgot_success' && (
             <div className="py-4 text-center space-y-4">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner">
-                <CheckCircleIcon size={32} />
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner border border-emerald-300 dark:border-emerald-800">
+                <CheckCircleIcon size={36} />
               </div>
               <div className="space-y-1">
-                <h4 className="text-base font-extrabold text-slate-900 dark:text-white">
-                  Password Reset Successful!
+                <h4 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
+                  Password Updated Successfully!
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-                  Your password for <strong className="text-slate-800 dark:text-slate-200">{email}</strong> has been updated. You can now sign in with your new credentials.
+                  Your password for <strong className="text-slate-800 dark:text-slate-200">{email}</strong> has been updated in the database. Please sign in again with your new password.
                 </p>
               </div>
               <button
@@ -703,12 +829,16 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                 onClick={() => {
                   setTab('login');
                   setPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                  setResetCode('');
                   setErrorMsg('');
-                  setSuccessMsg('');
+                  setSuccessMsg('Password updated successfully! Please enter your new password to sign in.');
                 }}
-                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer"
+                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]"
               >
-                Proceed to Sign In
+                <LockIcon size={14} />
+                <span>Proceed to Sign In</span>
               </button>
             </div>
           )}

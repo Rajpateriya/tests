@@ -113,7 +113,22 @@ async def test_remember_me_and_forgot_password(client: AsyncClient):
     code = forgot_data["data"]["reset_code"]
     assert len(code) == 6
 
-    # 3. Reset password with valid code
+    # 3a. Verify reset code with incorrect OTP -> 401
+    bad_verify = await client.post(
+        "/api/v1/auth/verify-reset-code",
+        json={"email": "student@gmail.com", "reset_code": "000000"},
+    )
+    assert bad_verify.status_code == 401
+
+    # 3b. Verify reset code with correct OTP -> 200
+    good_verify = await client.post(
+        "/api/v1/auth/verify-reset-code",
+        json={"email": "student@gmail.com", "reset_code": code},
+    )
+    assert good_verify.status_code == 200
+    assert good_verify.json()["data"]["valid"] is True
+
+    # 3c. Reset password with valid code
     reset_resp = await client.post(
         "/api/v1/auth/reset-password",
         json={"email": "student@gmail.com", "reset_code": code, "new_password": "NewStudentPassword@123"},

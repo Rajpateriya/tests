@@ -21,8 +21,7 @@ export const isRealSession = () => {
   return !!token && !token.startsWith('demo');
 };
 
-// Auth routes never trigger a silent refresh themselves (that would loop).
-const SKIPS_REFRESH = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout', '/auth/forgot-password', '/auth/reset-password'];
+const SKIPS_REFRESH = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout', '/auth/forgot-password', '/auth/verify-reset-code', '/auth/reset-password'];
 
 // A 401 is refreshed at most once at a time, even if several requests hit it together —
 // they all wait on the same refresh and then retry with the new token.
@@ -239,6 +238,13 @@ export const api = {
       return await request('/auth/forgot-password', {
         method: 'POST',
         body: JSON.stringify({ email }),
+      });
+    },
+
+    verifyResetCode: async (email, reset_code) => {
+      return await request('/auth/verify-reset-code', {
+        method: 'POST',
+        body: JSON.stringify({ email, reset_code }),
       });
     },
 

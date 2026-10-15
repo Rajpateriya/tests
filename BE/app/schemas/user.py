@@ -30,6 +30,11 @@ class ForgotPasswordResponse(BaseModel):
     reset_token: Optional[str] = None
 
 
+class VerifyResetCodeRequest(BaseModel):
+    email: EmailStr
+    reset_code: str
+
+
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
     reset_code: str

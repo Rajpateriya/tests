@@ -50,15 +50,48 @@ class AuthService:
     def _send_otp_email(self, email: str, otp: str) -> None:
         try:
             if settings.RESEND_API_KEY:
-                resend.api_key = settings.RESEND_API_KEY
+                resend.api_key = settings.RESEND_API_KEY.strip()
                 resend.Emails.send({
-                    "from": settings.RESEND_FROM_EMAIL,
+                    "from": settings.RESEND_FROM_EMAIL.strip(),
                     "to": email,
                     "subject": "Your PrepMagnet Verification Code",
                     "html": f"<p>Your 6-digit verification code is <strong>{otp}</strong>. This code is valid for 10 minutes.</p>",
                 })
         except Exception as e:
             logger.warning(f"Failed to send OTP email to {email} via Resend: {e}")
+
+    def _send_password_reset_email(self, email: str, reset_code: str) -> None:
+        try:
+            if settings.RESEND_API_KEY:
+                resend.api_key = settings.RESEND_API_KEY.strip()
+                resend.Emails.send({
+                    "from": settings.RESEND_FROM_EMAIL.strip(),
+                    "to": email,
+                    "subject": "Your PrepMagnet Password Reset Verification Code",
+                    "html": f"""
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 28px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <h2 style="color: #0f172a; margin: 0 0 8px 0; font-size: 22px; font-weight: 800;">Reset Your Password</h2>
+                            <p style="color: #64748b; margin: 0; font-size: 14px;">PrepMagnet Candidate Security</p>
+                        </div>
+                        <p style="color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                            We received a request to reset the password for your account (<strong>{email}</strong>).
+                        </p>
+                        <div style="margin: 24px 0; padding: 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; text-align: center;">
+                            <div style="font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Your 6-Digit Password Reset OTP</div>
+                            <span style="font-family: monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #15803d;">{reset_code}</span>
+                        </div>
+                        <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin: 16px 0;">
+                            This OTP verification code will expire in <strong>15 minutes</strong>. If you did not request this password reset, please ignore this email or contact support.
+                        </p>
+                        <div style="border-top: 1px solid #e2e8f0; margin-top: 24px; padding-top: 16px; text-align: center;">
+                            <p style="color: #94a3b8; font-size: 11px; margin: 0;">Secured with 256-bit encryption • PrepMagnet Platform</p>
+                        </div>
+                    </div>
+                    """,
+                })
+        except Exception as e:
+            logger.warning(f"Failed to send password reset email to {email} via Resend: {e}")
 
     async def register(self, req: UserRegisterRequest) -> RegisterInitiateResponse:
         email = req.email.lower().strip()
@@ -136,6 +169,7 @@ class AuthService:
         }
 
     async def forgot_password(self, email: str) -> ForgotPasswordResponse:
+        email = email.lower().strip()
         user = await self.repo.get_by_email(email)
         if not user:
             raise NotFoundException(f"No registered account found with email '{email}'")
@@ -152,25 +186,43 @@ class AuthService:
             expires_at=expires_at,
         )
 
+        self._send_password_reset_email(email, reset_code)
+
+        is_dev = settings.ENVIRONMENT in ("development", "test") or settings.DEBUG
         return ForgotPasswordResponse(
             email=email,
-            message="Password reset code generated successfully. Please enter the 6-digit code to choose a new password.",
-            reset_code=reset_code,
+            message="A 6-digit verification code has been sent to your email. Please verify the code to reset your password.",
+            reset_code=reset_code if is_dev else None,
             reset_token=reset_token,
         )
 
+    async def verify_reset_code(self, email: str, reset_code: str) -> Dict[str, Any]:
+        email = email.lower().strip()
+        code = reset_code.strip()
+        user = await self.repo.verify_reset_code(email, code)
+        if not user:
+            raise UnauthorizedException("Invalid or expired 6-digit verification code. Please request a new code.")
+
+        return {
+            "valid": True,
+            "email": email,
+            "message": "OTP verified successfully. Please enter your new password.",
+        }
+
     async def reset_password(self, req: ResetPasswordRequest) -> Dict[str, Any]:
-        user = await self.repo.verify_reset_code(req.email, req.reset_code)
+        email = req.email.lower().strip()
+        code = req.reset_code.strip()
+        user = await self.repo.verify_reset_code(email, code)
         if not user:
             raise UnauthorizedException("Invalid or expired 6-digit verification code. Please request a new code.")
 
         new_hashed = hash_password(req.new_password)
-        updated_user = await self.repo.reset_password(req.email, req.reset_code, new_hashed)
+        updated_user = await self.repo.reset_password(email, code, new_hashed)
         if not updated_user:
             raise BadRequestException("Unable to reset password. Please try again.")
 
         return {
-            "email": req.email,
+            "email": email,
             "message": "Password has been successfully updated. You may now sign in with your new password.",
         }
 

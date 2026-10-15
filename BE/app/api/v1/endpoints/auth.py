@@ -17,6 +17,7 @@ from app.schemas.user import (
     UserRegisterRequest,
     UserResponse,
     VerifyOtpRequest,
+    VerifyResetCodeRequest,
 )
 from app.services.auth_service import AuthService
 
@@ -97,6 +98,21 @@ async def forgot_password(
     return APIResponse(
         success=True,
         message=res.message,
+        data=res,
+    )
+
+
+@router.post("/verify-reset-code", response_model=APIResponse[dict])
+async def verify_reset_code(
+    req: VerifyResetCodeRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Verify that the 6-digit password reset OTP is valid and unexpired."""
+    auth_service = AuthService(db)
+    res = await auth_service.verify_reset_code(req.email, req.reset_code)
+    return APIResponse(
+        success=True,
+        message=res["message"],
         data=res,
     )
 
