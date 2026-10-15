@@ -78,7 +78,7 @@ export const TermsPage = () => {
           </h1>
 
           <p className="text-sm sm:text-base text-charcoal-600 dark:text-charcoal-300 leading-relaxed">
-            Welcome to <strong className="text-charcoal-900 dark:text-white">PrepMagnet</strong> (operated by <strong>PrepMagnet Educational Systems Pvt. Ltd.</strong>). Please read these Terms carefully before using our computer-based testing (CBT) simulators, mock test series, courses, and typing master modules.
+            Welcome to <strong className="text-charcoal-900 dark:text-white">PrepMagnet</strong> (operated by <strong>PrepMagnet</strong>). Please read these Terms carefully before using our computer-based testing (CBT) simulators, mock test series, courses, and typing master modules.
           </p>
 
           <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-charcoal-500 dark:text-charcoal-400">
@@ -306,7 +306,7 @@ export const TermsPage = () => {
               </h3>
               <div className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-300 space-y-2.5 leading-relaxed">
                 <p>
-                  All content included on the Platform, including questions, answer explanations, mock blueprints, examination graphics, user interface designs, algorithms, code, and trademarks, is the exclusive proprietary intellectual property of <strong>PrepMagnet Educational Systems Pvt. Ltd.</strong> and is protected under the Indian Copyright Act, 1957, and relevant international treaties.
+                  All content included on the Platform, including questions, answer explanations, mock blueprints, examination graphics, user interface designs, algorithms, code, and trademarks, is the exclusive proprietary intellectual property of <strong>PrepMagnet</strong> and is protected under the Indian Copyright Act, 1957, and relevant international treaties.
                 </p>
                 <p>
                   You are granted a non-exclusive, non-transferable, revocable license to access and practice test materials strictly for your personal, non-commercial examination preparation. You must not:
@@ -403,24 +403,14 @@ export const TermsPage = () => {
               </p>
 
               <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200/80 dark:border-charcoal-700 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div>
-                  <div className="font-bold text-charcoal-900 dark:text-white">Grievance Officer:</div>
-                  <div className="text-charcoal-600 dark:text-charcoal-300">Mr. Alok Verma (Legal & Operations)</div>
-                  <div className="text-charcoal-600 dark:text-charcoal-300 mt-1">PrepMagnet Educational Systems Pvt. Ltd.</div>
-                  <div className="text-charcoal-500 dark:text-charcoal-400 mt-1">Pragati Maidan Academic Complex, New Delhi 110001, India</div>
-                </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-charcoal-600 dark:text-charcoal-300">
                     <MailIcon size={14} className="text-institutional-600 dark:text-institutional-400 shrink-0" />
-                    <span>Email: <strong className="text-charcoal-900 dark:text-white select-all">legal@prepmagnet.com</strong></span>
-                  </div>
-                  <div className="flex items-center gap-2 text-charcoal-600 dark:text-charcoal-300">
-                    <PhoneIcon size={14} className="text-institutional-600 dark:text-institutional-400 shrink-0" />
-                    {/* <span>Support Desk: <strong className="text-charcoal-900 dark:text-white font-mono select-all">+91 (011) 4892-0190</strong></span> */}
+                    <span>Email: <strong className="text-charcoal-900 dark:text-white select-all">support.prepmagnet@gmail.com</strong></span>
                   </div>
                   <div className="text-[11px] text-charcoal-500 mt-2">
-                    Office Hours: Monday – Saturday, 9:30 AM to 6:30 PM IST (Excluding Public Holidays). Grievances are acknowledged within 48 hours and resolved within 15 days.
+                    Support Hours: Monday – Saturday, 10:00 AM to 6:00 PM IST (Excluding Public Holidays). Grievances are acknowledged within 48 hours and resolved within 15 days.
                   </div>
                 </div>
               </div>

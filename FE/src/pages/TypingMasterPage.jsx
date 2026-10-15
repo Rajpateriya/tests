@@ -96,17 +96,18 @@ const TrendChart = ({ points, colorClass, name, unit, zeroBase, maxCap, refValue
   const tipRight = hover !== null && x(hover) > W / 2;
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div ref={wrapRef} className="relative w-full max-w-full overflow-hidden">
       <svg
         width={W}
         height={H}
+        viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label={ariaLabel}
         tabIndex={0}
         onKeyDown={onKeyDown}
         onFocus={() => setHover((h) => h ?? lastIdx)}
         onBlur={() => setHover(null)}
-        className={`block max-w-full outline-none focus-visible:ring-2 focus-visible:ring-institutional-500 rounded-lg ${colorClass}`}
+        className={`block w-full max-w-full outline-none focus-visible:ring-2 focus-visible:ring-institutional-500 rounded-lg ${colorClass}`}
       >
         {/* Grid + y-axis: solid hairlines, text in muted ink */}
         {scale.ticks.map((t) => (
@@ -227,6 +228,36 @@ export const TypingMasterPage = () => {
 
   const inputRef = useRef(null);
   const passageContainerRef = useRef(null);
+  const activeCharRef = useRef(null);
+
+  const [passageFont, setPassageFont] = useState(() => {
+    try {
+      return localStorage.getItem('pm_typing_font') || 'sans';
+    } catch {
+      return 'sans';
+    }
+  });
+  const [passageFontSize, setPassageFontSize] = useState(() => {
+    try {
+      return localStorage.getItem('pm_typing_size') || 'md';
+    } catch {
+      return 'md';
+    }
+  });
+
+  const handleFontChange = (font) => {
+    setPassageFont(font);
+    try {
+      localStorage.setItem('pm_typing_font', font);
+    } catch { }
+  };
+
+  const handleSizeChange = (size) => {
+    setPassageFontSize(size);
+    try {
+      localStorage.setItem('pm_typing_size', size);
+    } catch { }
+  };
 
   useEffect(() => {
     loadPassagesAndHistory();
@@ -416,25 +447,50 @@ export const TypingMasterPage = () => {
   const liveGrossWpm = elapsedSeconds > 0 ? Math.round((currentTypedLength / 5) / currentMinutes) : 0;
   const progressPct = targetContent.length ? Math.min(100, Math.round((currentTypedLength / targetContent.length) * 100)) : 0;
 
+  // Auto-scroll passage container to keep active char in view
+  useEffect(() => {
+    if (activeCharRef.current && passageContainerRef.current) {
+      const container = passageContainerRef.current;
+      const el = activeCharRef.current;
+      const containerTop = container.scrollTop;
+      const containerBottom = containerTop + container.clientHeight;
+      const elemTop = el.offsetTop - container.offsetTop;
+      const elemBottom = elemTop + el.offsetHeight;
+
+      if (elemBottom > containerBottom - 36) {
+        container.scrollTo({ top: elemTop - 36, behavior: 'smooth' });
+      } else if (elemTop < containerTop + 24) {
+        container.scrollTo({ top: Math.max(0, elemTop - 24), behavior: 'smooth' });
+      }
+    }
+  }, [currentTypedLength]);
+
   // Render character tokens
   const renderPassageWithHighlights = () => {
     const chars = targetContent.split('');
     return chars.map((char, index) => {
-      let statusClass = 'text-charcoal-400 dark:text-charcoal-500'; // untyped
+      let statusClass = 'text-charcoal-400 dark:text-charcoal-500 font-normal'; // untyped
 
       if (index < currentTypedLength) {
         if (typedText[index] === char) {
-          statusClass = 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 font-semibold';
+          statusClass = 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 dark:bg-emerald-400/15 font-semibold rounded-[2px]';
         } else {
-          statusClass = 'text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-950/80 font-bold underline';
+          statusClass = 'text-rose-700 dark:text-rose-300 bg-rose-500/20 dark:bg-rose-400/25 font-bold underline decoration-rose-500 decoration-2 rounded-[2px]';
         }
       } else if (index === currentTypedLength) {
-        statusClass = 'bg-institutional-600 text-white rounded font-bold animate-pulse';
+        statusClass = 'bg-institutional-600 text-white font-bold rounded-[2px] ring-2 ring-institutional-400/70 shadow-sm animate-pulse';
       }
 
+      const isSpace = char === ' ';
+      const isActive = index === currentTypedLength;
+
       return (
-        <span key={index} className={`transition-colors font-mono text-sm sm:text-base leading-relaxed ${statusClass}`}>
-          {char}
+        <span
+          key={index}
+          ref={isActive ? activeCharRef : null}
+          className={`transition-colors inline-block ${isSpace ? 'min-w-[0.45em]' : ''} ${statusClass}`}
+        >
+          {isSpace && isActive ? '␣' : char}
         </span>
       );
     });
@@ -479,30 +535,44 @@ export const TypingMasterPage = () => {
     .slice(0, 6);
   const topPassageWpm = bestByPassage.length ? Math.max(1, Number(bestByPassage[0].net_wpm)) : 1;
 
+  const fontClass = passageFont === 'mono'
+    ? 'font-mono'
+    : passageFont === 'serif'
+      ? 'font-serif'
+      : 'font-sans font-medium';
+
+  const sizeClass = passageFontSize === 'sm'
+    ? 'text-xs sm:text-sm leading-relaxed sm:leading-loose'
+    : passageFontSize === 'lg'
+      ? 'text-base sm:text-lg md:text-xl leading-[1.85] sm:leading-[2.1]'
+      : 'text-sm sm:text-base md:text-[17px] leading-[1.8] sm:leading-[1.95]';
+
   return (
     // The -mt/-mb + pt/pb pairs cancel the app shell's navbar/footer padding so the backdrop reaches the very top and bottom.
-    <div className="relative overflow-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero">
-      {/* Ambient glows — same backdrop as the landing page */}
-      <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
-      <div className="absolute top-[520px] -left-36 w-[520px] h-[520px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
-      <div className="absolute top-[900px] -right-36 w-[560px] h-[560px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
+    <div className="relative w-full max-w-full overflow-x-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero">
+      {/* Ambient glows — wrapped in overflow-hidden container to avoid horizontal scrolling */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] max-w-[140vw] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
+        <div className="absolute top-[520px] -left-36 w-[520px] max-w-[140vw] h-[520px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
+        <div className="absolute top-[900px] -right-36 w-[560px] max-w-[140vw] h-[560px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
+      </div>
 
-      <main className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">
+      <main className="relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-10 space-y-5 sm:space-y-6 min-w-0">
         {/* Header */}
-        <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 animate-fade-in">
-          <div className="space-y-1.5">
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.15]">
+        <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 animate-fade-in w-full min-w-0">
+          <div className="space-y-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.15] break-words">
               Typing <span className="text-institutional-600 dark:text-institutional-400">Master</span>
             </h1>
-            <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-300 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-300 max-w-2xl leading-relaxed break-words">
               Government-exam typing simulation (SSC CGL DEST, CHSL, RRB NTPC) with live Gross and Net WPM, keystroke accuracy and correction analysis.
             </p>
           </div>
 
-          <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold self-start sm:self-auto">
+          <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold self-start sm:self-auto max-w-full overflow-x-auto shrink-0">
             <button
               onClick={() => setActiveTab('test')}
-              className={`px-4 py-1.5 rounded-lg whitespace-nowrap transition-all ${
+              className={`px-3.5 sm:px-4 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'test'
                   ? 'bg-white dark:bg-charcoal-900 text-institutional-700 dark:text-institutional-300 shadow-sm font-extrabold'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
@@ -512,7 +582,7 @@ export const TypingMasterPage = () => {
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-4 py-1.5 rounded-lg whitespace-nowrap transition-all inline-flex items-center gap-1.5 ${
+              className={`px-3.5 sm:px-4 py-1.5 rounded-lg whitespace-nowrap transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'history'
                   ? 'bg-white dark:bg-charcoal-900 text-institutional-700 dark:text-institutional-300 shadow-sm font-extrabold'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
@@ -525,23 +595,23 @@ export const TypingMasterPage = () => {
         </section>
 
         {activeTab === 'test' && (
-          <div className="space-y-5">
+          <div className="space-y-5 w-full min-w-0">
             {/* Exam Specification Bar & Dynamic Random Passage Trigger */}
-            <div className="p-4 rounded-2xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-extrabold border border-amber-200 dark:border-amber-800">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs min-w-0">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-extrabold border border-amber-200 dark:border-amber-800 text-[11px] sm:text-xs shrink-0">
                   🏆 20 Marks
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-extrabold border border-sky-200 dark:border-sky-800">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-extrabold border border-sky-200 dark:border-sky-800 text-[11px] sm:text-xs shrink-0">
                   ⏱ 5 Minutes (300s)
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800 text-[11px] sm:text-xs shrink-0">
                   📝 ~{selectedPassage?.word_count || 200} Words
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-extrabold border border-purple-200 dark:border-purple-800">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-extrabold border border-purple-200 dark:border-purple-800 text-[11px] sm:text-xs shrink-0">
                   ⚡ Target {selectedPassage?.target_wpm || 35} WPM
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 font-mono text-[11px]">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 font-mono text-[10px] sm:text-[11px] shrink-0">
                   DB: typing_master_para
                 </span>
               </div>
@@ -550,21 +620,21 @@ export const TypingMasterPage = () => {
                 type="button"
                 disabled={loadingPassage || sessionActive}
                 onClick={handleFetchRandomPassage}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer"
               >
                 <span>{loadingPassage ? 'Fetching from DB...' : '🎲 Get Random Passage'}</span>
               </button>
             </div>
 
             {/* Passage picker */}
-            <div className="flex items-stretch gap-3 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex items-stretch gap-2.5 sm:gap-3 overflow-x-auto pb-1 max-w-full w-full min-w-0 scrollbar-none">
               {passages.map((p) => {
                 const isSelected = selectedPassage?.id === p.id;
                 return (
                   <button
                     key={p.id}
                     onClick={() => initPassage(p)}
-                    className={`px-4 py-3 rounded-xl border text-left shrink-0 transition-all ${
+                    className={`px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-left shrink-0 transition-all cursor-pointer ${
                       isSelected
                         ? 'border-institutional-500 bg-institutional-50 dark:bg-institutional-950/40 shadow-card'
                         : 'border-charcoal-200 dark:border-charcoal-800 bg-white/90 dark:bg-charcoal-900/90 hover:border-institutional-300 dark:hover:border-institutional-700 hover:-translate-y-0.5 shadow-subtle'
@@ -573,10 +643,10 @@ export const TypingMasterPage = () => {
                     <div className="text-[10px] font-extrabold uppercase tracking-wider text-institutional-600 dark:text-institutional-400">
                       {p.exam_category || 'Mock Exam'}
                     </div>
-                    <div className="text-xs font-extrabold text-charcoal-900 dark:text-white truncate max-w-[220px] mt-0.5">
+                    <div className="text-xs font-extrabold text-charcoal-900 dark:text-white truncate max-w-[170px] sm:max-w-[220px] mt-0.5">
                       {p.title}
                     </div>
-                    <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 mt-0.5">
+                    <div className="text-[10px] sm:text-[11px] text-charcoal-500 dark:text-charcoal-400 mt-0.5">
                       {p.marks || 20} Marks · {p.duration_minutes || 5} min · ~{p.word_count || 200} words
                     </div>
                   </button>
@@ -585,122 +655,206 @@ export const TypingMasterPage = () => {
             </div>
 
             {/* Live stat tiles */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 w-full min-w-0">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-2.5 sm:gap-3 shadow-subtle min-w-0">
                 <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0 ${
                     timeIsLow
                       ? 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300 animate-pulse'
                       : 'bg-institutional-50 text-institutional-600 dark:bg-institutional-950/50 dark:text-institutional-300'
                   }`}
                 >
-                  <ClockIcon size={17} />
+                  <ClockIcon size={16} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Time left</div>
-                  <div className={`text-lg font-black font-mono leading-tight ${timeIsLow ? 'text-rose-600 dark:text-rose-400' : 'text-charcoal-900 dark:text-white'}`}>
+                  <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Time left</div>
+                  <div className={`text-base sm:text-lg font-black font-mono leading-tight truncate ${timeIsLow ? 'text-rose-600 dark:text-rose-400' : 'text-charcoal-900 dark:text-white'}`}>
                     {formatTime(timeLeft)}
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
-                <div className="w-9 h-9 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300 flex items-center justify-center shrink-0 text-base">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-2.5 sm:gap-3 shadow-subtle min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300 flex items-center justify-center shrink-0 text-sm sm:text-base">
                   ⚡
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Gross speed</div>
-                  <div className="text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white">
+                  <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Gross speed</div>
+                  <div className="text-base sm:text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white truncate">
                     {liveGrossWpm} <span className="text-[10px] font-semibold text-charcoal-400">WPM</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
-                <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0 text-base">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-2.5 sm:gap-3 shadow-subtle min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0 text-sm sm:text-base">
                   🏆
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Max Marks</div>
-                  <div className="text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white">
-                    {selectedPassage?.marks || 20} <span className="text-[10px] font-semibold text-charcoal-400">Marks</span>
+                  <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Max Marks</div>
+                  <div className="text-base sm:text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white truncate">
+                    {selectedPassage?.marks || 20} <span className="text-[10px] font-semibold text-charcoal-400">M</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0">
-                  <AwardIcon size={17} />
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-2.5 sm:gap-3 shadow-subtle min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                  <AwardIcon size={16} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Cutoff</div>
-                  <div className="text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white">
+                  <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Cutoff</div>
+                  <div className="text-base sm:text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white truncate">
                     {selectedPassage?.target_wpm || 35} <span className="text-[10px] font-semibold text-charcoal-400">WPM</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
-                <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0 text-base">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-2.5 sm:gap-3 shadow-subtle min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0 text-sm sm:text-base">
                   ⌨️
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Keystrokes</div>
-                  <div className="text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white">
-                    {currentTypedLength} <span className="text-[10px] font-semibold text-charcoal-400">/ {targetContent.length || 1000}</span>
+                  <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Keystrokes</div>
+                  <div className="text-base sm:text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white truncate">
+                    {currentTypedLength} <span className="text-[9px] font-semibold text-charcoal-400">/{targetContent.length || 1000}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
-                <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 flex items-center justify-center shrink-0 text-base">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-2.5 sm:gap-3 shadow-subtle min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 flex items-center justify-center shrink-0 text-sm sm:text-base">
                   ⌫
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Backspaces</div>
-                  <div className="text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white">{backspaceCount}</div>
+                  <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Backspaces</div>
+                  <div className="text-base sm:text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white truncate">{backspaceCount}</div>
                 </div>
               </div>
             </div>
 
             {/* Test arena: target text + input */}
-            <section className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden">
+            <section className="w-full min-w-0 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden">
               <div className="h-1.5 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500" />
-              <div className="p-5 sm:p-6 space-y-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center flex-wrap gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 shrink-0">
                         {selectedPassage?.exam_category || 'Exam Mock'}
                       </span>
                       <span className="text-xs font-semibold text-charcoal-500">
                         20 Marks · 5 Minutes · ~{selectedPassage?.word_count || 200} Words
                       </span>
                     </div>
-                    <h3 className="text-base font-extrabold tracking-tight text-charcoal-900 dark:text-white truncate mt-1">
+                    <h3 className="text-base sm:text-lg font-extrabold tracking-tight text-charcoal-900 dark:text-white break-words mt-1">
                       {selectedPassage?.title}
                     </h3>
-                    <div className="text-xs text-charcoal-500 dark:text-charcoal-400">
+                    <div className="text-xs text-charcoal-500 dark:text-charcoal-400 break-words">
                       Type the passage exactly as shown. Green indicates correct stroke, red indicates error.
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-charcoal-150 dark:border-charcoal-800">
                     <button
                       type="button"
                       disabled={sessionActive || loadingPassage}
                       onClick={handleFetchRandomPassage}
-                      className="px-3 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors inline-flex items-center gap-1.5"
+                      className="flex-1 sm:flex-none justify-center px-3 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <span>🎲 New Passage</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => initPassage(selectedPassage)}
-                      className="px-3.5 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors"
+                      className="px-3.5 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors cursor-pointer"
                     >
                       Restart
                     </button>
+                  </div>
+                </div>
+
+                {/* Typography & Controls Toolbar */}
+                <div className="flex flex-wrap items-center justify-between gap-2.5 py-2 px-3 rounded-xl bg-charcoal-50/70 dark:bg-charcoal-850/60 border border-charcoal-200/60 dark:border-charcoal-800/60 text-xs text-charcoal-500">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">Font:</span>
+                    <div className="flex items-center p-0.5 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-lg text-[11px] font-bold shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => handleFontChange('sans')}
+                        className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                          passageFont === 'sans'
+                            ? 'bg-institutional-600 text-white font-extrabold shadow-xs'
+                            : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                        }`}
+                      >
+                        Clean Sans
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFontChange('mono')}
+                        className={`px-2.5 py-1 rounded-md font-mono transition-all cursor-pointer ${
+                          passageFont === 'mono'
+                            ? 'bg-institutional-600 text-white font-extrabold shadow-xs'
+                            : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                        }`}
+                      >
+                        JetBrains Mono
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFontChange('serif')}
+                        className={`px-2.5 py-1 rounded-md font-serif transition-all cursor-pointer ${
+                          passageFont === 'serif'
+                            ? 'bg-institutional-600 text-white font-extrabold shadow-xs'
+                            : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                        }`}
+                      >
+                        Serif
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">Size:</span>
+                    <div className="flex items-center p-0.5 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-lg text-[11px] font-bold shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => handleSizeChange('sm')}
+                        className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                          passageFontSize === 'sm'
+                            ? 'bg-institutional-600 text-white font-extrabold shadow-xs'
+                            : 'text-charcoal-600 dark:text-charcoal-400'
+                        }`}
+                        title="Small font"
+                      >
+                        A-
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSizeChange('md')}
+                        className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                          passageFontSize === 'md'
+                            ? 'bg-institutional-600 text-white font-extrabold shadow-xs'
+                            : 'text-charcoal-600 dark:text-charcoal-400'
+                        }`}
+                        title="Default font"
+                      >
+                        A
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSizeChange('lg')}
+                        className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                          passageFontSize === 'lg'
+                            ? 'bg-institutional-600 text-white font-extrabold shadow-xs'
+                            : 'text-charcoal-600 dark:text-charcoal-400'
+                        }`}
+                        title="Large font"
+                      >
+                        A+
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -718,7 +872,8 @@ export const TypingMasterPage = () => {
                 {/* Target passage */}
                 <div
                   ref={passageContainerRef}
-                  className="p-4 sm:p-5 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 max-h-56 overflow-y-auto select-none space-x-0.5 tracking-wide"
+                  className={`p-4 sm:p-5 rounded-xl bg-charcoal-50/90 dark:bg-charcoal-850/90 border border-charcoal-200 dark:border-charcoal-800 max-h-56 sm:max-h-64 overflow-y-auto select-none whitespace-pre-wrap transition-all ${fontClass} ${sizeClass}`}
+                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                 >
                   {renderPassageWithHighlights()}
                 </div>
@@ -732,21 +887,21 @@ export const TypingMasterPage = () => {
                     onKeyDown={handleKeyDown}
                     disabled={sessionCompleted}
                     placeholder={sessionActive ? 'Keep typing with rhythm and precision...' : 'Click here and start typing to begin the timer...'}
-                    rows={5}
-                    className="w-full p-4 rounded-xl bg-white dark:bg-charcoal-800 border-2 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 placeholder-charcoal-400 font-mono text-sm leading-relaxed focus:outline-none focus:border-institutional-500 dark:focus:border-institutional-500 resize-none disabled:opacity-60"
+                    rows={4}
+                    className={`w-full p-3.5 sm:p-4 rounded-xl bg-white dark:bg-charcoal-800 border-2 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 placeholder-charcoal-400 text-sm sm:text-base leading-relaxed focus:outline-none focus:border-institutional-500 dark:focus:border-institutional-500 resize-none disabled:opacity-60 transition-colors ${fontClass}`}
                   />
 
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                     <span className="text-xs text-charcoal-500 dark:text-charcoal-400 font-medium inline-flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${sessionActive ? 'bg-emerald-500 animate-pulse' : 'bg-charcoal-300 dark:bg-charcoal-600'}`} />
-                      {sessionActive ? 'Test in progress · live keystroke tracking' : 'The timer starts on your first keypress'}
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${sessionActive ? 'bg-emerald-500 animate-pulse' : 'bg-charcoal-300 dark:bg-charcoal-600'}`} />
+                      <span>{sessionActive ? 'Test in progress · live keystroke tracking' : 'The timer starts on your first keypress'}</span>
                     </span>
 
                     <button
                       type="button"
                       disabled={typedText.length === 0 || sessionCompleted || submitting}
                       onClick={() => handleSubmitAttempt(typedText, elapsedSeconds || 1)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     >
                       <span>{submitting ? 'Analyzing performance...' : 'Submit & Analyze'}</span>
                       <ArrowRightIcon size={14} />
@@ -758,93 +913,93 @@ export const TypingMasterPage = () => {
 
             {/* Scorecard */}
             {scorecard && (
-              <section className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden animate-fade-in">
+              <section className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden animate-fade-in w-full min-w-0">
                 <div className="h-1.5 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500" />
-                <div className="p-5 sm:p-6 space-y-5">
+                <div className="p-4 sm:p-6 space-y-5 min-w-0">
                   {/* Verdict & Score */}
                   <div
-                    className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                    className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
                       scorecard.is_qualified
                         ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
                         : 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${
+                        className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg shrink-0 ${
                           scorecard.is_qualified ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
                         }`}
                       >
                         {scorecard.is_qualified ? '✓' : '✕'}
                       </div>
-                      <div>
-                        <div className="text-base font-extrabold tracking-tight">
+                      <div className="min-w-0">
+                        <div className="text-sm sm:text-base font-extrabold tracking-tight">
                           {scorecard.is_qualified ? 'Qualified' : 'Not qualified'}
                         </div>
-                        <div className="text-xs opacity-90 font-medium">{scorecard.qualification_reason}</div>
+                        <div className="text-xs opacity-90 font-medium break-words">{scorecard.qualification_reason}</div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="px-3.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 font-mono font-black text-sm text-amber-900 dark:text-amber-200">
+                    <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto justify-end">
+                      <div className="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 font-mono font-black text-xs sm:text-sm text-amber-900 dark:text-amber-200">
                         Score: {scorecard.marks_obtained !== undefined ? scorecard.marks_obtained : 20} / {scorecard.total_marks || 20} Marks
                       </div>
-                      <div className="px-3 py-1.5 rounded-lg bg-white/70 dark:bg-black/30 font-mono font-bold text-[11px]">
+                      <div className="px-2.5 py-1.5 rounded-lg bg-white/70 dark:bg-black/30 font-mono font-bold text-[10px] sm:text-[11px]">
                         {scorecard.exam_category || 'Standard'}
                       </div>
                     </div>
                   </div>
 
                   {/* Metrics */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 text-center">
-                      <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-bold">Net speed</div>
-                      <div className="text-2xl sm:text-3xl font-black font-mono text-institutional-600 dark:text-institutional-400 mt-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full min-w-0">
+                    <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 text-center min-w-0">
+                      <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-bold truncate">Net speed</div>
+                      <div className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-institutional-600 dark:text-institutional-400 mt-1 truncate">
                         {scorecard.net_wpm} <span className="text-xs font-semibold">WPM</span>
                       </div>
-                      <div className="text-[10px] text-charcoal-400 mt-0.5">Gross {scorecard.gross_wpm} WPM</div>
+                      <div className="text-[10px] text-charcoal-400 mt-0.5 truncate">Gross {scorecard.gross_wpm} WPM</div>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 text-center">
-                      <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-bold">Accuracy</div>
-                      <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                    <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 text-center min-w-0">
+                      <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-bold truncate">Accuracy</div>
+                      <div className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 truncate">
                         {scorecard.accuracy_percentage}%
                       </div>
-                      <div className="text-[10px] text-charcoal-400 mt-0.5">Error rate {(100 - scorecard.accuracy_percentage).toFixed(1)}%</div>
+                      <div className="text-[10px] text-charcoal-400 mt-0.5 truncate">Error {(100 - scorecard.accuracy_percentage).toFixed(1)}%</div>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 text-center">
-                      <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-bold">Keystrokes</div>
-                      <div className="text-2xl sm:text-3xl font-black font-mono text-charcoal-900 dark:text-white mt-1">
+                    <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 text-center min-w-0">
+                      <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-bold truncate">Keystrokes</div>
+                      <div className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-charcoal-900 dark:text-white mt-1 truncate">
                         {scorecard.total_keystrokes}
                       </div>
-                      <div className="text-[10px] text-charcoal-400 mt-0.5">
-                        Correct {scorecard.correct_keystrokes} · Wrong {scorecard.wrong_keystrokes}
+                      <div className="text-[10px] text-charcoal-400 mt-0.5 truncate">
+                        ✓ {scorecard.correct_keystrokes} · ✕ {scorecard.wrong_keystrokes}
                       </div>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 text-center">
-                      <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-bold">Time taken</div>
-                      <div className="text-2xl sm:text-3xl font-black font-mono text-charcoal-900 dark:text-white mt-1">
+                    <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-150 dark:border-charcoal-800 text-center min-w-0">
+                      <div className="text-[9px] sm:text-[10px] text-charcoal-500 uppercase tracking-wider font-bold truncate">Time taken</div>
+                      <div className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-charcoal-900 dark:text-white mt-1 truncate">
                         {Math.round(scorecard.time_taken_seconds)} <span className="text-xs font-semibold">sec</span>
                       </div>
-                      <div className="text-[10px] text-charcoal-400 mt-0.5">Backspaces {scorecard.backspace_count}</div>
+                      <div className="text-[10px] text-charcoal-400 mt-0.5 truncate">Backspaces {scorecard.backspace_count}</div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-1">
                     <button
                       type="button"
                       disabled={loadingPassage}
                       onClick={handleFetchRandomPassage}
-                      className="px-5 py-2.5 rounded-lg border border-institutional-500 text-institutional-600 dark:text-institutional-400 hover:bg-institutional-50 dark:hover:bg-institutional-950 font-extrabold text-xs shadow-sm transition-all active:scale-95 inline-flex items-center gap-1.5"
+                      className="justify-center px-5 py-2.5 rounded-lg border border-institutional-500 text-institutional-600 dark:text-institutional-400 hover:bg-institutional-50 dark:hover:bg-institutional-950 font-extrabold text-xs shadow-sm transition-all active:scale-95 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <span>🎲 Next Random Passage</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => initPassage(selectedPassage)}
-                      className="px-5 py-2.5 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-95"
+                      className="justify-center px-5 py-2.5 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
                     >
                       Retake test
                     </button>

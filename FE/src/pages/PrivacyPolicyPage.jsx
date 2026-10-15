@@ -51,7 +51,7 @@ export const PrivacyPolicyPage = () => {
       <div className="absolute top-[600px] -left-36 w-[520px] h-[520px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none" />
 
       <main className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
-        
+
         {/* Breadcrumb */}
         <div className="flex flex-wrap items-center gap-2 text-xs text-charcoal-500 dark:text-charcoal-400 animate-fade-in">
           <button onClick={() => navigate(ROUTES.home)} className="hover:text-institutional-600 dark:hover:text-institutional-400 transition-colors">
@@ -75,7 +75,7 @@ export const PrivacyPolicyPage = () => {
           </h1>
 
           <p className="text-sm sm:text-base text-charcoal-600 dark:text-charcoal-300 leading-relaxed">
-            At <strong className="text-charcoal-900 dark:text-white">PrepMagnet</strong> (operated by <strong>PrepMagnet Educational Systems Pvt. Ltd.</strong>), we hold candidate trust and data confidentiality to the highest standards. This Privacy Policy details our practices concerning the collection, storage, and processing of your personal data in accordance with Indian data protection laws.
+            At <strong className="text-charcoal-900 dark:text-white">PrepMagnet</strong>, we hold candidate trust and data confidentiality to the highest standards. This Privacy Policy details our practices concerning the collection, storage, and processing of your personal data in accordance with Indian data protection laws.
           </p>
 
           <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-charcoal-500 dark:text-charcoal-400">
@@ -100,7 +100,7 @@ export const PrivacyPolicyPage = () => {
 
         {/* Layout Grid: Sidebar Navigation + Content Body */}
         <div className="grid lg:grid-cols-4 gap-8 items-start">
-          
+
           {/* Table of Contents Sticky Sidebar */}
           <aside className="lg:col-span-1 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-4 sm:p-5 shadow-card lg:sticky lg:top-24 space-y-3">
             <div className="flex items-center gap-2 pb-2 border-b border-charcoal-150 dark:border-charcoal-800">
@@ -115,11 +115,10 @@ export const PrivacyPolicyPage = () => {
                 <button
                   key={sec.id}
                   onClick={() => scrollTo(sec.id)}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors truncate block ${
-                    activeSection === sec.id
+                  className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors truncate block ${activeSection === sec.id
                       ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold shadow-xs'
                       : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
-                  }`}
+                    }`}
                 >
                   {sec.title}
                 </button>
@@ -147,7 +146,7 @@ export const PrivacyPolicyPage = () => {
 
           {/* Main Content Body */}
           <section className="lg:col-span-3 space-y-6">
-            
+
             {/* Highlights Banner */}
             <div className="p-5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-2 text-xs">
               <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-200 font-bold text-sm">
@@ -166,7 +165,7 @@ export const PrivacyPolicyPage = () => {
               </h3>
               <div className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-300 space-y-2.5 leading-relaxed">
                 <p>
-                  This Privacy Policy applies to all users, candidates, and subscribers accessing the PrepMagnet web application, API services, and associated domains. It describes how <strong>PrepMagnet Educational Systems Pvt. Ltd.</strong> ("PrepMagnet", "we", "us", or "our") collects, uses, shares, and protects your information.
+                  This Privacy Policy applies to all users, candidates, and subscribers accessing the PrepMagnet web application, API services, and associated domains. It describes how <strong>PrepMagnet </strong> ("PrepMagnet", "we", "us", or "our") collects, uses, shares, and protects your information.
                 </p>
                 <p>
                   This document is compiled in compliance with Section 43A of the Information Technology Act, 2000, the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011, and the Digital Personal Data Protection Act (DPDPA), 2023.
@@ -183,7 +182,7 @@ export const PrivacyPolicyPage = () => {
                 <p>
                   We collect information strictly necessary to deliver high-fidelity exam simulations, compute All-India percentiles, and process subscription orders:
                 </p>
-                
+
                 <div className="space-y-2">
                   <div className="p-3.5 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-150 dark:border-charcoal-700">
                     <strong className="text-charcoal-900 dark:text-white">A. Account & Profile Information:</strong>
@@ -323,7 +322,7 @@ export const PrivacyPolicyPage = () => {
                   We retain candidate account and exam historical records for as long as your account remains active, so you can track your speed improvements and performance graphs over time.
                 </p>
                 <p>
-                  You may request permanent deletion of your account and associated scorecards at any time by writing to <strong>privacy@prepmagnet.com</strong>. Upon receiving a verified request, your personal identifiers will be purged within 30 days, except where transaction invoices must be archived to comply with Indian tax (GST) and audit statutes.
+                  You may request permanent deletion of your account and associated scorecards at any time by writing to <strong>support.prepmagnet@gmail.com</strong>. Upon receiving a verified request, your personal identifiers will be purged within 30 days, except where transaction invoices must be archived to comply with Indian tax (GST) and audit statutes.
                 </p>
               </div>
             </article>
@@ -366,21 +365,17 @@ export const PrivacyPolicyPage = () => {
               </p>
 
               <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200/80 dark:border-charcoal-700 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div>
+                {/* <div>
                   <div className="font-bold text-charcoal-900 dark:text-white">Data Protection Officer:</div>
                   <div className="text-charcoal-600 dark:text-charcoal-300">Ms. Sneha Mukherjee (Legal & Compliance)</div>
-                  <div className="text-charcoal-600 dark:text-charcoal-300 mt-1">PrepMagnet Educational Systems Pvt. Ltd.</div>
+                  <div className="text-charcoal-600 dark:text-charcoal-300 mt-1">PrepMagnet</div>
                   <div className="text-charcoal-500 dark:text-charcoal-400 mt-1">Pragati Maidan Academic Complex, New Delhi 110001, India</div>
-                </div>
+                </div> */}
 
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-charcoal-600 dark:text-charcoal-300">
                     <MailIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Email: <strong className="text-charcoal-900 dark:text-white select-all">privacy@prepmagnet.com</strong></span>
-                  </div>
-                  <div className="flex items-center gap-2 text-charcoal-600 dark:text-charcoal-300">
-                    <PhoneIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    {/* <span>Phone: <strong className="text-charcoal-900 dark:text-white font-mono select-all">+91 (011) 4892-0190</strong></span> */}
+                    <span>Email: <strong className="text-charcoal-900 dark:text-white select-all">support.prepmagnet@gmail.com</strong></span>
                   </div>
                   <div className="text-[11px] text-charcoal-500 mt-2">
                     Response SLA: Acknowledged within 48 hours; resolved within 15 business days.

@@ -382,7 +382,7 @@ export const Footer = () => {
                   <button
                     onClick={() => handleNav({ to: ROUTES.about })}
                     className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                    title="About PrepMagnet Educational Systems"
+                    title="About PrepMagnet"
                   >
                     <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
                     <span>About Us</span>
@@ -469,7 +469,7 @@ export const Footer = () => {
             {/* Copyright & Interactive Legal Links */}
             <div className="mt-4 pt-4 border-t border-charcoal-200/60 dark:border-charcoal-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
               <div className="flex items-center gap-2 text-charcoal-500 dark:text-charcoal-400 text-center sm:text-left">
-                <span>© {currentYear} PrepMagnet Educational Systems Pvt. Ltd.</span>
+                <span>© {currentYear} PrepMagnet </span>
                 <span className="hidden sm:inline">•</span>
                 <span className="hidden sm:inline">All rights reserved.</span>
               </div>

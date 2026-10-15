@@ -191,7 +191,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 flex flex-col font-sans transition-colors duration-200">
       {/* Start-test failure (shown instead of silently opening a demo exam) */}
       {startError && (
         <div className="fixed top-24 inset-x-0 z-50 flex justify-center px-4" role="alert">
@@ -200,7 +200,7 @@ function AppContent() {
               <strong className="block">Could not start the test</strong>
               {startError}
             </span>
-            <button type="button" className="font-bold" onClick={() => setStartError('')} aria-label="Dismiss">✕</button>
+            <button type="button" className="font-bold cursor-pointer" onClick={() => setStartError('')} aria-label="Dismiss">✕</button>
           </div>
         </div>
       )}
@@ -209,7 +209,7 @@ function AppContent() {
       {!isExam && <Navbar activeAttempt={activeAttempt} onOpenAuthModal={handleOpenAuthModal} />}
 
       {/* Main Content Area (With top padding pt-20 to accommodate floating navbar) */}
-      <div className={`flex-1 ${!isExam ? 'pt-20 sm:pt-24 pb-12' : ''}`}>
+      <div className={`flex-1 w-full min-w-0 ${!isExam ? 'pt-20 sm:pt-24 pb-12' : ''}`}>
         <Routes>
           {/* Public Test Discovery / Landing Page */}
           <Route
