@@ -29,6 +29,7 @@ import {
 } from '../components/Icons';
 
 import { PassDetailModal } from '../components/PassDetailModal';
+import { GlobalGlobeAnimation } from '../components/GlobalGlobeAnimation';
 
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
@@ -242,10 +243,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
       negativeMark: '-0.50 per wrong response',
       safeScore: '142 - 158 Marks',
       sections: [
-        { name: 'General Intelligence & Reasoning', qs: 25, marks: 50, time: '~14 mins' },
-        { name: 'General Awareness & Static GK', qs: 25, marks: 50, time: '~8 mins' },
-        { name: 'Quantitative Aptitude (Arithmetic + Adv)', qs: 25, marks: 50, time: '~24 mins' },
-        { name: 'English Comprehension & Grammar', qs: 25, marks: 50, time: '~14 mins' },
+        { name: 'General Intelligence & Reasoning', qs: 25, marks: 50, time: '15 mins' },
+        { name: 'General Awareness & Static GK', qs: 25, marks: 50, time: '15 mins' },
+        { name: 'Quantitative Aptitude (Arithmetic + Adv)', qs: 25, marks: 50, time: '15 mins' },
+        { name: 'English Comprehension & Grammar', qs: 25, marks: 50, time: '15 mins' },
       ],
     },
     banking: {
@@ -323,9 +324,12 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </span>
           </div>
 
-          {/* Master Headline - Responsively Scaled for All Device Dimensions */}
-          <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.18] sm:leading-[1.12]">
-            The Gold Standard in Mock Tests for Government Aspirants.
+          {/* Master Headline - Responsively Scaled with Modern Typographic Contrast */}
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-[4rem] font-black tracking-tight text-charcoal-950 dark:text-white leading-[1.15] sm:leading-[1.1] text-balance">
+            <span>Practice Smarter.</span>{' '}
+            <span className="block sm:inline lg:block mt-1 sm:mt-0 lg:mt-1 text-[0.8em] sm:text-[0.78em] font-extrabold bg-gradient-to-r from-institutional-600 via-sky-500 to-indigo-600 dark:from-institutional-400 dark:via-sky-300 dark:to-indigo-300 bg-clip-text text-transparent">
+              Get Exam-Ready.
+            </span>
           </h1>
 
           {/* Subheading */}
@@ -483,15 +487,15 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         setSandboxPaletteState('ANSWERED');
                       }}
                       className={`p-3.5 rounded-xl border text-xs sm:text-sm font-medium flex items-center justify-between cursor-pointer transition-all duration-150 ${isSelected
-                          ? 'border-institutional-500 bg-institutional-50/70 dark:bg-institutional-950/40 text-institutional-900 dark:text-institutional-100 shadow-sm ring-1 ring-institutional-500'
-                          : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/40 text-charcoal-800 dark:text-charcoal-200 hover:border-charcoal-350 dark:hover:border-charcoal-700'
+                        ? 'border-institutional-500 bg-institutional-50/70 dark:bg-institutional-950/40 text-institutional-900 dark:text-institutional-100 shadow-sm ring-1 ring-institutional-500'
+                        : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/40 text-charcoal-800 dark:text-charcoal-200 hover:border-charcoal-350 dark:hover:border-charcoal-700'
                         }`}
                     >
                       <div className="flex items-center gap-3">
                         <span
                           className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${isSelected
-                              ? 'bg-institutional-600 text-white'
-                              : 'bg-white dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-600 text-charcoal-700 dark:text-charcoal-300'
+                            ? 'bg-institutional-600 text-white'
+                            : 'bg-white dark:bg-charcoal-800 border border-charcoal-300 dark:border-charcoal-600 text-charcoal-700 dark:text-charcoal-300'
                             }`}
                         >
                           {opt.id}
@@ -659,8 +663,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   key={tab.id}
                   onClick={() => setSelectedExamBlueprint(tab.id)}
                   className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${selectedExamBlueprint === tab.id
-                      ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                     }`}
                 >
                   {tab.label}
@@ -698,7 +702,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                     <th className="pb-3 pr-4">Syllabus Section</th>
                     <th className="pb-3 px-4">Questions</th>
                     <th className="pb-3 px-4">Maximum Marks</th>
-                    <th className="pb-3 pl-4">Recommended Time Allocation</th>
+                    <th className="pb-3 pl-4">Recommended Timing</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-charcoal-100 dark:divide-charcoal-800">
@@ -825,8 +829,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               <button
                 onClick={() => setActiveFeatureTab('engine')}
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'engine'
-                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
               >
                 1. PrepMagnet CBT Engine
@@ -834,8 +838,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               <button
                 onClick={() => setActiveFeatureTab('analytics')}
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'analytics'
-                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
               >
                 2. Deep Percentile Analytics
@@ -843,8 +847,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               <button
                 onClick={() => setActiveFeatureTab('solutions')}
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'solutions'
-                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
               >
                 3. Mathematical Derivations
@@ -857,8 +861,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             {/* Box 1 */}
             <div
               className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'engine'
-                  ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
-                  : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
+                ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
+                : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
                 }`}
             >
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
@@ -880,8 +884,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             {/* Box 2 */}
             <div
               className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'analytics'
-                  ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
-                  : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
+                ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
+                : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
                 }`}
             >
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
@@ -903,8 +907,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             {/* Box 3 */}
             <div
               className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'solutions'
-                  ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
-                  : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
+                ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
+                : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
                 }`}
             >
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
@@ -960,8 +964,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   key={tab.id}
                   onClick={() => setCatalogTab(tab.id)}
                   className={`px-3.5 sm:px-4 py-1.5 rounded-lg whitespace-nowrap transition-all ${catalogTab === tab.id
-                      ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                     }`}
                 >
                   {tab.label}
@@ -1067,8 +1071,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                       key={tab.id}
                       onClick={() => setSelectedType(tab.id)}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${selectedType === tab.id
-                          ? 'bg-institutional-600 text-white'
-                          : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
+                        ? 'bg-institutional-600 text-white'
+                        : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
                         }`}
                     >
                       {tab.label}
@@ -1362,8 +1366,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               <button
                 type="button"
                 className={`px-3.5 sm:px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${landingBillingCycle === 'monthly'
-                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
                 onClick={() => setLandingBillingCycle('monthly')}
               >
@@ -1372,8 +1376,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               <button
                 type="button"
                 className={`px-3.5 sm:px-4 py-1.5 rounded-full transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${landingBillingCycle === 'yearly'
-                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
                 onClick={() => setLandingBillingCycle('yearly')}
               >
@@ -1407,8 +1411,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   <div
                     key={p.id}
                     className={`group relative rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl bg-white dark:bg-charcoal-900 border overflow-hidden ${isHighlighted || isAnnual
-                        ? 'border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted ring-2 ring-institutional-500/20'
-                        : 'border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400'
+                      ? 'border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted ring-2 ring-institutional-500/20'
+                      : 'border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400'
                       }`}
                   >
                     {/* Top Ribbon Badge */}
@@ -1505,8 +1509,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         type="button"
                         onClick={() => setSelectedPassForDetail(p)}
                         className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 group/btn active:scale-[0.98] cursor-pointer ${isHighlighted || isAnnual
-                            ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/25 ring-1 ring-institutional-500'
-                            : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
+                          ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/25 ring-1 ring-institutional-500'
+                          : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
                           }`}
                       >
                         <span>Select {p.title} & View Courses</span>
@@ -1542,12 +1546,19 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* ========================================================================= */}
         <section id="contact-section" className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-10 space-y-6 sm:space-y-8 scroll-mt-24 bg-white/70 dark:bg-charcoal-900/70 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 overflow-hidden bg-mesh-contact shadow-card">
           {/* Moving Atmospheric Support Glows */}
-          <div className="absolute -top-24 right-1/4 w-[450px] h-[450px] bg-emerald-500/12 dark:bg-emerald-400/18 blur-[120px] rounded-full pointer-events-none animate-blob" />
-          <div className="absolute -bottom-24 left-1/4 w-[450px] h-[450px] bg-institutional-500/12 dark:bg-institutional-400/18 blur-[120px] rounded-full pointer-events-none animate-blob-delayed" />
-          <div className="absolute top-1/3 left-10 w-64 h-64 bg-cyan-500/8 dark:bg-cyan-400/12 blur-[100px] rounded-full pointer-events-none animate-drift-slow" />
+          <div className="absolute -top-24 right-1/4 w-[450px] h-[450px] bg-emerald-500/10 dark:bg-emerald-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
+          <div className="absolute -bottom-24 left-1/4 w-[450px] h-[450px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob-delayed" />
+          <div className="absolute top-1/3 left-10 w-64 h-64 bg-cyan-500/8 dark:bg-cyan-400/10 blur-[100px] rounded-full pointer-events-none animate-drift-slow" />
+
+          {/* Interactive 3D Moving Globe Animation (Confined exclusively to this section background) */}
+          <GlobalGlobeAnimation />
 
           <div className="text-center max-w-2xl mx-auto space-y-2.5 sm:space-y-3 relative z-10">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-institutional-50/90 dark:bg-institutional-950/90 backdrop-blur-sm text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
               <MailIcon size={14} />
               <span>Aspirant Helpdesk & Grievance Redressal</span>
             </div>
@@ -1559,10 +1570,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-6xl mx-auto relative z-10">
             {/* Left Column: Direct Official Contact Directory (5 cols) */}
             <div className="lg:col-span-5 space-y-4 sm:space-y-5">
-              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-4 sm:space-y-5">
+              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-md border border-charcoal-200/90 dark:border-charcoal-800/90 shadow-subtle space-y-4 sm:space-y-5">
                 <div className="flex items-center gap-3 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
                   <div className="w-10 h-10 rounded-xl bg-institutional-50 dark:bg-institutional-950 text-institutional-600 dark:text-institutional-400 flex items-center justify-center font-bold">
                     <ShieldIcon size={20} />
@@ -1579,22 +1590,6 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
                 <div className="space-y-4 text-xs">
                   {/* Helpline */}
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 flex items-center justify-center shrink-0 mt-0.5 text-institutional-600 dark:text-institutional-400">
-                      <PhoneIcon size={16} />
-                    </div>
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-400">
-                        Aspirant Toll-Free Helpline
-                      </div>
-                      <div className="font-extrabold text-charcoal-900 dark:text-charcoal-100 font-mono text-sm">
-                        +91 (011) 4892-0190
-                      </div>
-                      <div className="text-[11px] text-charcoal-500">
-                        Toll-Free: 1800-890-EXAM (3926)
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Email */}
                   <div className="flex items-start gap-3">
@@ -1606,10 +1601,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         Academic Coordination Email
                       </div>
                       <a
-                        href="mailto:support@prepmagnet.com"
+                        href="mailto:support.prepmagnet@gmail.com"
                         className="font-bold text-institutional-600 dark:text-institutional-400 hover:underline block"
                       >
-                        support@prepmagnet.com
+                        support.prepmagnet@gmail.com
                       </a>
                       <div className="text-[11px] text-charcoal-500">
                         Disputes reviewed by subject matter leads
@@ -1618,7 +1613,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   </div>
 
                   {/* Physical Address */}
-                  <div className="flex items-start gap-3">
+                  {/* <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 flex items-center justify-center shrink-0 mt-0.5 text-institutional-600 dark:text-institutional-400">
                       <MapPinIcon size={16} />
                     </div>
@@ -1633,7 +1628,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         New Delhi 110001, India
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Hours */}
                   <div className="flex items-start gap-3">
@@ -1645,10 +1640,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         Active Support Hours
                       </div>
                       <div className="font-medium text-charcoal-700 dark:text-charcoal-300">
-                        07:00 AM – 11:00 PM IST
+                        10:00 AM – 06:00 PM IST
                       </div>
                       <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                        7 Days a Week • Active During Live Mocks
+                        6 Days a Week • Active During Live Mocks
                       </div>
                     </div>
                   </div>
@@ -1669,7 +1664,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
             {/* Right Column: Interactive Grievance & Contact Form (7 cols) */}
             <div className="lg:col-span-7">
-              <div className="p-4 sm:p-8 rounded-xl sm:rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-4 sm:space-y-6">
+              <div className="p-4 sm:p-8 rounded-xl sm:rounded-2xl bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-md border border-charcoal-200/90 dark:border-charcoal-800/90 shadow-subtle space-y-4 sm:space-y-6">
                 {contactSuccessTicket ? (
                   /* Success Confirmation Screen */
                   <div className="text-center py-6 space-y-4 animate-scale-in">
@@ -1748,8 +1743,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                           placeholder="e.g. Rahul Sharma"
                           title={user ? 'Signed in as this account — the ticket is raised under your own name' : undefined}
                           className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 ${user
-                              ? 'bg-charcoal-100 dark:bg-charcoal-800/60 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 cursor-not-allowed'
-                              : 'bg-charcoal-50 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100'
+                            ? 'bg-charcoal-100 dark:bg-charcoal-800/60 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 cursor-not-allowed'
+                            : 'bg-charcoal-50 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100'
                             }`}
                         />
                       </div>
@@ -1772,8 +1767,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                           placeholder="rahul.aspirant@gmail.com"
                           title={user ? 'Signed in as this account — the ticket is raised under your own email' : undefined}
                           className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all placeholder-charcoal-400 ${user
-                              ? 'bg-charcoal-100 dark:bg-charcoal-800/60 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 cursor-not-allowed'
-                              : 'bg-charcoal-50 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100'
+                            ? 'bg-charcoal-100 dark:bg-charcoal-800/60 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 cursor-not-allowed'
+                            : 'bg-charcoal-50 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100'
                             }`}
                         />
                       </div>

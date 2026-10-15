@@ -6,17 +6,21 @@ from pydantic import BaseModel, Field
 class TypingPassageInDB(BaseModel):
     id: str = Field(alias="_id")
     title: str
-    exam_category: str
+    exam_category: str = "SSC CGL"
     content: str
-    duration_seconds: int = 900
-    target_wpm: float = 27.0
-    target_keystrokes: int = 2000
+    paragraph: Optional[str] = None
+    duration_minutes: int = 5
+    duration_seconds: int = 300
+    marks: int = 20
+    word_count: int = 200
+    target_wpm: float = 35.0
+    target_keystrokes: int = 1200
     difficulty: str = "Medium"
     language: str = "English"
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    model_config = {"populate_by_name": True}
+    model_config = {"populate_by_name": True, "extra": "allow"}
 
 
 class TypingAttemptInDB(BaseModel):
@@ -34,9 +38,11 @@ class TypingAttemptInDB(BaseModel):
     wrong_keystrokes: int
     backspace_count: int
     error_count: int
+    marks_obtained: float = 20.0
+    total_marks: int = 20
     is_qualified: bool
     qualification_reason: str
     typed_text: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    model_config = {"populate_by_name": True}
+    model_config = {"populate_by_name": True, "extra": "allow"}

@@ -83,7 +83,7 @@ const LEGAL_DOCS = {
       {
         heading: '3. Technical Grievance Window',
         content:
-          'If technical faults on our platform prevent you from attempting scheduled mocks within the first 48 hours of pass activation, contact support@prepmagnet.com with your Order ID for immediate resolution or credit reversal.',
+          'If technical faults on our platform prevent you from attempting scheduled mocks within the first 48 hours of pass activation, contact support@prepmagnet.inwith your Order ID for immediate resolution or credit reversal.',
       },
     ],
   },
@@ -193,8 +193,8 @@ export const Footer = () => {
 
         {/* Upper Main Footer Grid */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-7 sm:gap-10 lg:gap-12">
-            
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-8 lg:gap-8">
+
             {/* Column 1: Brand & Academic Engine (Spans 2 columns on mobile & desktop) */}
             <div className="col-span-2 lg:col-span-2 space-y-3.5 sm:space-y-4">
               <div
@@ -351,7 +351,66 @@ export const Footer = () => {
               </ul>
             </div>
 
-            {/* Column 4: Support & Grievance Desk */}
+            {/* Column 4: Legal & Policies */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5">
+                <ShieldIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
+                <span>Legal</span>
+              </h4>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <button
+                    onClick={() => handleNav({ to: ROUTES.terms })}
+                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
+                    title="View Terms & Conditions (Ref: Unstop Legal)"
+                  >
+                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
+                    <span>Terms & Conditions</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => handleNav({ to: ROUTES.privacy })}
+                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
+                    title="View Privacy Policy (Ref: Unstop Legal)"
+                  >
+                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
+                    <span>Privacy Policy</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => handleNav({ to: ROUTES.about })}
+                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
+                    title="About PrepMagnet Educational Systems"
+                  >
+                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
+                    <span>About Us</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => handleNav({ to: ROUTES.refund })}
+                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
+                    title="Cancellation & Refund Policy"
+                  >
+                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
+                    <span>Refund Policy</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setActiveLegalModal('honor')}
+                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
+                  >
+                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
+                    <span>Honor Code</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 5: Support & Grievance Desk */}
             <div className="col-span-2 md:col-span-1 lg:col-span-1 space-y-3">
               <h4 className="font-bold text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5">
                 <MailIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
@@ -362,21 +421,7 @@ export const Footer = () => {
                   <div className="w-6 h-6 rounded-lg bg-institutional-50 dark:bg-institutional-950/80 flex items-center justify-center text-institutional-600 dark:text-institutional-400 shrink-0">
                     <MailIcon size={13} />
                   </div>
-                  <span className="truncate font-medium select-all">support@prepmagnet.com</span>
-                </div>
-
-                <div className="flex items-center gap-2 text-charcoal-600 dark:text-charcoal-400">
-                  <div className="w-6 h-6 rounded-lg bg-institutional-50 dark:bg-institutional-950/80 flex items-center justify-center text-institutional-600 dark:text-institutional-400 shrink-0">
-                    <PhoneIcon size={13} />
-                  </div>
-                  <span className="font-mono font-medium select-all">+91 (011) 4892-0190</span>
-                </div>
-
-                <div className="flex items-start gap-2 text-charcoal-500 dark:text-charcoal-400">
-                  <div className="w-6 h-6 rounded-lg bg-institutional-50 dark:bg-institutional-950/80 flex items-center justify-center text-institutional-600 dark:text-institutional-400 shrink-0 mt-0.5">
-                    <MapPinIcon size={13} />
-                  </div>
-                  <span className="leading-snug">Pragati Maidan Academic Complex, New Delhi 110001</span>
+                  <span className="truncate font-medium select-all">support.prepmagnet@gmail.com</span>
                 </div>
 
                 <div className="pt-2">
@@ -403,7 +448,7 @@ export const Footer = () => {
         <div className="border-t border-charcoal-200/80 dark:border-charcoal-800/80 bg-charcoal-50/70 dark:bg-charcoal-950/70 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
             <div className="flex flex-col lg:flex-row items-center justify-between gap-4 text-[11px] text-charcoal-500 dark:text-charcoal-400">
-              
+
               {/* Disclaimer */}
               <p className="max-w-2xl text-center lg:text-left leading-relaxed">
                 <strong className="text-charcoal-700 dark:text-charcoal-300 font-semibold">Institutional Disclaimer:</strong>{' '}
@@ -429,24 +474,31 @@ export const Footer = () => {
                 <span className="hidden sm:inline">All rights reserved.</span>
               </div>
 
-              {/* Legal Modals Trigger Links */}
+              {/* Dedicated Legal Links */}
               <div className="flex flex-wrap items-center justify-center gap-4 text-charcoal-500 dark:text-charcoal-400 font-medium">
                 <button
-                  onClick={() => setActiveLegalModal('privacy')}
+                  onClick={() => handleNav({ to: ROUTES.terms })}
+                  className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
+                >
+                  Terms & Conditions
+                </button>
+                <span>•</span>
+                <button
+                  onClick={() => handleNav({ to: ROUTES.privacy })}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   Privacy Policy
                 </button>
                 <span>•</span>
                 <button
-                  onClick={() => setActiveLegalModal('terms')}
+                  onClick={() => handleNav({ to: ROUTES.about })}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
-                  Terms of Service
+                  About Us
                 </button>
                 <span>•</span>
                 <button
-                  onClick={() => setActiveLegalModal('refund')}
+                  onClick={() => handleNav({ to: ROUTES.refund })}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   Refund Policy

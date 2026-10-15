@@ -14,6 +14,9 @@ import { CoursesPage } from './pages/CoursesPage';
 import { CourseDetailPage } from './pages/CourseDetailPage';
 import { TypingMasterPage } from './pages/TypingMasterPage';
 import { AiPipelinePage } from './pages/AiPipelinePage';
+import { TermsPage } from './pages/TermsPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { AboutUsPage } from './pages/AboutUsPage';
 import { Footer } from './components/Footer';
 import { api } from './services/api';
 import { ROUTES, DASHBOARD_TABS, homePathFor } from './routes';
@@ -299,6 +302,17 @@ function AppContent() {
               </RequireRole>
             }
           />
+
+          {/* Institutional Legal & Company Pages */}
+          <Route path={ROUTES.terms} element={<TermsPage />} />
+          <Route path="/terms-of-use" element={<TermsPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path={ROUTES.privacy} element={<PrivacyPolicyPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path={ROUTES.about} element={<AboutUsPage />} />
+          <Route path="/about" element={<AboutUsPage />} />
+          <Route path={ROUTES.refund} element={<TermsPage />} />
 
           {/* Anything else goes home */}
           <Route path="*" element={<Navigate to={homePathFor(user)} replace />} />

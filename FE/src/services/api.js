@@ -759,6 +759,10 @@ export const api = {
 
   // Typing Master Mock Test Engine
   typing: {
+    getRandomPassage: async () => {
+      return await request('/typing/random');
+    },
+
     listPassages: async (examCategory) => {
       const q = examCategory && examCategory !== 'All' ? `?exam_category=${encodeURIComponent(examCategory)}` : '';
       return await request(`/typing/passages${q}`);
@@ -766,6 +770,13 @@ export const api = {
 
     getPassage: async (passageId) => {
       return await request(`/typing/passages/${passageId}`);
+    },
+
+    createPassage: async (payload) => {
+      return await request('/typing/passages', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
     },
 
     submitAttempt: async (payload) => {

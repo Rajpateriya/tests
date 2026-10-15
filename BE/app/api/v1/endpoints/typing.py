@@ -7,6 +7,7 @@ from app.db.mongodb import get_db
 from app.schemas.common import APIResponse
 from app.schemas.typing import (
     TypingHistoryResponse,
+    TypingPassageCreate,
     TypingPassageOut,
     TypingScorecardOut,
     TypingSubmitRequest,
@@ -15,6 +16,25 @@ from app.schemas.user import UserResponse
 from app.services.typing_service import TypingService
 
 router = APIRouter(prefix="/typing", tags=["Typing Master Engine"])
+
+
+@router.post("/passages", response_model=APIResponse[TypingPassageOut], status_code=status.HTTP_201_CREATED)
+@router.post("/passage", response_model=APIResponse[TypingPassageOut], status_code=status.HTTP_201_CREATED)
+async def create_typing_passage(
+    payload: TypingPassageCreate,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Create a new typing paragraph in typing_master_para collection for future test customization.
+    """
+    service = TypingService(db)
+    passage = await service.create_passage(payload)
+    return APIResponse(
+        success=True,
+        message="Typing passage created successfully in typing_master_para",
+        data=passage,
+        status_code=status.HTTP_201_CREATED,
+    )
 
 
 @router.get("/passages", response_model=APIResponse[List[TypingPassageOut]])
@@ -31,6 +51,24 @@ async def list_typing_passages(
         success=True,
         message=f"Retrieved {len(passages)} typing passages",
         data=passages,
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@router.get("/random", response_model=APIResponse[TypingPassageOut])
+@router.get("/passage/random", response_model=APIResponse[TypingPassageOut])
+async def get_random_typing_passage(
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Retrieve random typing paragraph from typing_master_para collection (20 marks, 5 min, ~200 words).
+    """
+    service = TypingService(db)
+    passage = await service.get_random_passage()
+    return APIResponse(
+        success=True,
+        message="Random typing passage retrieved from typing_master_para",
+        data=passage,
         status_code=status.HTTP_200_OK,
     )
 

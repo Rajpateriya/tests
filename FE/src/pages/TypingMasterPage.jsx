@@ -211,6 +211,7 @@ export const TypingMasterPage = () => {
   const [passages, setPassages] = useState([]);
   const [selectedPassage, setSelectedPassage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingPassage, setLoadingPassage] = useState(false);
   const [historyData, setHistoryData] = useState(null);
   const [activeTab, setActiveTab] = useState('test'); // 'test' | 'history'
 
@@ -218,7 +219,7 @@ export const TypingMasterPage = () => {
   const [typedText, setTypedText] = useState('');
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(900); // in seconds
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes default
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [backspaceCount, setBackspaceCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -234,12 +235,32 @@ export const TypingMasterPage = () => {
   const loadPassagesAndHistory = async () => {
     setLoading(true);
     try {
-      const pList = await api.typing.listPassages();
-      setPassages(pList || []);
-      if (pList && pList.length > 0) {
-        initPassage(pList[0]);
+      // 1. Fetch random passage dynamically from typing_master_para
+      let randomPassage = null;
+      try {
+        randomPassage = await api.typing.getRandomPassage();
+      } catch (e) {
+        console.warn('Could not fetch random passage:', e);
       }
-      const hist = await api.typing.getMyHistory();
+
+      // 2. Also fetch the list of available passages
+      const pList = (await api.typing.listPassages().catch(() => [])) || [];
+      
+      let allPassages = [...pList];
+      if (randomPassage) {
+        if (!allPassages.some(p => p.id === randomPassage.id)) {
+          allPassages = [randomPassage, ...allPassages];
+        }
+        setPassages(allPassages);
+        initPassage(randomPassage);
+      } else if (allPassages.length > 0) {
+        setPassages(allPassages);
+        initPassage(allPassages[0]);
+      } else {
+        setPassages([]);
+      }
+
+      const hist = await api.typing.getMyHistory().catch(() => null);
       setHistoryData(hist);
     } catch (err) {
       console.error('Failed to load typing data:', err);
@@ -248,12 +269,34 @@ export const TypingMasterPage = () => {
     }
   };
 
+  const handleFetchRandomPassage = async () => {
+    setLoadingPassage(true);
+    try {
+      const rand = await api.typing.getRandomPassage();
+      if (rand) {
+        setPassages((prev) => {
+          if (!prev.some((p) => p.id === rand.id)) {
+            return [rand, ...prev];
+          }
+          return prev;
+        });
+        initPassage(rand);
+      }
+    } catch (err) {
+      console.error('Failed to fetch new random passage:', err);
+    } finally {
+      setLoadingPassage(false);
+    }
+  };
+
   const initPassage = (passage) => {
+    if (!passage) return;
     setSelectedPassage(passage);
     setTypedText('');
     setSessionActive(false);
     setSessionCompleted(false);
-    setTimeLeft(passage.duration_seconds || 900);
+    const duration = passage.duration_seconds || (passage.duration_minutes ? passage.duration_minutes * 60 : 300);
+    setTimeLeft(duration);
     setElapsedSeconds(0);
     setBackspaceCount(0);
     setScorecard(null);
@@ -287,7 +330,8 @@ export const TypingMasterPage = () => {
     setTypedText(val);
 
     // Auto complete if passage typed completely
-    if (selectedPassage && val.length >= selectedPassage.content.length) {
+    const content = selectedPassage?.paragraph || selectedPassage?.content || '';
+    if (content && val.length >= content.length) {
       handleSubmitAttempt(val, elapsedSeconds || 1);
     }
   };
@@ -326,7 +370,7 @@ export const TypingMasterPage = () => {
     } catch (err) {
       console.error('Failed to submit typing attempt:', err);
       // Fallback calculation for demonstration
-      const content = selectedPassage.content;
+      const content = selectedPassage.paragraph || selectedPassage.content || '';
       const minLen = Math.min(content.length, textToSubmit.length);
       let correct = 0;
       for (let i = 0; i < minLen; i++) {
@@ -337,6 +381,8 @@ export const TypingMasterPage = () => {
       const mins = Math.max(0.1, (timeTaken || 30) / 60);
       const gross = Math.round((textToSubmit.length / 5) / mins);
       const net = Math.max(0, Math.round(gross - (wrong / 5) / mins));
+      const totalMarks = selectedPassage.marks || 20;
+      const marksObtained = Math.max(0, Math.round(((acc / 100.0) * totalMarks - wrong * 0.2) * 10) / 10);
 
       setScorecard({
         passage_id: selectedPassage.id,
@@ -351,8 +397,10 @@ export const TypingMasterPage = () => {
         wrong_keystrokes: wrong,
         backspace_count: backspaceCount,
         error_count: wrong,
-        is_qualified: net >= (selectedPassage.target_wpm || 27) && acc >= 93,
-        qualification_reason: net >= (selectedPassage.target_wpm || 27)
+        marks_obtained: marksObtained,
+        total_marks: totalMarks,
+        is_qualified: net >= (selectedPassage.target_wpm || 35) && acc >= 90,
+        qualification_reason: net >= (selectedPassage.target_wpm || 35)
           ? `QUALIFIED: Net Speed ${net} WPM exceeded required benchmark`
           : `NOT QUALIFIED: Net Speed ${net} WPM below benchmark`,
       });
@@ -362,7 +410,7 @@ export const TypingMasterPage = () => {
   };
 
   // Real-time calculation helpers
-  const targetContent = selectedPassage?.content || '';
+  const targetContent = selectedPassage?.paragraph || selectedPassage?.content || '';
   const currentTypedLength = typedText.length;
   const currentMinutes = Math.max(0.1, elapsedSeconds / 60);
   const liveGrossWpm = elapsedSeconds > 0 ? Math.round((currentTypedLength / 5) / currentMinutes) : 0;
@@ -478,6 +526,36 @@ export const TypingMasterPage = () => {
 
         {activeTab === 'test' && (
           <div className="space-y-5">
+            {/* Exam Specification Bar & Dynamic Random Passage Trigger */}
+            <div className="p-4 rounded-2xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-extrabold border border-amber-200 dark:border-amber-800">
+                  🏆 20 Marks
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-extrabold border border-sky-200 dark:border-sky-800">
+                  ⏱ 5 Minutes (300s)
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800">
+                  📝 ~{selectedPassage?.word_count || 200} Words
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-extrabold border border-purple-200 dark:border-purple-800">
+                  ⚡ Target {selectedPassage?.target_wpm || 35} WPM
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 font-mono text-[11px]">
+                  DB: typing_master_para
+                </span>
+              </div>
+
+              <button
+                type="button"
+                disabled={loadingPassage || sessionActive}
+                onClick={handleFetchRandomPassage}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              >
+                <span>{loadingPassage ? 'Fetching from DB...' : '🎲 Get Random Passage'}</span>
+              </button>
+            </div>
+
             {/* Passage picker */}
             <div className="flex items-stretch gap-3 overflow-x-auto pb-1 scrollbar-none">
               {passages.map((p) => {
@@ -493,13 +571,13 @@ export const TypingMasterPage = () => {
                     }`}
                   >
                     <div className="text-[10px] font-extrabold uppercase tracking-wider text-institutional-600 dark:text-institutional-400">
-                      {p.exam_category}
+                      {p.exam_category || 'Mock Exam'}
                     </div>
                     <div className="text-xs font-extrabold text-charcoal-900 dark:text-white truncate max-w-[220px] mt-0.5">
                       {p.title}
                     </div>
                     <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 mt-0.5">
-                      Target {p.target_wpm} WPM · {Math.round(p.duration_seconds / 60)} min
+                      {p.marks || 20} Marks · {p.duration_minutes || 5} min · ~{p.word_count || 200} words
                     </div>
                   </button>
                 );
@@ -507,7 +585,7 @@ export const TypingMasterPage = () => {
             </div>
 
             {/* Live stat tiles */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
                 <div
                   className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
@@ -539,30 +617,42 @@ export const TypingMasterPage = () => {
               </div>
 
               <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
+                <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0 text-base">
+                  🏆
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Max Marks</div>
+                  <div className="text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white">
+                    {selectedPassage?.marks || 20} <span className="text-[10px] font-semibold text-charcoal-400">Marks</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
                 <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0">
                   <AwardIcon size={17} />
                 </div>
                 <div className="min-w-0">
                   <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Cutoff</div>
                   <div className="text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white">
-                    {selectedPassage?.target_wpm || 27} <span className="text-[10px] font-semibold text-charcoal-400">WPM</span>
+                    {selectedPassage?.target_wpm || 35} <span className="text-[10px] font-semibold text-charcoal-400">WPM</span>
                   </div>
                 </div>
               </div>
 
               <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
-                <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0 text-base">
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0 text-base">
                   ⌨️
                 </div>
                 <div className="min-w-0">
                   <div className="text-[10px] text-charcoal-500 uppercase tracking-wider font-semibold truncate">Keystrokes</div>
                   <div className="text-lg font-black font-mono leading-tight text-charcoal-900 dark:text-white">
-                    {currentTypedLength} <span className="text-[10px] font-semibold text-charcoal-400">/ {selectedPassage?.target_keystrokes || 2000}</span>
+                    {currentTypedLength} <span className="text-[10px] font-semibold text-charcoal-400">/ {targetContent.length || 1000}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle col-span-2 sm:col-span-1">
+              <div className="p-3 rounded-xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 flex items-center gap-3 shadow-subtle">
                 <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 flex items-center justify-center shrink-0 text-base">
                   ⌫
                 </div>
@@ -579,21 +669,39 @@ export const TypingMasterPage = () => {
               <div className="p-5 sm:p-6 space-y-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-0.5 min-w-0">
-                    <h3 className="text-base font-extrabold tracking-tight text-charcoal-900 dark:text-white truncate">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300">
+                        {selectedPassage?.exam_category || 'Exam Mock'}
+                      </span>
+                      <span className="text-xs font-semibold text-charcoal-500">
+                        20 Marks · 5 Minutes · ~{selectedPassage?.word_count || 200} Words
+                      </span>
+                    </div>
+                    <h3 className="text-base font-extrabold tracking-tight text-charcoal-900 dark:text-white truncate mt-1">
                       {selectedPassage?.title}
                     </h3>
                     <div className="text-xs text-charcoal-500 dark:text-charcoal-400">
-                      Type the passage exactly as shown. Green is a correct stroke, red is a typo.
+                      Type the passage exactly as shown. Green indicates correct stroke, red indicates error.
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => initPassage(selectedPassage)}
-                    className="shrink-0 px-3.5 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors"
-                  >
-                    Restart
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      disabled={sessionActive || loadingPassage}
+                      onClick={handleFetchRandomPassage}
+                      className="px-3 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      <span>🎲 New Passage</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => initPassage(selectedPassage)}
+                      className="px-3.5 py-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors"
+                    >
+                      Restart
+                    </button>
+                  </div>
                 </div>
 
                 {/* Progress */}
@@ -653,7 +761,7 @@ export const TypingMasterPage = () => {
               <section className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden animate-fade-in">
                 <div className="h-1.5 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500" />
                 <div className="p-5 sm:p-6 space-y-5">
-                  {/* Verdict */}
+                  {/* Verdict & Score */}
                   <div
                     className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
                       scorecard.is_qualified
@@ -677,8 +785,13 @@ export const TypingMasterPage = () => {
                       </div>
                     </div>
 
-                    <div className="px-3 py-1 rounded-lg bg-white/70 dark:bg-black/30 font-mono font-bold text-[11px]">
-                      {scorecard.exam_category} benchmark
+                    <div className="flex items-center gap-2">
+                      <div className="px-3.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 font-mono font-black text-sm text-amber-900 dark:text-amber-200">
+                        Score: {scorecard.marks_obtained !== undefined ? scorecard.marks_obtained : 20} / {scorecard.total_marks || 20} Marks
+                      </div>
+                      <div className="px-3 py-1.5 rounded-lg bg-white/70 dark:bg-black/30 font-mono font-bold text-[11px]">
+                        {scorecard.exam_category || 'Standard'}
+                      </div>
                     </div>
                   </div>
 
@@ -719,7 +832,15 @@ export const TypingMasterPage = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end pt-1">
+                  <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+                    <button
+                      type="button"
+                      disabled={loadingPassage}
+                      onClick={handleFetchRandomPassage}
+                      className="px-5 py-2.5 rounded-lg border border-institutional-500 text-institutional-600 dark:text-institutional-400 hover:bg-institutional-50 dark:hover:bg-institutional-950 font-extrabold text-xs shadow-sm transition-all active:scale-95 inline-flex items-center gap-1.5"
+                    >
+                      <span>🎲 Next Random Passage</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => initPassage(selectedPassage)}
@@ -918,6 +1039,7 @@ export const TypingMasterPage = () => {
                       <thead>
                         <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-400 uppercase tracking-wider text-[10px]">
                           <th className="pb-3 font-semibold">Exam / Passage</th>
+                          <th className="pb-3 font-semibold">Score</th>
                           <th className="pb-3 font-semibold">Net Speed</th>
                           <th className="pb-3 font-semibold">Accuracy</th>
                           <th className="pb-3 font-semibold">Keystrokes</th>
@@ -931,6 +1053,9 @@ export const TypingMasterPage = () => {
                           <tr key={att.id} className="hover:bg-institutional-50/50 dark:hover:bg-institutional-950/20 transition-colors">
                             <td className="py-3 font-bold text-charcoal-900 dark:text-white max-w-[200px] truncate">
                               {att.passage_title}
+                            </td>
+                            <td className="py-3 font-mono font-bold text-amber-600 dark:text-amber-400">
+                              {att.marks_obtained !== undefined ? att.marks_obtained : 20} / {att.total_marks || 20}
                             </td>
                             <td className="py-3 font-mono font-bold text-institutional-600 dark:text-institutional-400">
                               {att.net_wpm} WPM

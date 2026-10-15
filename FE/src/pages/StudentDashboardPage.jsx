@@ -923,12 +923,12 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                           <span>Mission Accomplished for Today!</span>
                           <span className="text-2xl animate-bounce">🎯</span>
                         </h3>
-                        <p className="text-xs sm:text-sm text-charcoal-700 dark:text-charcoal-200 leading-relaxed font-normal">
+                        <p className="hidden sm:block text-xs sm:text-sm text-charcoal-700 dark:text-charcoal-200 leading-relaxed font-normal">
                           {dailyReward?.milestone_title
                             ? `Triumph unlocked! You've claimed the ${dailyReward.milestone_title.toUpperCase()} milestone.`
                             : "Your daily discipline speaks louder than words. In the fierce arena of competitive exams, showing up every single day is the rare superpower that separates rankers from contenders."}
                         </p>
-                        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 leading-relaxed italic">
+                        <p className="hidden sm:block text-xs text-charcoal-500 dark:text-charcoal-400 leading-relaxed italic">
                           "One question mastered each morning builds the unshakeable foundation of an All-India Ranker. Your practice quota for today is 100% fulfilled."
                         </p>
                       </div>

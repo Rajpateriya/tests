@@ -12,6 +12,10 @@ export const ROUTES = {
   pipeline: '/ai-pipeline',
   exam: '/exam',
   results: '/results',
+  terms: '/legal/terms-of-use',
+  privacy: '/legal/privacy-policy',
+  about: '/about-us',
+  refund: '/legal/refund-policy',
 };
 
 // /dashboard/<tab>; the first one is the default.

@@ -5,8 +5,21 @@ from app.repositories.base import BaseRepository
 
 class TypingRepository(BaseRepository):
     def __init__(self, db: AsyncIOMotorDatabase):
-        super().__init__(db, "typing_passages")
+        super().__init__(db, "typing_master_para")
         self.attempts_collection = db["typing_attempts"]
+
+    async def get_random_passage(self) -> Optional[Dict[str, Any]]:
+        cursor = self.collection.aggregate([
+            {"$match": {"is_active": {"$ne": False}}},
+            {"$sample": {"size": 1}}
+        ])
+        results = await cursor.to_list(length=1)
+        if results:
+            return results[0]
+        # Fallback to any passage if active filter returns nothing
+        cursor2 = self.collection.aggregate([{"$sample": {"size": 1}}])
+        results2 = await cursor2.to_list(length=1)
+        return results2[0] if results2 else None
 
     async def get_active_passages(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
         query: Dict[str, Any] = {"is_active": {"$ne": False}}

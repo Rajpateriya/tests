@@ -2,11 +2,12 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import BadRequestException, NotFoundException
 from app.repositories.typing_repo import TypingRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.typing import (
     TypingHistoryResponse,
+    TypingPassageCreate,
     TypingPassageOut,
     TypingScorecardOut,
     TypingSubmitRequest,
@@ -19,48 +20,78 @@ class TypingService:
         self.typing_repo = TypingRepository(db)
         self.user_repo = UserRepository(db)
 
+    def _format_passage(self, p: Dict[str, Any]) -> TypingPassageOut:
+        content = p.get("content") or p.get("paragraph", "")
+        words = [w for w in content.split() if w]
+        duration_minutes = int(p.get("duration_minutes", 5))
+        duration_seconds = int(p.get("duration_seconds", duration_minutes * 60))
+        marks = int(p.get("marks", 20))
+        word_count = int(p.get("word_count", len(words)))
+        return TypingPassageOut(
+            id=str(p["_id"]),
+            title=p.get("title", "Typing Practice Passage"),
+            exam_category=p.get("exam_category", "SSC CGL"),
+            content=content,
+            paragraph=content,
+            duration_minutes=duration_minutes,
+            duration_seconds=duration_seconds,
+            marks=marks,
+            word_count=word_count,
+            target_wpm=float(p.get("target_wpm", 35.0)),
+            target_keystrokes=int(p.get("target_keystrokes", 1200)),
+            difficulty=p.get("difficulty", "Medium"),
+            language=p.get("language", "English"),
+            total_words=len(words),
+            total_characters=len(content),
+        )
+
+    async def create_passage(self, data: TypingPassageCreate) -> TypingPassageOut:
+        content = (data.content or data.paragraph or "").strip()
+        if not content:
+            raise BadRequestException("Passage content or paragraph text is required")
+
+        words = [w for w in content.split() if w]
+        word_count = data.word_count or len(words)
+        duration_minutes = data.duration_minutes
+        duration_seconds = data.duration_seconds or (duration_minutes * 60)
+        target_keystrokes = data.target_keystrokes or int(word_count * 5)
+
+        doc_id = f"para-{uuid.uuid4().hex[:8]}"
+        doc = {
+            "_id": doc_id,
+            "title": data.title,
+            "exam_category": data.exam_category,
+            "content": content,
+            "paragraph": content,
+            "marks": data.marks,
+            "duration_minutes": duration_minutes,
+            "duration_seconds": duration_seconds,
+            "word_count": word_count,
+            "target_wpm": data.target_wpm,
+            "target_keystrokes": target_keystrokes,
+            "difficulty": data.difficulty,
+            "language": data.language,
+            "is_active": data.is_active,
+            "created_at": datetime.now(timezone.utc),
+        }
+        await self.typing_repo.insert(doc)
+        return self._format_passage(doc)
+
+    async def get_random_passage(self) -> TypingPassageOut:
+        doc = await self.typing_repo.get_random_passage()
+        if not doc:
+            raise NotFoundException("No typing passages found in typing_master_para collection")
+        return self._format_passage(doc)
+
     async def list_passages(self, category: Optional[str] = None) -> List[TypingPassageOut]:
         passages = await self.typing_repo.get_active_passages(category)
-        result = []
-        for p in passages:
-            content = p.get("content", "")
-            words = [w for w in content.split() if w]
-            result.append(
-                TypingPassageOut(
-                    id=p["_id"],
-                    title=p["title"],
-                    exam_category=p.get("exam_category", "SSC CGL DEST"),
-                    content=content,
-                    duration_seconds=p.get("duration_seconds", 900),
-                    target_wpm=float(p.get("target_wpm", 27.0)),
-                    target_keystrokes=int(p.get("target_keystrokes", 2000)),
-                    difficulty=p.get("difficulty", "Medium"),
-                    language=p.get("language", "English"),
-                    total_words=len(words),
-                    total_characters=len(content),
-                )
-            )
-        return result
+        return [self._format_passage(p) for p in passages]
 
     async def get_passage(self, passage_id: str) -> TypingPassageOut:
         passage = await self.typing_repo.get_by_id(passage_id)
         if not passage:
             raise NotFoundException(f"Typing passage '{passage_id}' not found")
-        content = passage.get("content", "")
-        words = [w for w in content.split() if w]
-        return TypingPassageOut(
-            id=passage["_id"],
-            title=passage["title"],
-            exam_category=passage.get("exam_category", "SSC CGL DEST"),
-            content=content,
-            duration_seconds=passage.get("duration_seconds", 900),
-            target_wpm=float(passage.get("target_wpm", 27.0)),
-            target_keystrokes=int(passage.get("target_keystrokes", 2000)),
-            difficulty=passage.get("difficulty", "Medium"),
-            language=passage.get("language", "English"),
-            total_words=len(words),
-            total_characters=len(content),
-        )
+        return self._format_passage(passage)
 
     async def evaluate_attempt(
         self, user_id: str, req: TypingSubmitRequest
@@ -174,6 +205,11 @@ class TypingService:
                 is_qualified = False
                 reason = f"NOT QUALIFIED: Net Speed {net_wpm} WPM or Accuracy {accuracy}% below benchmark"
 
+        total_marks = int(passage.get("marks", 20))
+        marks_base = (accuracy / 100.0) * total_marks
+        marks_penalty = min(total_marks, word_errors * 0.25)
+        marks_obtained = max(0.0, round(marks_base - marks_penalty, 2))
+
         attempt_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
 
@@ -182,7 +218,7 @@ class TypingService:
             "user_id": user_id,
             "passage_id": passage["_id"],
             "passage_title": passage["title"],
-            "exam_category": passage.get("exam_category", "SSC CGL DEST"),
+            "exam_category": passage.get("exam_category", "SSC CGL"),
             "time_taken_seconds": round(req.time_taken_seconds, 1),
             "gross_wpm": gross_wpm,
             "net_wpm": net_wpm,
@@ -192,6 +228,8 @@ class TypingService:
             "wrong_keystrokes": wrong_keystrokes,
             "backspace_count": req.backspace_count,
             "error_count": word_errors,
+            "marks_obtained": marks_obtained,
+            "total_marks": total_marks,
             "is_qualified": is_qualified,
             "qualification_reason": reason,
             "typed_text": typed_text,
@@ -224,7 +262,7 @@ class TypingService:
             id=attempt_id,
             passage_id=passage["_id"],
             passage_title=passage["title"],
-            exam_category=passage.get("exam_category", "SSC CGL DEST"),
+            exam_category=passage.get("exam_category", "SSC CGL"),
             time_taken_seconds=round(req.time_taken_seconds, 1),
             gross_wpm=gross_wpm,
             net_wpm=net_wpm,
@@ -234,6 +272,8 @@ class TypingService:
             wrong_keystrokes=wrong_keystrokes,
             backspace_count=req.backspace_count,
             error_count=word_errors,
+            marks_obtained=marks_obtained,
+            total_marks=total_marks,
             is_qualified=is_qualified,
             qualification_reason=reason,
             created_at=now,
@@ -248,7 +288,7 @@ class TypingService:
                     id=a["_id"],
                     passage_id=a["passage_id"],
                     passage_title=a["passage_title"],
-                    exam_category=a.get("exam_category", "SSC CGL DEST"),
+                    exam_category=a.get("exam_category", "SSC CGL"),
                     time_taken_seconds=a["time_taken_seconds"],
                     gross_wpm=a["gross_wpm"],
                     net_wpm=a["net_wpm"],
@@ -258,6 +298,8 @@ class TypingService:
                     wrong_keystrokes=a["wrong_keystrokes"],
                     backspace_count=a.get("backspace_count", 0),
                     error_count=a.get("error_count", 0),
+                    marks_obtained=float(a.get("marks_obtained", 20.0)),
+                    total_marks=int(a.get("total_marks", 20)),
                     is_qualified=a.get("is_qualified", False),
                     qualification_reason=a.get("qualification_reason", ""),
                     created_at=a["created_at"],
