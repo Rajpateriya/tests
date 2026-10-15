@@ -192,11 +192,11 @@ export const Footer = () => {
         <div className="absolute -top-32 -right-32 w-80 h-80 bg-purple-500/5 dark:bg-purple-500/10 blur-3xl rounded-full pointer-events-none" />
 
         {/* Upper Main Footer Grid */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 relative z-10">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-7 sm:gap-10 lg:gap-12">
             
-            {/* Column 1: Brand & Academic Engine (2 Columns on large screens) */}
-            <div className="lg:col-span-2 space-y-4">
+            {/* Column 1: Brand & Academic Engine (Spans 2 columns on mobile & desktop) */}
+            <div className="col-span-2 lg:col-span-2 space-y-3.5 sm:space-y-4">
               <div
                 onClick={() => handleNav({ to: ROUTES.home })}
                 className="flex items-center gap-2 cursor-pointer select-none group w-fit"
@@ -352,7 +352,7 @@ export const Footer = () => {
             </div>
 
             {/* Column 4: Support & Grievance Desk */}
-            <div className="space-y-3">
+            <div className="col-span-2 md:col-span-1 lg:col-span-1 space-y-3">
               <h4 className="font-bold text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5">
                 <MailIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
                 <span>Support Desk</span>

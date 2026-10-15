@@ -9,6 +9,12 @@ class PassCourseInfo(BaseModel):
     target_exam: Optional[str] = None
     tagline: Optional[str] = None
     thumbnail_icon: Optional[str] = None
+    thumbnail: Optional[str] = None
+    description: Optional[str] = None
+    total_quizzes: Optional[int] = 0
+    subjects: List[str] = Field(default_factory=list)
+
+    model_config = {"extra": "allow"}
 
 
 class PassCreateRequest(BaseModel):

@@ -534,10 +534,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         </span>
                       )}
 
-                      {!isAdmin && subscription?.status === 'ACTIVE' && subscription?.plan && subscription?.plan !== 'FREE' && subscription?.plan !== 'NONE' && (
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1">
-                          <CrownIcon size={10} className="text-amber-500" />
-                          <span>{formatPlanTitle(subscription.plan)}</span>
+                      {!isAdmin && (user?.profile?.is_pro || user?.profile?.tags?.includes('PRO USER') || (subscription?.status === 'ACTIVE' && subscription?.plan && subscription?.plan !== 'FREE')) && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 via-yellow-400/20 to-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1">
+                          <CrownIcon size={10} className="text-amber-500 fill-amber-500" />
+                          <span>PRO USER</span>
                         </span>
                       )}
                     </div>
@@ -745,10 +745,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                     </span>
                   )}
 
-                  {!isAdmin && subscription?.status === 'ACTIVE' && subscription?.plan && subscription?.plan !== 'FREE' && subscription?.plan !== 'NONE' && (
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1">
-                      <CrownIcon size={10} className="text-amber-500" />
-                      <span>{formatPlanTitle(subscription.plan)}</span>
+                  {!isAdmin && (user?.profile?.is_pro || user?.profile?.tags?.includes('PRO USER') || (subscription?.status === 'ACTIVE' && subscription?.plan && subscription?.plan !== 'FREE')) && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 via-yellow-400/20 to-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/50 flex items-center gap-1">
+                      <CrownIcon size={10} className="text-amber-500 fill-amber-500" />
+                      <span>PRO USER</span>
                     </span>
                   )}
                 </div>

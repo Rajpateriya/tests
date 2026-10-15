@@ -36,8 +36,71 @@ class PassService:
 
     # ── Admin Operations ─────────────────────────────────────────────────────
 
+    async def _ensure_default_passes(self):
+        count = await self.db.passes.count_documents({})
+        if count == 0:
+            now = datetime.now(timezone.utc)
+            default_passes = [
+                {
+                    "_id": "pass_monthly",
+                    "title": "Monthly Pass",
+                    "tagline": "30-Day Exam Sprint: Instant access to SSC CGL & RRB NTPC courses, CBT mocks, and percentile tracking.",
+                    "badge": "MOST POPULAR",
+                    "duration_days": 30,
+                    "base_price": 149.0,
+                    "original_price": 249.0,
+                    "max_coins_discount": 500,
+                    "covered_course_ids": ["course-ssc-cgl-2026", "course-rrb-ntpc-2026"],
+                    "features": [
+                        "30 Days Full Platform Access",
+                        "2 Prime Courses Included (SSC CGL & RRB NTPC)",
+                        "Full Tier-I & Tier-II Simulation Mocks",
+                        "PrepMagnet CBT Test Interface & Live Clock",
+                        "All-India Percentile & Predicted AIR Benchmark",
+                        "Speed vs Accuracy Diagnostics & Solution Derivations",
+                    ],
+                    "is_active": True,
+                    "created_at": now,
+                    "updated_at": now,
+                },
+                {
+                    "_id": "pass_annual",
+                    "title": "Annual Pass",
+                    "tagline": "365-Day Unlimited All-Access: Unlocks ALL 4 Prime Courses, Tier-I/II Mocks, Typing Master & AI Drills.",
+                    "badge": "SAVE 40%",
+                    "duration_days": 365,
+                    "base_price": 499.0,
+                    "original_price": 899.0,
+                    "max_coins_discount": 1000,
+                    "covered_course_ids": [
+                        "course-ssc-cgl-2026",
+                        "course-rrb-ntpc-2026",
+                        "course-ssc-chsl-2026",
+                        "course-banking-2026",
+                    ],
+                    "features": [
+                        "365 Days All-Access Membership",
+                        "ALL 4 Prime Courses Included (SSC CGL, NTPC, CHSL, Bank PO)",
+                        "Unlimited Mock Tests & Topic-wise Sectional Drills",
+                        "Typing Master Skill Engine (DEST & CHSL 35 WPM)",
+                        "Deep Diagnostic Error Analytics & AI Weak-Area Drills",
+                        "Priority Student Support & Answer Key Dispute Window",
+                    ],
+                    "is_active": True,
+                    "created_at": now,
+                    "updated_at": now,
+                },
+            ]
+            for p in default_passes:
+                pid = p["_id"]
+                doc = {k: v for k, v in p.items() if k != "_id"}
+                await self.db.passes.update_one({"_id": pid}, {"$set": doc, "$setOnInsert": {"_id": pid}}, upsert=True)
+
     async def list_all_passes_admin(self) -> List[PassResponse]:
         passes = await self.pass_repo.get_all_passes()
+        if not passes:
+            await self._ensure_default_passes()
+            passes = await self.pass_repo.get_all_passes()
         return [await self._enrich_pass(p) for p in passes]
 
     async def create_pass(self, req: PassCreateRequest) -> PassResponse:
@@ -94,6 +157,9 @@ class PassService:
 
     async def list_active_passes(self) -> List[PassResponse]:
         passes = await self.pass_repo.get_active_passes()
+        if not passes:
+            await self._ensure_default_passes()
+            passes = await self.pass_repo.get_active_passes()
         return [await self._enrich_pass(p) for p in passes]
 
     async def get_pass_by_id(self, pass_id: str) -> PassResponse:
@@ -111,13 +177,19 @@ class PassService:
             cursor = self.db.courses.find({"_id": {"$in": c_ids}})
             course_docs = await cursor.to_list(length=100)
             for cd in course_docs:
+                subs = cd.get("subjects", [])
+                sub_names = [s if isinstance(s, str) else s.get("subject_name", "") for s in subs]
                 covered_info.append(
                     PassCourseInfo(
                         id=cd["_id"],
                         title=cd.get("title", ""),
                         target_exam=cd.get("target_exam") or cd.get("exam", "All"),
-                        tagline=cd.get("tagline"),
+                        tagline=cd.get("tagline") or cd.get("description", "")[:120],
                         thumbnail_icon=cd.get("thumbnail_icon", "SparklesIcon"),
+                        thumbnail=cd.get("thumbnail"),
+                        description=cd.get("description"),
+                        total_quizzes=len(cd.get("quizzes", [])),
+                        subjects=sub_names,
                     )
                 )
 
@@ -331,6 +403,46 @@ class PassService:
         # Update user profile with active pass
         await self.user_repo.add_user_pass(user_id, user_pass_item)
 
+        # Auto-enroll user into all courses covered by this pass
+        c_ids = pass_doc.get("covered_course_ids", [])
+        if c_ids:
+            cursor = self.db.courses.find({"_id": {"$in": c_ids}})
+        else:
+            cursor = self.db.courses.find({"is_active": True})
+        courses_to_enroll = await cursor.to_list(length=100)
+
+        enrolled_courses_out = []
+        for c in courses_to_enroll:
+            enrollment_record = {
+                "course_id": c["_id"],
+                "course_title": c.get("title", ""),
+                "target_exam": c.get("target_exam") or c.get("exam", ""),
+                "tagline": c.get("tagline") or c.get("description", "")[:120],
+                "enrolled_at": now.isoformat(),
+                "status": "Active Pass",
+                "pass_id": pass_doc["_id"],
+                "total_quizzes": len(c.get("quizzes", [])),
+                "expires_at": expires_at.isoformat(),
+            }
+            await self.user_repo.add_enrolled_course(user_id, enrollment_record)
+            enrolled_courses_out.append(enrollment_record)
+
+        # Mark user profile as PRO USER in tags and set is_pro=True
+        await self.db.users.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "profile.is_pro": True,
+                    "profile.subscription_status": "ACTIVE",
+                    "profile.subscription_plan": pass_doc["_id"],
+                    "profile.subscription_expires_at": expires_at.isoformat(),
+                },
+                "$addToSet": {
+                    "profile.tags": {"$each": ["PRO USER", "VERIFIED ASPIRANT"]}
+                }
+            }
+        )
+
         # Record payment receipt
         await self.payments_collection.insert_one({
             "_id": f"pay_{uuid.uuid4().hex[:12]}",
@@ -348,7 +460,7 @@ class PassService:
 
         return {
             "success": True,
-            "message": f"Successfully activated {pass_doc['title']}! Access unlocked to all covered courses.",
+            "message": f"Successfully activated {pass_doc['title']}! Access unlocked to all {len(courses_to_enroll)} covered courses.",
             "payment_id": payment_id,
             "pass": {
                 "id": pass_doc["_id"],
@@ -357,6 +469,13 @@ class PassService:
                 "duration_days": duration_days,
                 "expires_at": expires_at.isoformat(),
                 "covered_course_ids": pass_doc.get("covered_course_ids", []),
+                "enrolled_courses": enrolled_courses_out,
+            },
+            "user_profile": {
+                "is_pro": True,
+                "tags": ["PRO USER", "VERIFIED ASPIRANT"],
+                "subscription_status": "ACTIVE",
+                "subscription_plan": pass_doc["_id"],
             },
             "subscription": {
                 "plan": pass_doc["_id"],
@@ -364,6 +483,7 @@ class PassService:
                 "duration_days": duration_days,
                 "expires_at": expires_at.isoformat(),
             },
+            "enrolled_courses": enrolled_courses_out,
             "coins_deducted": coins_used,
             "coins_balance": new_coins,
         }

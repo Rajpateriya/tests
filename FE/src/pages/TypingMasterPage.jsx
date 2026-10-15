@@ -443,10 +443,10 @@ export const TypingMasterPage = () => {
         {/* Header */}
         <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 animate-fade-in">
           <div className="space-y-1.5">
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.15]">
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.15]">
               Typing <span className="text-institutional-600 dark:text-institutional-400">Master</span>
             </h1>
-            <p className="text-sm text-charcoal-600 dark:text-charcoal-300 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-300 max-w-2xl leading-relaxed">
               Government-exam typing simulation (SSC CGL DEST, CHSL, RRB NTPC) with live Gross and Net WPM, keystroke accuracy and correction analysis.
             </p>
           </div>

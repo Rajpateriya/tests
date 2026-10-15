@@ -28,6 +28,8 @@ import {
   MessageSquareIcon,
 } from '../components/Icons';
 
+import { PassDetailModal } from '../components/PassDetailModal';
+
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
  * Built with institutional rigor, inspiring copywriting, anti-AI aesthetics,
@@ -57,8 +59,9 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   const [sandboxPaletteState, setSandboxPaletteState] = useState('ANSWERED'); // 'ANSWERED' | 'REVIEW' | 'NOT_VISITED'
   const [showSandboxExplanation, setShowSandboxExplanation] = useState(false);
 
-  // Interactive Passes Section State (Monthly vs Annual)
+  // Interactive Passes Section State (Monthly vs Annual & Detail Modal)
   const [landingBillingCycle, setLandingBillingCycle] = useState('yearly'); // 'yearly' | 'monthly'
+  const [selectedPassForDetail, setSelectedPassForDetail] = useState(null);
 
   // Interactive Candidate Grievance & Helpdesk Form State
   const [contactName, setContactName] = useState(user?.full_name || '');
@@ -305,12 +308,12 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* ========================================================================= */}
         {/* 1. HERO SECTION: Inspiring, Authoritative Institutional Positioning       */}
         {/* ========================================================================= */}
-        <section className="text-center max-w-4xl mx-auto space-y-6 pt-4 sm:pt-6 animate-fade-in">
+        <section className="text-center max-w-4xl mx-auto space-y-4 sm:space-y-6 pt-2 sm:pt-6 animate-fade-in px-1 sm:px-0">
           {/* Live Activity & Pulse Indicator */}
-          <div className="inline-flex flex-wrap sm:flex-nowrap items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-2xl sm:rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 text-xs font-bold shadow-subtle hover:border-institutional-400 transition-colors cursor-default select-none animate-float-slow max-w-full text-center">
-            <span className="flex h-2.5 w-2.5 relative shrink-0">
+          <div className="inline-flex flex-wrap sm:flex-nowrap items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 text-[11px] sm:text-xs font-bold shadow-subtle hover:border-institutional-400 transition-colors cursor-default select-none animate-float-slow max-w-full text-center">
+            <span className="flex h-2 w-2 sm:h-2.5 sm:w-2.5 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600" />
+              <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-600" />
             </span>
             <span className="text-charcoal-600 dark:text-charcoal-300">
               1,420 Aspirants in Active Timed Simulation
@@ -320,33 +323,33 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </span>
           </div>
 
-          {/* Master Headline */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.12]">
+          {/* Master Headline - Responsively Scaled for All Device Dimensions */}
+          <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.18] sm:leading-[1.12]">
             The Gold Standard in Mock Tests for Government Aspirants.
           </h1>
 
           {/* Subheading */}
-          <p className="text-base sm:text-lg text-charcoal-600 dark:text-charcoal-300 max-w-3xl mx-auto leading-relaxed font-normal">
+          <p className="text-xs sm:text-sm md:text-base lg:text-lg text-charcoal-600 dark:text-charcoal-300 max-w-2xl sm:max-w-3xl mx-auto leading-relaxed font-normal">
             Calibrated strictly for <strong className="text-charcoal-900 dark:text-charcoal-100 font-bold">SSC CGL, Banking (IBPS/SBI PO), Railways (RRB NTPC)</strong>, and <strong className="text-charcoal-900 dark:text-charcoal-100 font-bold">State PSCs</strong>. Experience the PrepMagnet CBT test interface, server-synchronized countdowns, official negative deduction rules, and deep diagnostic percentiles.
           </p>
 
           {/* Dual Action CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3.5 pt-1 sm:pt-2 w-full max-w-md sm:max-w-none mx-auto">
             <button
               onClick={() => {
                 const el = document.getElementById('mock-catalog');
                 el?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="w-full sm:w-auto px-7 py-3 rounded-full bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group"
+              className="w-full sm:w-auto px-5 py-2.5 sm:px-7 sm:py-3 rounded-full bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
             >
               <span>Explore Available Mocks (50+ Full Tests)</span>
-              <ArrowRightIcon size={16} className="group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRightIcon size={15} className="group-hover:translate-x-0.5 transition-transform" />
             </button>
 
             {!user ? (
               <button
                 onClick={() => onOpenAuthModal('register')}
-                className="w-full sm:w-auto px-6 py-3 rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-300 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 font-bold text-sm transition-all shadow-subtle cursor-pointer"
+                className="w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-300 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 font-bold text-xs sm:text-sm transition-all shadow-subtle cursor-pointer"
               >
                 Sign In / Join Free
               </button>
@@ -356,7 +359,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   const firstTest = tests[0];
                   if (firstTest) onStartTest(firstTest);
                 }}
-                className="w-full sm:w-auto px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all shadow-subtle flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition-all shadow-subtle flex items-center justify-center gap-2 cursor-pointer"
               >
                 <PlayIcon size={14} />
                 <span>Launch Quick Mock Exam</span>
@@ -364,31 +367,31 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             )}
           </div>
 
-          {/* Social Proof & Metrics Strip */}
-          <div className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto border-t border-charcoal-200/60 dark:border-charcoal-800/80">
+          {/* Social Proof & Metrics Strip - Clean 2x2 Grid on Mobile */}
+          <div className="pt-4 sm:pt-8 grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 max-w-3xl mx-auto border-t border-charcoal-200/60 dark:border-charcoal-800/80 p-2.5 sm:p-0 rounded-2xl bg-charcoal-50/50 sm:bg-transparent dark:bg-charcoal-850/40 sm:dark:bg-transparent">
             <div className="space-y-0.5">
-              <div className="text-xl sm:text-2xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
+              <div className="text-lg sm:text-2xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
                 48,500+
               </div>
-              <div className="text-xs text-charcoal-500 font-medium">Aspirants Evaluated</div>
+              <div className="text-[10px] sm:text-xs text-charcoal-500 font-medium">Aspirants Evaluated</div>
             </div>
             <div className="space-y-0.5">
-              <div className="text-xl sm:text-2xl font-extrabold font-mono text-emerald-700 dark:text-emerald-400">
+              <div className="text-lg sm:text-2xl font-extrabold font-mono text-emerald-700 dark:text-emerald-400">
                 1:1
               </div>
-              <div className="text-xs text-charcoal-500 font-medium">PrepMagnet Examination Engine</div>
+              <div className="text-[10px] sm:text-xs text-charcoal-500 font-medium">PrepMagnet Examination Engine</div>
             </div>
             <div className="space-y-0.5">
-              <div className="text-xl sm:text-2xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
+              <div className="text-lg sm:text-2xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
                 -0.50
               </div>
-              <div className="text-xs text-charcoal-500 font-medium">Strict Negative Deduction</div>
+              <div className="text-[10px] sm:text-xs text-charcoal-500 font-medium">Strict Negative Deduction</div>
             </div>
             <div className="space-y-0.5">
-              <div className="text-xl sm:text-2xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
+              <div className="text-lg sm:text-2xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
                 &lt; 200ms
               </div>
-              <div className="text-xs text-charcoal-500 font-medium">Server State Sync</div>
+              <div className="text-[10px] sm:text-xs text-charcoal-500 font-medium">Server State Sync</div>
             </div>
           </div>
         </section>
@@ -727,13 +730,17 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* 5. INTERACTIVE TARGET SCORE & AIR PERCENTILE PREDICTOR                    */}
         {/* Engaging visual tool that calculates candidate standing in real time      */}
         {/* ========================================================================= */}
-        <section id="rank-predictor" className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 sm:p-10 shadow-subtle space-y-6 scroll-mt-24">
+        {/* ========================================================================= */}
+        {/* 5. INTERACTIVE TARGET SCORE & AIR PERCENTILE PREDICTOR                    */}
+        {/* Engaging visual tool that calculates candidate standing in real time      */}
+        {/* ========================================================================= */}
+        <section id="rank-predictor" className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl sm:rounded-3xl p-4 sm:p-10 shadow-subtle space-y-4 sm:space-y-6 scroll-mt-24">
           <div className="max-w-2xl mx-auto text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
               <TargetIcon size={14} />
               <span>All-India Benchmark Calculator</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
+            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
               Target Score & Rank Predictor
             </h2>
             <p className="text-xs sm:text-sm text-charcoal-500 dark:text-charcoal-400">
@@ -741,12 +748,12 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto space-y-6 pt-2">
+          <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6 pt-1 sm:pt-2">
             {/* Slider */}
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-charcoal-500">Tier-I Raw Score (out of 200)</span>
-                <span className="text-xl font-extrabold font-mono text-institutional-600 dark:text-institutional-400">
+                <span className="text-base sm:text-xl font-extrabold font-mono text-institutional-600 dark:text-institutional-400">
                   {targetScore} / 200 Marks
                 </span>
               </div>
@@ -771,25 +778,25 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </div>
             </div>
 
-            {/* Real-time Output Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-              <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-1">
-                <span className="text-xs text-charcoal-500 font-semibold">Predicted Percentile</span>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+            {/* Real-time Output Cards - Compact 2-column grid on mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 pt-1 sm:pt-2">
+              <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1">
+                <span className="text-[10px] sm:text-xs text-charcoal-500 font-semibold">Predicted Percentile</span>
+                <div className="text-xl sm:text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
                   {predictorResult.percentile}%ile
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-1">
-                <span className="text-xs text-charcoal-500 font-semibold">Projected All-India Rank</span>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-institutional-600 dark:text-institutional-400">
+              <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1">
+                <span className="text-[10px] sm:text-xs text-charcoal-500 font-semibold">Projected AIR</span>
+                <div className="text-xl sm:text-3xl font-extrabold font-mono text-institutional-600 dark:text-institutional-400 truncate">
                   {predictorResult.rank}
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-1">
-                <span className="text-xs text-charcoal-500 font-semibold">Selection Assessment</span>
-                <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100 pt-1 leading-snug">
+              <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1">
+                <span className="text-[10px] sm:text-xs text-charcoal-500 font-semibold">Selection Assessment</span>
+                <div className="text-[11px] sm:text-xs font-bold text-charcoal-900 dark:text-charcoal-100 pt-0.5 leading-snug">
                   {predictorResult.tier}
                 </div>
               </div>
@@ -800,7 +807,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* ========================================================================= */}
         {/* 6. INSTITUTIONAL RIGOR: Real Engine vs Diagnostics vs Derivations          */}
         {/* ========================================================================= */}
-        <section id="platform-features" className="relative rounded-3xl p-6 sm:p-10 shadow-subtle space-y-8 scroll-mt-24 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 overflow-hidden bg-nodes-pattern">
+        <section id="platform-features" className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-10 shadow-subtle space-y-4 sm:space-y-8 scroll-mt-24 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 overflow-hidden bg-nodes-pattern">
           {/* Moving Neural Analytics Glowing Core */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/10 dark:bg-purple-500/15 blur-[110px] rounded-full pointer-events-none animate-glow-pulse" />
           <div className="absolute top-0 right-10 w-64 h-64 bg-cyan-500/8 dark:bg-cyan-400/10 blur-[90px] rounded-full pointer-events-none animate-float-slow" />
@@ -817,7 +824,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             <div className="flex max-w-full overflow-x-auto p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl sm:rounded-full text-xs font-bold gap-1 mt-4 scrollbar-none justify-start sm:justify-center">
               <button
                 onClick={() => setActiveFeatureTab('engine')}
-                className={`px-4 py-2 rounded-full whitespace-nowrap shrink-0 transition-all ${activeFeatureTab === 'engine'
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'engine'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -826,7 +833,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </button>
               <button
                 onClick={() => setActiveFeatureTab('analytics')}
-                className={`px-4 py-2 rounded-full whitespace-nowrap shrink-0 transition-all ${activeFeatureTab === 'analytics'
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'analytics'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -835,7 +842,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </button>
               <button
                 onClick={() => setActiveFeatureTab('solutions')}
-                className={`px-4 py-2 rounded-full whitespace-nowrap shrink-0 transition-all ${activeFeatureTab === 'solutions'
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'solutions'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -846,21 +853,21 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           </div>
 
           {/* Interactive Feature Display Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-6 pt-1 sm:pt-2">
             {/* Box 1 */}
             <div
-              className={`p-6 rounded-2xl border transition-all ${activeFeatureTab === 'engine'
+              className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'engine'
                   ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
                   : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
                 }`}
             >
-              <div className="w-10 h-10 rounded-xl bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 flex items-center justify-center font-bold mb-4">
-                <ClockIcon size={20} />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
+                <ClockIcon size={18} />
               </div>
-              <h3 className="font-bold text-base text-charcoal-900 dark:text-charcoal-100 mb-2">
+              <h3 className="font-bold text-sm sm:text-base text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2">
                 Server-Synchronized Engine
               </h3>
-              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-4">
+              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-3 sm:mb-4">
                 Exact replica of the official examination layout. Countdown timers run on the server clock, preventing client tampering or timing drift.
               </p>
               <ul className="text-xs space-y-1.5 text-charcoal-700 dark:text-charcoal-300 font-medium">
@@ -872,18 +879,18 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
             {/* Box 2 */}
             <div
-              className={`p-6 rounded-2xl border transition-all ${activeFeatureTab === 'analytics'
+              className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'analytics'
                   ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
                   : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
                 }`}
             >
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold mb-4">
-                <BarChart3Icon size={20} />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
+                <BarChart3Icon size={18} />
               </div>
-              <h3 className="font-bold text-base text-charcoal-900 dark:text-charcoal-100 mb-2">
+              <h3 className="font-bold text-sm sm:text-base text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2">
                 Percentile & Speed Diagnostics
               </h3>
-              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-4">
+              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-3 sm:mb-4">
                 Compare your dwell time against question difficulty. Identify whether wrong answers stemmed from conceptual confusion or hurried pacing.
               </p>
               <ul className="text-xs space-y-1.5 text-charcoal-700 dark:text-charcoal-300 font-medium">
@@ -895,18 +902,18 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
             {/* Box 3 */}
             <div
-              className={`p-6 rounded-2xl border transition-all ${activeFeatureTab === 'solutions'
+              className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'solutions'
                   ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
                   : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
                 }`}
             >
-              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold mb-4">
-                <HelpCircleIcon size={20} />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
+                <HelpCircleIcon size={18} />
               </div>
-              <h3 className="font-bold text-base text-charcoal-900 dark:text-charcoal-100 mb-2">
+              <h3 className="font-bold text-sm sm:text-base text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2">
                 Rigorous Concept Derivations
               </h3>
-              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-4">
+              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-3 sm:mb-4">
                 Every single solution contains step-by-step mathematical reasoning, formula shortcuts, and official PYQ cross-references.
               </p>
               <ul className="text-xs space-y-1.5 text-charcoal-700 dark:text-charcoal-300 font-medium">
@@ -921,19 +928,19 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* ========================================================================= */}
         {/* 7. MOCK TEST CATALOG: Search, Filter Tabs & Interactive Cards             */}
         {/* ========================================================================= */}
-        <section id="mock-catalog" className="relative rounded-3xl p-6 sm:p-8 space-y-6 pt-6 scroll-mt-24 bg-white/60 dark:bg-charcoal-900/60 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 overflow-hidden bg-dots-pattern shadow-subtle">
+        <section id="mock-catalog" className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-8 space-y-4 sm:space-y-6 pt-4 sm:pt-6 scroll-mt-24 bg-white/60 dark:bg-charcoal-900/60 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 overflow-hidden bg-dots-pattern shadow-subtle">
           {/* Moving Atmospheric Library Glows */}
           <div className="absolute -top-32 left-1/4 w-[500px] h-[350px] bg-institutional-500/10 dark:bg-institutional-500/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
           <div className="absolute top-1/2 -right-20 w-[450px] h-[450px] bg-sky-500/10 dark:bg-sky-500/15 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
           <div className="absolute -bottom-24 left-10 w-[400px] h-[400px] bg-emerald-500/8 dark:bg-emerald-500/12 blur-[100px] rounded-full pointer-events-none animate-drift-slow" />
 
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 relative z-10">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 relative z-10">
             <div>
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-institutional-600 dark:text-institutional-400 uppercase tracking-wider mb-1">
                 <BookOpenIcon size={14} />
                 <span>Catalog</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
+              <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
                 {catalogTab === 'courses' ? 'Available Courses' : 'Free Mock Tests'}
               </h2>
               <p className="text-xs sm:text-sm text-charcoal-500 dark:text-charcoal-400">
@@ -944,7 +951,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </div>
 
             {/* Catalog Tabs */}
-            <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold">
+            <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold self-start sm:self-auto">
               {[
                 { id: 'courses', label: 'Courses' },
                 { id: 'mocks', label: 'Free Mocks' },
@@ -952,7 +959,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                 <button
                   key={tab.id}
                   onClick={() => setCatalogTab(tab.id)}
-                  className={`px-4 py-1.5 rounded-lg whitespace-nowrap transition-all ${catalogTab === tab.id
+                  className={`px-3.5 sm:px-4 py-1.5 rounded-lg whitespace-nowrap transition-all ${catalogTab === tab.id
                       ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
                       : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                     }`}
@@ -965,52 +972,52 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
           {catalogTab === 'courses' ? (
             coursesLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 animate-pulse">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-64 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
+                  <div key={n} className="h-64 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl sm:rounded-2xl" />
                 ))}
               </div>
             ) : courses.length === 0 ? (
-              <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-12 text-center space-y-3">
+              <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-8 sm:p-12 text-center space-y-3">
                 <BookOpenIcon size={36} className="text-charcoal-400 mx-auto" />
                 <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">No courses published yet</h3>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
                 {courses.map((course) => (
                   <article
                     key={course.id}
-                    className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
+                    className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
                   >
                     <div>
-                      <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
                           {course.target_exam}
                         </span>
                         <span className="text-xs font-black px-2 py-0.5 rounded bg-emerald-500 text-white">{course.discount_percent}% OFF</span>
                       </div>
-                      <h3 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                      <h3 className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
                         {course.title}
                       </h3>
-                      <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-4 leading-relaxed font-normal">
+                      <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-2.5 sm:mb-4 leading-relaxed font-normal">
                         {course.description}
                       </p>
-                      <div className="flex flex-wrap gap-1.5 mb-5">
+                      <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-3 sm:mb-5">
                         {(course.subjects || []).slice(0, 3).map((sub, i) => (
-                          <span key={i} className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
+                          <span key={i} className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
                             {sub}
                           </span>
                         ))}
                       </div>
                     </div>
-                    <div className="pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
+                    <div className="pt-3 sm:pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
                       <div className="flex items-baseline gap-1.5 font-mono">
-                        <span className="text-lg font-black text-charcoal-900 dark:text-white">₹{course.discounted_price}</span>
+                        <span className="text-base sm:text-lg font-black text-charcoal-900 dark:text-white">₹{course.discounted_price}</span>
                         <span className="text-xs text-charcoal-400 line-through">₹{course.original_price}</span>
                       </div>
                       <button
                         onClick={() => navigate(ROUTES.courses)}
-                        className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm"
+                        className="inline-flex items-center gap-1 px-3 sm:px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm cursor-pointer"
                       >
                         <span>View Course</span>
                       </button>
@@ -1022,12 +1029,12 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           ) : (
             <>
               {/* Search & Subject Bar */}
-              <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-3 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-2.5 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 md:max-w-md">
                   <select
                     value={selectedSubject}
                     onChange={(e) => setSelectedSubject(e.target.value)}
-                    className="px-3 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 shrink-0"
+                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 shrink-0"
                   >
                     <option value="ALL">All Subjects</option>
                     <option value="Quantitative Aptitude">Quantitative Aptitude</option>
@@ -1043,7 +1050,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                       placeholder="Search by topic (e.g. Geometry)..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-institutional-500"
+                      className="w-full pl-8 pr-3 py-1.5 sm:py-2 text-xs rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 focus:outline-none focus:ring-2 focus:ring-institutional-500"
                     />
                   </div>
                 </div>
@@ -1076,13 +1083,13 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
               {/* Test Cards Grid */}
               {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 animate-pulse">
                   {[1, 2, 3, 4, 5, 6].map((n) => (
-                    <div key={n} className="h-56 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl" />
+                    <div key={n} className="h-56 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl sm:rounded-2xl" />
                   ))}
                 </div>
               ) : filteredTests.length === 0 ? (
-                <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-12 text-center space-y-3">
+                <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-8 sm:p-12 text-center space-y-3">
                   <BookOpenIcon size={36} className="text-charcoal-400 mx-auto" />
                   <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">
                     No mock tests found matching criteria
@@ -1092,15 +1099,15 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
                   {filteredTests.map((test) => (
                     <article
                       key={test.id}
-                      className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
+                      className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
                     >
                       <div>
                         {/* Header: Type Pill & Difficulty */}
-                        <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
                           <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 border border-charcoal-200 dark:border-charcoal-700">
                             {test.test_type === 'FULL' ? 'Full Mock' : test.test_type === 'SUBJECT' ? 'Subject Mock' : 'Topic Drill'}
                           </span>
@@ -1108,22 +1115,22 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         </div>
 
                         {/* Title */}
-                        <h3 className="text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                        <h3 className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
                           {test.title}
                         </h3>
 
                         {/* Description */}
-                        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-4 leading-relaxed font-normal">
+                        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-2 sm:mb-4 leading-relaxed font-normal">
                           {test.description || 'Full PrepMagnet CBT test simulation with negative marking and instant scorecard.'}
                         </p>
 
                         {/* Subject Tags */}
-                        <div className="flex flex-wrap gap-1.5 mb-5">
-                          <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
+                        <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-3 sm:mb-5">
+                          <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
                             {test.subject || 'Full Syllabus'}
                           </span>
                           {test.topic && (
-                            <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
+                            <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
                               {test.topic}
                             </span>
                           )}
@@ -1131,10 +1138,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                       </div>
 
                       {/* Card Footer: Metadata + Actions */}
-                      <div className="pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-xs text-charcoal-500 font-mono">
+                      <div className="pt-3 sm:pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2 sm:gap-2.5 text-xs text-charcoal-500 font-mono">
                           <span className="flex items-center gap-1 font-semibold">
-                            <ClockIcon size={13} className="text-charcoal-400" />
+                            <ClockIcon size={12} className="text-charcoal-400" />
                             {test.duration_minutes}m
                           </span>
                           <span>•</span>
@@ -1144,13 +1151,13 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleTestCardClick(test)}
-                            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors"
+                            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors cursor-pointer"
                           >
                             Rules
                           </button>
                           <button
                             onClick={() => handleTestCardClick(test)}
-                            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm"
+                            className="inline-flex items-center gap-1 px-3 sm:px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm cursor-pointer"
                           >
                             <span>Start</span>
                             <PlayIcon size={10} />
@@ -1262,8 +1269,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-4 hover:border-charcoal-350 dark:hover:border-charcoal-700 transition-colors">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-6">
+            <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-3 sm:space-y-4 hover:border-charcoal-350 dark:hover:border-charcoal-700 transition-colors">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
                   AIR 142 • SSC CGL 2024
@@ -1284,7 +1291,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-4 hover:border-charcoal-350 dark:hover:border-charcoal-700 transition-colors">
+            <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-3 sm:space-y-4 hover:border-charcoal-350 dark:hover:border-charcoal-700 transition-colors">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
                   Selected • IBPS PO XVI
@@ -1305,7 +1312,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-4 hover:border-charcoal-350 dark:hover:border-charcoal-700 transition-colors">
+            <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-3 sm:space-y-4 hover:border-charcoal-350 dark:hover:border-charcoal-700 transition-colors">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
                   Inspector (Central Excise)
@@ -1330,20 +1337,20 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
         {/* ========================================================================= */}
         {/* 10. ASPIRANT PASSES & ALL-ACCESS MEMBERSHIP TIERS                         */}
-        {/* Compact, Sleek, Animated Cards with Monthly/Annual Cycle & Hover Effects  */}
+        {/* Compact, Sleek, 100% Backend-Driven with Mobile 2-Column Grid Pattern     */}
         {/* ========================================================================= */}
-        <section id="passes-section" className="relative rounded-3xl p-6 sm:p-10 space-y-8 scroll-mt-24 bg-white/70 dark:bg-charcoal-900/70 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 overflow-hidden bg-mesh-passes shadow-card">
+        <section id="passes-section" className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-10 space-y-4 sm:space-y-8 scroll-mt-24 bg-white/70 dark:bg-charcoal-900/70 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 overflow-hidden bg-mesh-passes shadow-card">
           {/* Moving Atmospheric Pass Glows */}
           <div className="absolute -top-24 -left-20 w-[450px] h-[450px] bg-institutional-500/15 dark:bg-institutional-400/20 blur-[130px] rounded-full pointer-events-none animate-blob" />
           <div className="absolute -bottom-24 -right-20 w-[500px] h-[500px] bg-indigo-500/15 dark:bg-indigo-400/20 blur-[140px] rounded-full pointer-events-none animate-blob-delayed" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-emerald-500/8 dark:bg-emerald-400/12 blur-[100px] rounded-full pointer-events-none animate-float-slow" />
 
-          <div className="text-center max-w-2xl mx-auto space-y-3 relative z-10">
+          <div className="text-center max-w-2xl mx-auto space-y-2.5 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
               <CrownIcon size={14} />
               <span>Aspirant Passes & Memberships</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
+            <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
               Targeted Passes Built for Exam Cycles
             </h2>
             <p className="text-xs sm:text-sm text-charcoal-500 dark:text-charcoal-400">
@@ -1354,7 +1361,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             <div className="inline-flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-full border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold gap-1 mt-1 shadow-inner">
               <button
                 type="button"
-                className={`px-4 py-1.5 rounded-full transition-all duration-200 ${landingBillingCycle === 'monthly'
+                className={`px-3.5 sm:px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${landingBillingCycle === 'monthly'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -1364,7 +1371,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </button>
               <button
                 type="button"
-                className={`px-4 py-1.5 rounded-full transition-all duration-200 flex items-center gap-1.5 ${landingBillingCycle === 'yearly'
+                className={`px-3.5 sm:px-4 py-1.5 rounded-full transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${landingBillingCycle === 'yearly'
                     ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
@@ -1378,183 +1385,153 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </div>
           </div>
 
-          {/* Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch max-w-5xl mx-auto">
-            {passes.length > 0 ? (
+          {/* Cards Grid - Balanced & Responsive Centered Grid (No Empty Slots) */}
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch justify-center">
+            {passesLoading ? (
+              /* Shimmer Loading Skeletons */
+              [1, 2].map((n) => (
+                <div
+                  key={n}
+                  className="rounded-2xl sm:rounded-3xl p-6 sm:p-7 h-96 bg-charcoal-150/70 dark:bg-charcoal-800/60 animate-pulse border border-charcoal-200/50 dark:border-charcoal-700/50"
+                />
+              ))
+            ) : passes.length > 0 ? (
               passes.map((p) => {
                 const isAnnual = p.duration_days > 100;
                 const isMonthly = p.duration_days <= 100;
-                const matchesToggle = landingBillingCycle === 'yearly' ? isAnnual : isMonthly;
-                const coveredCount = p.covered_course_ids?.length || 0;
+                const isHighlighted = landingBillingCycle === 'yearly' ? isAnnual : isMonthly;
+                const coveredCourses = p.covered_courses || [];
+                const coveredCount = coveredCourses.length || p.covered_course_ids?.length || 0;
 
                 return (
                   <div
                     key={p.id}
-                    className={`group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl bg-white dark:bg-charcoal-900 border overflow-hidden ${p.badge || isAnnual
-                        ? 'border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted ring-1 ring-institutional-500/30'
+                    className={`group relative rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl bg-white dark:bg-charcoal-900 border overflow-hidden ${isHighlighted || isAnnual
+                        ? 'border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted ring-2 ring-institutional-500/20'
                         : 'border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400'
                       }`}
                   >
-                    {/* Badge */}
+                    {/* Top Ribbon Badge */}
                     {(p.badge || isAnnual) && (
                       <div className="absolute top-0 right-0">
-                        <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] tracking-wider uppercase px-2.5 py-0.5 rounded-bl-xl shadow-sm flex items-center gap-1">
-                          <SparklesIcon size={10} />
+                        <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[10px] tracking-wider uppercase px-3 py-1 rounded-bl-2xl shadow-sm flex items-center gap-1.5">
+                          <SparklesIcon size={11} />
                           <span>{p.badge || 'SAVE 40%'}</span>
                         </div>
                       </div>
                     )}
 
                     <div>
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                      {/* Pass Header */}
+                      <div className="flex items-center justify-between gap-2 mb-2 pr-16">
+                        <h3 className="text-lg sm:text-xl font-black text-charcoal-900 dark:text-white group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
                           {p.title}
                         </h3>
-                        {!p.badge && !isAnnual && (
-                          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 font-mono">
-                            {p.duration_days} Days
-                          </span>
-                        )}
                       </div>
-                      <p className="text-[11px] text-charcoal-500 dark:text-charcoal-400 mb-3 line-clamp-2 leading-normal">
-                        {p.tagline || 'Full-length official simulations, deep error analytics, and All-India percentile tracking.'}
+
+                      <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-400 mb-4 leading-relaxed">
+                        {p.tagline}
                       </p>
 
-                      <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
-                        <span className="text-2xl sm:text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white tracking-tight">
+                      {/* Pricing Tier */}
+                      <div className="flex items-baseline gap-2 pb-4 border-b border-charcoal-150 dark:border-charcoal-800 mb-4">
+                        <span className="text-3xl sm:text-4xl font-black font-mono text-charcoal-950 dark:text-white tracking-tight">
                           ₹{p.base_price}
                         </span>
-                        <span className="text-xs font-semibold text-charcoal-500">
-                          / {p.duration_days} days
+                        <span className="text-xs font-bold text-charcoal-500">
+                          / {p.duration_days > 100 ? '365 Days' : `${p.duration_days} Days`}
                         </span>
                         {p.original_price > p.base_price && (
-                          <span className="text-xs text-charcoal-400 line-through font-mono ml-2">
+                          <span className="text-sm text-charcoal-400 line-through font-mono ml-2">
                             ₹{p.original_price}
                           </span>
                         )}
+                        {p.original_price > p.base_price && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 ml-auto">
+                            SAVE ₹{Math.round(p.original_price - p.base_price)}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Covered courses banner */}
-                      <div className="mb-3 p-2 rounded-xl bg-institutional-50 dark:bg-institutional-950/60 border border-institutional-200/60 dark:border-institutional-800/60 text-[11px] text-institutional-800 dark:text-institutional-200">
-                        <span className="font-bold">✓ Covers {coveredCount > 0 ? `${coveredCount} Exam Courses` : 'All Courses'}</span>
-                        <span className="block text-[10px] text-charcoal-500 dark:text-charcoal-400">Instant unlock to full mock tests & drills</span>
+                      {/* Dynamic Courses Unlocked Box (100% Backend Driven) */}
+                      <div className="mb-4 p-3.5 rounded-xl sm:rounded-2xl bg-institutional-50/70 dark:bg-institutional-950/40 border border-institutional-200/60 dark:border-institutional-800/60 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-institutional-900 dark:text-institutional-200">
+                          <span className="flex items-center gap-1.5">
+                            <BookOpenIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
+                            <span>Includes {coveredCount} Prime Courses</span>
+                          </span>
+                          <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">
+                            Instant All-Access
+                          </span>
+                        </div>
+
+                        {/* Exam Tags from Real MongoDB Courses */}
+                        {coveredCourses.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {coveredCourses.map((c) => (
+                              <span
+                                key={c.id}
+                                className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 border border-charcoal-200/80 dark:border-charcoal-700 shadow-2xs"
+                              >
+                                {c.target_exam || c.title}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      {/* Benefits */}
-                      <div className="space-y-1.5 mb-4">
+                      {/* Benefits from Backend */}
+                      <div className="space-y-2 mb-6">
                         {(p.features && p.features.length > 0
-                          ? p.features.slice(0, 4)
+                          ? p.features.slice(0, 5)
                           : [
                             'Full-Length Tier-I & Tier-II Simulation Mocks',
                             'All-India Percentile & AIR Benchmark',
                             'Speed vs. Accuracy Tradeoff Diagnostics',
-                            'Instant Answer Keys & Mathematical Explanations',
+                            'Instant Answer Keys & Explanations',
                           ]
                         ).map((feat, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-[11px]">
-                            <CheckCircleIcon size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
+                          <div key={idx} className="flex items-start gap-2 text-xs">
+                            <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                            <span className="text-charcoal-700 dark:text-charcoal-300 font-medium leading-tight">{feat}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="relative z-10 pt-2 border-t border-charcoal-100 dark:border-charcoal-800/80">
+                    {/* Interactive CTA to open details modal from the top */}
+                    <div className="pt-3 border-t border-charcoal-150 dark:border-charcoal-800/80">
                       <button
-                        onClick={() => navigate(ROUTES.subscription)}
-                        className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 group/btn active:scale-[0.98] cursor-pointer ${p.badge || isAnnual
-                            ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20'
+                        type="button"
+                        onClick={() => setSelectedPassForDetail(p)}
+                        className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 group/btn active:scale-[0.98] cursor-pointer ${isHighlighted || isAnnual
+                            ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/25 ring-1 ring-institutional-500'
                             : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
                           }`}
                       >
-                        <span>Select {p.title}</span>
-                        <ArrowRightIcon size={13} className="group-hover/btn:translate-x-1 transition-transform" />
+                        <span>Select {p.title} & View Courses</span>
+                        <ArrowRightIcon size={14} className="group-hover/btn:translate-x-1 transition-transform shrink-0" />
                       </button>
                     </div>
                   </div>
                 );
               })
             ) : (
-              /* Fallback static cards */
-              <>
-                {/* Monthly Card */}
-                <div className="group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100">
-                        Monthly Pass
-                      </h3>
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 font-mono">
-                        30 Days
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-charcoal-500 mb-3">
-                      Essential 30-day exam cycle pass with all covered mocks and analytics.
-                    </p>
-                    <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
-                      <span className="text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white">
-                        ₹149
-                      </span>
-                      <span className="text-xs text-charcoal-500">/ 30 days</span>
-                    </div>
-                    <div className="space-y-1.5 mb-4">
-                      {['Official simulations for covered exams', 'All-India percentile ranking', 'Deep error analytics'].map((feat, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-[11px]">
-                          <CheckCircleIcon size={13} className="text-emerald-600 shrink-0" />
-                          <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => navigate(ROUTES.subscription)}
-                    className="w-full py-2.5 rounded-xl font-bold text-xs border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 flex items-center justify-center gap-1.5"
-                  >
-                    <span>Select Monthly Pass</span>
-                    <ArrowRightIcon size={13} />
-                  </button>
-                </div>
-
-                {/* Annual Card */}
-                <div className="group relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl bg-white dark:bg-charcoal-900 border-2 border-institutional-600 shadow-lifted">
-                  <div className="absolute top-0 right-0">
-                    <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] tracking-wider uppercase px-2.5 py-0.5 rounded-bl-xl shadow-sm flex items-center gap-1">
-                      <SparklesIcon size={10} />
-                      <span>SAVE 40%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100">
-                      Annual Pass
-                    </h3>
-                    <p className="text-[11px] text-charcoal-500 mb-3">
-                      365-day complete coverage for all exam cycles throughout the calendar year.
-                    </p>
-                    <div className="flex items-baseline gap-1.5 pb-3 border-b border-charcoal-150 dark:border-charcoal-800 mb-3">
-                      <span className="text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white">
-                        ₹499
-                      </span>
-                      <span className="text-xs text-charcoal-500">/ 365 days</span>
-                      <span className="text-xs text-charcoal-400 line-through ml-2 font-mono">₹899</span>
-                    </div>
-                    <div className="space-y-1.5 mb-4">
-                      {['All covered courses & test series', '365 days full access', 'Save 40% over monthly renewals', 'Priority doubt support'].map((feat, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-[11px]">
-                          <CheckCircleIcon size={13} className="text-emerald-600 shrink-0" />
-                          <span className="text-charcoal-700 dark:text-charcoal-300 font-medium truncate">{feat}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => navigate(ROUTES.subscription)}
-                    className="w-full py-2.5 rounded-xl font-bold text-xs bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20 flex items-center justify-center gap-1.5"
-                  >
-                    <span>Select Annual Pass</span>
-                    <ArrowRightIcon size={13} />
-                  </button>
-                </div>
-              </>
+              /* Informative Empty State */
+              <div className="col-span-full py-12 px-6 text-center rounded-3xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 space-y-3">
+                <CrownIcon size={36} className="mx-auto text-charcoal-400" />
+                <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">No active passes available</h3>
+                <p className="text-xs text-charcoal-500 max-w-md mx-auto">
+                  Targeted examination passes are being updated. Check back shortly or explore our free mock tests.
+                </p>
+                <button
+                  type="button"
+                  onClick={loadPasses}
+                  className="px-5 py-2.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-bold text-xs cursor-pointer"
+                >
+                  Refresh Passes
+                </button>
+              </div>
             )}
           </div>
         </section>
@@ -1563,18 +1540,18 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* 11. CANDIDATE GRIEVANCE REDRESSAL & CONTACT SECTION                      */}
         {/* Transparent Institutional Support Desk & Interactive Ticket Form          */}
         {/* ========================================================================= */}
-        <section id="contact-section" className="relative rounded-3xl p-6 sm:p-10 space-y-8 scroll-mt-24 bg-white/70 dark:bg-charcoal-900/70 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 overflow-hidden bg-mesh-contact shadow-card">
+        <section id="contact-section" className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-10 space-y-6 sm:space-y-8 scroll-mt-24 bg-white/70 dark:bg-charcoal-900/70 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 overflow-hidden bg-mesh-contact shadow-card">
           {/* Moving Atmospheric Support Glows */}
           <div className="absolute -top-24 right-1/4 w-[450px] h-[450px] bg-emerald-500/12 dark:bg-emerald-400/18 blur-[120px] rounded-full pointer-events-none animate-blob" />
           <div className="absolute -bottom-24 left-1/4 w-[450px] h-[450px] bg-institutional-500/12 dark:bg-institutional-400/18 blur-[120px] rounded-full pointer-events-none animate-blob-delayed" />
           <div className="absolute top-1/3 left-10 w-64 h-64 bg-cyan-500/8 dark:bg-cyan-400/12 blur-[100px] rounded-full pointer-events-none animate-drift-slow" />
 
-          <div className="text-center max-w-2xl mx-auto space-y-3 relative z-10">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
+          <div className="text-center max-w-2xl mx-auto space-y-2.5 sm:space-y-3 relative z-10">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
               <MailIcon size={14} />
               <span>Aspirant Helpdesk & Grievance Redressal</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
+            <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white">
               Official Candidate Support Desk
             </h2>
             <p className="text-xs sm:text-sm text-charcoal-500 dark:text-charcoal-400">
@@ -1584,8 +1561,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-6xl mx-auto">
             {/* Left Column: Direct Official Contact Directory (5 cols) */}
-            <div className="lg:col-span-5 space-y-5">
-              <div className="p-6 rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-5">
+            <div className="lg:col-span-5 space-y-4 sm:space-y-5">
+              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-4 sm:space-y-5">
                 <div className="flex items-center gap-3 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
                   <div className="w-10 h-10 rounded-xl bg-institutional-50 dark:bg-institutional-950 text-institutional-600 dark:text-institutional-400 flex items-center justify-center font-bold">
                     <ShieldIcon size={20} />
@@ -1692,7 +1669,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
             {/* Right Column: Interactive Grievance & Contact Form (7 cols) */}
             <div className="lg:col-span-7">
-              <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-6">
+              <div className="p-4 sm:p-8 rounded-xl sm:rounded-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle space-y-4 sm:space-y-6">
                 {contactSuccessTicket ? (
                   /* Success Confirmation Screen */
                   <div className="text-center py-6 space-y-4 animate-scale-in">
@@ -1943,6 +1920,14 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           </div>
         </section>
       </main>
+
+      {/* Top-Down Interactive Pass Details & Courses Modal */}
+      <PassDetailModal
+        isOpen={!!selectedPassForDetail}
+        pass={selectedPassForDetail}
+        onClose={() => setSelectedPassForDetail(null)}
+        onOpenAuthModal={onOpenAuthModal}
+      />
     </div>
   );
 };

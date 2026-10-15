@@ -92,6 +92,13 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showExplanation, setShowExplanation] = useState(true);
 
+  // Pro User & Pass Status
+  const isProUser = Boolean(
+    user?.profile?.is_pro ||
+    user?.profile?.tags?.includes('PRO USER') ||
+    (user?.profile?.subscription_status === 'ACTIVE' && user?.profile?.subscription_plan && user?.profile?.subscription_plan !== 'FREE')
+  );
+
   // Single Daily Question Challenge State
   const [dailyQuestion, setDailyQuestion] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -548,11 +555,19 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             </div>
 
             {/* Candidate Metadata */}
-            <div className="space-y-1 min-w-0 flex-1">
+            <div className="space-y-1.5 min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black text-charcoal-900 dark:text-white tracking-tight break-words">
                   {user?.full_name || 'Alex Aspirant'}
                 </h1>
+
+                {/* Pro User Crown Badge */}
+                {isProUser && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-black bg-gradient-to-r from-amber-500/20 via-yellow-400/25 to-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/50 shadow-xs animate-scale-in">
+                    <CrownIcon size={13} className="text-amber-500 fill-amber-500" />
+                    <span>PRO USER</span>
+                  </span>
+                )}
 
                 {/* Verified Aspirant Badge */}
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-institutional-50 text-institutional-700 dark:bg-institutional-950/80 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
@@ -560,6 +575,25 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                   <span>{user?.role === 'admin' ? 'ADMINISTRATOR' : 'VERIFIED ASPIRANT'}</span>
                 </span>
               </div>
+
+              {/* Profile Tags Row */}
+              {user?.profile?.tags && user.profile.tags.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  {user.profile.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                        tag === 'PRO USER'
+                          ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-400/60 shadow-2xs'
+                          : 'bg-institutional-100 dark:bg-institutional-950/80 text-institutional-800 dark:text-institutional-300 border border-institutional-300/60 dark:border-institutional-800'
+                      }`}
+                    >
+                      {tag === 'PRO USER' ? <CrownIcon size={11} className="text-amber-500 fill-amber-500" /> : <ShieldIcon size={11} />}
+                      <span>{tag}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {/* Target Exam Chips & Countdown */}
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
@@ -634,131 +668,135 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
       </section>
 
       {/* =========================================================================
-          2. EXECUTIVE KPI BENTO GRID (4 High-Impact Pillars)
+          2. EXECUTIVE KPI BENTO GRID (4 High-Impact Pillars) - Responsive 2x2 Mobile Grid
           ========================================================================= */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Card 1: All India Rank */}
-        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between hover:border-institutional-400 transition-colors">
-          <div>
-            <div className="text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">
-              Predicted All-India Rank
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs flex flex-col justify-between sm:flex-row sm:items-center gap-2 sm:gap-4 hover:border-institutional-400 transition-colors">
+          <div className="min-w-0">
+            <div className="text-[10px] sm:text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider truncate">
+              Predicted AIR
             </div>
             {dashboard?.total_mocks_attempted > 0 && dashboard?.global_rank > 0 ? (
               <>
-                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 flex items-baseline gap-1.5 font-mono">
+                <div className="text-lg sm:text-2xl font-black text-charcoal-900 dark:text-white mt-0.5 sm:mt-1 flex items-baseline gap-1 font-mono">
                   <span>#{dashboard.global_rank}</span>
-                  <span className="text-xs font-normal text-charcoal-400">/ {(dashboard.total_candidates || 1).toLocaleString()}</span>
+                  <span className="text-[10px] sm:text-xs font-normal text-charcoal-400 truncate">/ {(dashboard.total_candidates || 1).toLocaleString()}</span>
                 </div>
-                <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-1 flex items-center gap-1">
-                  <span>↑ Top {Math.max(0.1, (100 - (dashboard.overall_percentile || 0))).toFixed(1)}% Percentile</span>
-                  <span className="text-charcoal-400 font-normal">
+                <div className="text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-0.5 sm:mt-1 flex items-center gap-1 truncate">
+                  <span>Top {Math.max(0.1, (100 - (dashboard.overall_percentile || 0))).toFixed(1)}%</span>
+                  <span className="text-charcoal-400 font-normal hidden sm:inline">
                     {dashboard.overall_percentile >= 75 ? '(Safe Cutoff)' : '(Competitive)'}
                   </span>
                 </div>
               </>
             ) : (
               <>
-                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 flex items-baseline gap-1.5 font-mono">
+                <div className="text-lg sm:text-2xl font-black text-charcoal-900 dark:text-white mt-0.5 sm:mt-1 flex items-baseline gap-1 font-mono">
                   <span className="text-charcoal-400">—</span>
-                  <span className="text-xs font-normal text-charcoal-400">
-                    {dashboard?.total_candidates ? `/ ${dashboard.total_candidates.toLocaleString()} Aspirants` : ''}
+                  <span className="text-[10px] sm:text-xs font-normal text-charcoal-400 truncate">
+                    {dashboard?.total_candidates ? `/ ${dashboard.total_candidates.toLocaleString()}` : ''}
                   </span>
                 </div>
-                <div className="text-[11px] text-charcoal-400 font-medium mt-1">
-                  Complete a mock to unlock rank
+                <div className="text-[10px] sm:text-[11px] text-charcoal-400 font-medium mt-0.5 sm:mt-1 truncate">
+                  Take mock to rank
                 </div>
               </>
             )}
           </div>
-          <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <TrophyIcon size={20} />
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 self-end sm:self-center">
+            <TrophyIcon size={16} className="sm:hidden" />
+            <TrophyIcon size={20} className="hidden sm:block" />
           </div>
         </div>
 
         {/* Card 2: Net Mock Accuracy */}
-        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between hover:border-emerald-400 transition-colors">
-          <div>
-            <div className="text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">
-              Net Mock Accuracy
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs flex flex-col justify-between sm:flex-row sm:items-center gap-2 sm:gap-4 hover:border-emerald-400 transition-colors">
+          <div className="min-w-0">
+            <div className="text-[10px] sm:text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider truncate">
+              Net Accuracy
             </div>
             {dashboard?.total_mocks_attempted > 0 ? (
               <>
-                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono">
+                <div className="text-lg sm:text-2xl font-black text-charcoal-900 dark:text-white mt-0.5 sm:mt-1 font-mono">
                   {(dashboard.average_accuracy || 0).toFixed(1)}%
                 </div>
-                <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium mt-1">
-                  Across {dashboard.total_mocks_attempted} submitted {dashboard.total_mocks_attempted === 1 ? 'mock' : 'mocks'}
+                <div className="text-[10px] sm:text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium mt-0.5 sm:mt-1 truncate">
+                  {dashboard.total_mocks_attempted} {dashboard.total_mocks_attempted === 1 ? 'mock' : 'mocks'} taken
                 </div>
               </>
             ) : (
               <>
-                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono text-charcoal-400">
+                <div className="text-lg sm:text-2xl font-black text-charcoal-900 dark:text-white mt-0.5 sm:mt-1 font-mono text-charcoal-400">
                   0.0%
                 </div>
-                <div className="text-[11px] text-charcoal-400 font-medium mt-1">
-                  No mock exams submitted yet
+                <div className="text-[10px] sm:text-[11px] text-charcoal-400 font-medium mt-0.5 sm:mt-1 truncate">
+                  No mocks taken yet
                 </div>
               </>
             )}
           </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <TargetIcon size={20} />
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 self-end sm:self-center">
+            <TargetIcon size={16} className="sm:hidden" />
+            <TargetIcon size={20} className="hidden sm:block" />
           </div>
         </div>
 
         {/* Card 3: Avg Speed per Question */}
-        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between hover:border-amber-400 transition-colors">
-          <div>
-            <div className="text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">
-              Avg Speed / Question
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs flex flex-col justify-between sm:flex-row sm:items-center gap-2 sm:gap-4 hover:border-amber-400 transition-colors">
+          <div className="min-w-0">
+            <div className="text-[10px] sm:text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider truncate">
+              Avg Speed / Q
             </div>
             {dashboard?.total_mocks_attempted > 0 && dashboard?.avg_speed_seconds > 0 ? (
               <>
-                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono">
-                  {Math.round(dashboard.avg_speed_seconds)}s <span className="text-xs font-normal text-charcoal-400">/ Q</span>
+                <div className="text-lg sm:text-2xl font-black text-charcoal-900 dark:text-white mt-0.5 sm:mt-1 font-mono truncate">
+                  {Math.round(dashboard.avg_speed_seconds)}s <span className="text-[10px] sm:text-xs font-normal text-charcoal-400">/ Q</span>
                 </div>
-                <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-1">
+                <div className="text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-0.5 sm:mt-1 truncate">
                   {dashboard.avg_speed_seconds <= 60
-                    ? `⚡ ${Math.round(60 - dashboard.avg_speed_seconds)}s faster than 60s benchmark`
-                    : `⚠️ ${Math.round(dashboard.avg_speed_seconds - 60)}s slower than 60s benchmark`}
+                    ? `⚡ ${Math.round(60 - dashboard.avg_speed_seconds)}s fast`
+                    : `⚠️ ${Math.round(dashboard.avg_speed_seconds - 60)}s slow`}
                 </div>
               </>
             ) : (
               <>
-                <div className="text-2xl font-black text-charcoal-900 dark:text-white mt-1 font-mono text-charcoal-400">
-                  — <span className="text-xs font-normal text-charcoal-400">/ Q</span>
+                <div className="text-lg sm:text-2xl font-black text-charcoal-900 dark:text-white mt-0.5 sm:mt-1 font-mono text-charcoal-400">
+                  — <span className="text-[10px] sm:text-xs font-normal text-charcoal-400">/ Q</span>
                 </div>
-                <div className="text-[11px] text-charcoal-400 font-medium mt-1">
-                  Benchmark cutoff pace: 60s / Q
+                <div className="text-[10px] sm:text-[11px] text-charcoal-400 font-medium mt-0.5 sm:mt-1 truncate">
+                  Target: 60s / Q
                 </div>
               </>
             )}
           </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-            <ClockIcon size={20} />
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 self-end sm:self-center">
+            <ClockIcon size={16} className="sm:hidden" />
+            <ClockIcon size={20} className="hidden sm:block" />
           </div>
         </div>
 
         {/* Card 4: Daily Discipline Streak */}
-        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between hover:border-orange-400 transition-colors">
-          <div>
-            <div className="text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider">
-              Discipline Streak
+        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs flex flex-col justify-between sm:flex-row sm:items-center gap-2 sm:gap-4 hover:border-orange-400 transition-colors">
+          <div className="min-w-0">
+            <div className="text-[10px] sm:text-[11px] font-bold text-charcoal-500 dark:text-charcoal-400 uppercase tracking-wider truncate">
+              Streak
             </div>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono flex items-center gap-1.5">
+            <div className="text-lg sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1 font-mono flex items-center gap-1">
               <span>{streakDays} Days</span>
-              <span className="text-xl">🔥</span>
+              <span className="text-base sm:text-xl">🔥</span>
             </div>
-            <div className="text-[11px] font-semibold mt-1">
+            <div className="text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 truncate">
               {isDailyCompleted ? (
-                <span className="text-emerald-700 dark:text-emerald-400 font-bold">Today's goal completed! ✓</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-bold">Goal done ✓</span>
               ) : (
-                <span className="text-amber-700 dark:text-amber-400">Solve daily challenge for bonus</span>
+                <span className="text-amber-700 dark:text-amber-400">Solve daily ⚡</span>
               )}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
-            <FlameIcon size={20} />
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0 self-end sm:self-center">
+            <FlameIcon size={16} className="sm:hidden" />
+            <FlameIcon size={20} className="hidden sm:block" />
           </div>
         </div>
       </section>
@@ -1262,11 +1300,11 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             </div>
 
             {enrolledCourses.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {enrolledCourses.map((course) => (
                   <div
                     key={course.id || course.course_id}
-                    className="p-5 rounded-2xl border border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/50 dark:bg-charcoal-800/40 hover:border-institutional-400 transition-all flex flex-col justify-between space-y-4 shadow-xs"
+                    className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/50 dark:bg-charcoal-800/40 hover:border-institutional-400 transition-all flex flex-col justify-between space-y-3.5 sm:space-y-4 shadow-xs"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -1365,11 +1403,11 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {exploreCourses.slice(0, 3).map((c) => (
                 <div
                   key={c.id}
-                  className="p-4 rounded-2xl border border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-800/30 flex flex-col justify-between space-y-3"
+                  className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-800/30 flex flex-col justify-between space-y-3"
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
@@ -1494,11 +1532,11 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {filteredTests.map((test) => (
               <article
                 key={test.id}
-                className="p-5 rounded-2xl border border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-400 bg-white dark:bg-charcoal-800/40 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-400 bg-white dark:bg-charcoal-800/40 hover:shadow-md transition-all flex flex-col justify-between space-y-3.5 sm:space-y-4"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">

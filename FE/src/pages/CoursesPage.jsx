@@ -192,12 +192,12 @@ export const CoursesPage = ({ onStartTest }) => {
 
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-7">
         {/* Hero */}
-        <section className="text-center max-w-3xl mx-auto space-y-4 animate-fade-in">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.15]">
+        <section className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 animate-fade-in">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.18] sm:leading-[1.15]">
             Courses built around <span className="text-institutional-600 dark:text-institutional-400">subject-wise quizzes</span>
           </h1>
 
-          <p className="text-sm sm:text-base text-charcoal-600 dark:text-charcoal-300 leading-relaxed">
+          <p className="text-xs sm:text-base text-charcoal-600 dark:text-charcoal-300 leading-relaxed">
             Pick your exam, preview the answer keys, and enroll — every course ships with full mock tests and step-by-step explanations.
           </p>
         </section>
@@ -306,7 +306,7 @@ export const CoursesPage = ({ onStartTest }) => {
 
         {/* Courses grid */}
         {!loading && filteredCourses.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5 items-start">
             {filteredCourses.map((course) => {
               const isEnrolled = course.is_enrolled;
               const isExpanded = !!expandedQuizzes[course.id];
@@ -325,10 +325,10 @@ export const CoursesPage = ({ onStartTest }) => {
               return (
                 <article
                   key={course.id}
-                  className="group relative flex flex-col bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-subtle overflow-hidden hover:-translate-y-1 hover:shadow-card hover:border-institutional-300 dark:hover:border-institutional-700 transition-all duration-200"
+                  className="group relative flex flex-col bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl shadow-subtle overflow-hidden hover:-translate-y-1 hover:shadow-card hover:border-institutional-300 dark:hover:border-institutional-700 transition-all duration-200"
                 >
                   {/* Cover strip */}
-                  <div className="relative h-14 px-4 flex items-center justify-between bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500 overflow-hidden">
+                  <div className="relative h-12 sm:h-14 px-3 sm:px-4 flex items-center justify-between bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500 overflow-hidden">
                     <div className="absolute inset-0" style={COVER_GRID} />
                     <div className="absolute inset-0" style={COVER_GLOW} />
 
@@ -357,15 +357,15 @@ export const CoursesPage = ({ onStartTest }) => {
                   </div>
 
                   {/* Body */}
-                  <div className="flex-1 p-5 space-y-3.5">
-                    <div className="space-y-1.5">
+                  <div className="flex-1 p-3.5 sm:p-5 space-y-2.5 sm:space-y-3.5">
+                    <div className="space-y-1 sm:space-y-1.5">
                       <h3
                         onClick={openDetails}
-                        className={`text-base font-extrabold tracking-tight leading-snug min-h-[2.75rem] text-charcoal-900 dark:text-white line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors cursor-pointer`}
+                        className={`text-sm sm:text-base font-extrabold tracking-tight leading-snug min-h-0 sm:min-h-[2.75rem] text-charcoal-900 dark:text-white line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors cursor-pointer`}
                       >
                         {course.title}
                       </h3>
-                      <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 leading-relaxed min-h-[2.5rem]">
+                      <p className="text-[11px] sm:text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 leading-relaxed min-h-0 sm:min-h-[2.5rem]">
                         {course.description}
                       </p>
                     </div>

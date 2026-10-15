@@ -12,6 +12,7 @@ import {
   CheckIcon,
 } from '../components/Icons';
 import { RazorpayModal } from '../components/RazorpayModal';
+import { PassDetailModal } from '../components/PassDetailModal';
 
 export const SubscriptionPage = ({ onGoToMocks }) => {
   const { subscription, user, upgradeSubscription, updateCoins } = useAuth();
@@ -20,6 +21,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
   const [loading, setLoading] = useState(true);
   const [applyCoins, setApplyCoins] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedPassForDetail, setSelectedPassForDetail] = useState(null);
   const [createdOrder, setCreatedOrder] = useState(null);
   const [isRazorpayOpen, setIsRazorpayOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
@@ -41,8 +43,10 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
 
       if (passesData && passesData.length > 0) {
         setPlans(passesData.map(p => ({
+          ...p,
           id: p.id,
           name: p.title,
+          title: p.title,
           badge: p.badge || (p.duration_days > 100 ? 'SAVE 40%' : 'POPULAR'),
           popular: !!p.badge || p.duration_days > 100,
           duration_days: p.duration_days,
@@ -50,7 +54,9 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
           original_price: p.original_price,
           max_coins_discount: p.max_coins_discount,
           covered_course_ids: p.covered_course_ids || [],
+          covered_courses: p.covered_courses || [],
           description: p.tagline || 'Targeted Pass Built for Exam Cycles',
+          tagline: p.tagline || 'Targeted Pass Built for Exam Cycles',
           features: p.features || [
             'Full-length official simulations',
             'Deep error analytics & AI solutions',
@@ -173,13 +179,13 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
         )}
 
         {/* Hero Banner */}
-        <div className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-subtle relative overflow-hidden">
+        <div className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-center space-y-3 sm:space-y-4 shadow-subtle relative overflow-hidden">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
             <CrownIcon size={14} />
             <span>TARGETED PASSES BUILT FOR EXAM CYCLES</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-tight">
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-tight">
             Full-Length Official Simulations &amp; All-India Tracking
           </h1>
 
@@ -188,16 +194,16 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
           </p>
 
           {/* GovCoins Discount Feature Card */}
-          <div className="max-w-md mx-auto p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-institutional-500/10 border border-amber-300 dark:border-amber-700/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg sm:text-xl shadow-md shrink-0">
+          <div className="max-w-md mx-auto p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-institutional-500/10 border border-amber-300 dark:border-amber-700/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-left">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-base sm:text-xl shadow-md shrink-0">
                 🪙
               </div>
               <div>
                 <div className="text-xs font-extrabold text-charcoal-900 dark:text-white flex items-center gap-1.5">
                   <span>Your Balance: {coinsBalance} GovCoins</span>
                 </div>
-                <div className="text-[11px] text-charcoal-600 dark:text-charcoal-300">
+                <div className="text-[10px] sm:text-[11px] text-charcoal-600 dark:text-charcoal-300">
                   Earned from streak challenges (100 Coins = ₹10 Discount)
                 </div>
               </div>
@@ -224,7 +230,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
 
         {/* Pricing Cards Grid */}
         {plans.length === 0 ? (
-          <div className="text-center py-16 px-4 rounded-3xl border border-charcoal-200 dark:border-charcoal-800 bg-white/50 dark:bg-charcoal-900/50 max-w-xl mx-auto">
+          <div className="text-center py-12 sm:py-16 px-4 rounded-2xl sm:rounded-3xl border border-charcoal-200 dark:border-charcoal-800 bg-white/50 dark:bg-charcoal-900/50 max-w-xl mx-auto">
             <p className="text-charcoal-600 dark:text-charcoal-400 text-sm font-semibold">
               No active subscription passes available at the moment.
             </p>
@@ -233,51 +239,48 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch justify-center">
             {plans.map((plan) => {
             const isCurrent = currentPlanId === plan.id;
             const maxCoinDiscount = plan.max_coins_discount || 500;
             const coinsEligible = applyCoins ? Math.min(coinsBalance, maxCoinDiscount) : 0;
             const discountRupees = Math.round(coinsEligible * 0.10);
             const finalPayable = Math.max(1, plan.base_price - discountRupees);
+            const coveredCourses = plan.covered_courses || [];
+            const coveredCount = coveredCourses.length || plan.covered_course_ids?.length || 0;
 
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl p-6 flex flex-col justify-between transition-all duration-300 border shadow-subtle ${
+                className={`relative rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 border shadow-subtle ${
                   plan.popular
-                    ? 'bg-white dark:bg-charcoal-900 border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted md:-translate-y-1'
+                    ? 'bg-white dark:bg-charcoal-900 border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted md:-translate-y-1 ring-2 ring-institutional-500/20'
                     : 'bg-white dark:bg-charcoal-900 border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-400'
                 }`}
               >
                 {/* Popular Ribbon */}
                 {plan.popular && (
                   <div className="absolute top-0 right-0">
-                    <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] tracking-wider uppercase px-3 py-1 rounded-bl-2xl shadow-sm flex items-center gap-1">
-                      <SparklesIcon size={10} />
+                    <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] sm:text-[10px] tracking-wider uppercase px-3 py-1 rounded-bl-2xl shadow-sm flex items-center gap-1.5">
+                      <SparklesIcon size={11} />
                       <span>{plan.badge}</span>
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className="text-lg font-extrabold text-charcoal-900 dark:text-charcoal-100">
+                  <div className="flex items-center justify-between gap-2 mb-1 pr-16">
+                    <h3 className="text-lg sm:text-xl font-black text-charcoal-900 dark:text-charcoal-100">
                       {plan.name}
                     </h3>
-                    {!plan.popular && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 font-mono">
-                        {plan.duration_days} Days
-                      </span>
-                    )}
                   </div>
 
-                  <p className="text-xs text-charcoal-500 mb-4 leading-relaxed line-clamp-2">
+                  <p className="text-xs sm:text-sm text-charcoal-500 mb-4 leading-relaxed">
                     {plan.description}
                   </p>
 
                   {/* Price Box with Coin Discount */}
-                  <div className="p-3.5 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850/80 border border-charcoal-200 dark:border-charcoal-800 mb-5">
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-charcoal-50 dark:bg-charcoal-850/80 border border-charcoal-200 dark:border-charcoal-800 mb-4 sm:mb-5">
                     <div className="flex items-baseline justify-between">
                       <span className="text-xs text-charcoal-500 font-semibold">Payable Price</span>
                       {discountRupees > 0 && (
@@ -288,21 +291,47 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
                     </div>
 
                     <div className="flex items-baseline gap-2 mt-0.5">
-                      <span className="text-3xl font-extrabold font-mono text-charcoal-950 dark:text-white">
+                      <span className="text-3xl sm:text-4xl font-black font-mono text-charcoal-950 dark:text-white">
                         ₹{finalPayable}
                       </span>
-                      <span className="text-xs text-charcoal-500 font-medium">
-                        / {plan.duration_days} days
+                      <span className="text-xs text-charcoal-500 font-bold">
+                        / {plan.duration_days > 100 ? '365 Days' : `${plan.duration_days} Days`}
                       </span>
                     </div>
 
                     {discountRupees > 0 ? (
-                      <div className="mt-2 text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                      <div className="mt-2 text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
                         <span>🪙 Applied {coinsEligible} Coins (-₹{discountRupees} Off)</span>
                       </div>
                     ) : (
-                      <div className="mt-2 text-[10px] text-charcoal-400">
+                      <div className="mt-2 text-[11px] text-charcoal-400">
                         Eligible for up to ₹{(maxCoinDiscount * 0.1).toFixed(0)} off with GovCoins (100 coins = ₹10)
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dynamic Courses Unlocked Box */}
+                  <div className="mb-4 p-3.5 rounded-xl sm:rounded-2xl bg-institutional-50/70 dark:bg-institutional-950/40 border border-institutional-200/60 dark:border-institutional-800/60 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-institutional-900 dark:text-institutional-200">
+                      <span className="flex items-center gap-1.5">
+                        <BookOpenIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
+                        <span>Includes {coveredCount} Prime Courses</span>
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">
+                        All-Access
+                      </span>
+                    </div>
+
+                    {coveredCourses.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {coveredCourses.map((c) => (
+                          <span
+                            key={c.id}
+                            className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 border border-charcoal-200/80 dark:border-charcoal-700 shadow-2xs"
+                          >
+                            {c.target_exam || c.title}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -312,7 +341,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
                     {plan.features?.map((feat, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-xs">
                         <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="text-charcoal-700 dark:text-charcoal-300 font-medium">{feat}</span>
+                        <span className="text-charcoal-700 dark:text-charcoal-300 font-medium leading-tight">{feat}</span>
                       </div>
                     ))}
                   </div>
@@ -321,22 +350,22 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
                 {/* Checkout CTA */}
                 <div className="pt-3 border-t border-charcoal-150 dark:border-charcoal-800">
                   {isCurrent ? (
-                    <div className="w-full py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold text-xs text-center flex items-center justify-center gap-1.5">
+                    <div className="w-full py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold text-xs text-center flex items-center justify-center gap-1.5">
                       <CheckIcon size={14} />
                       <span>Active Pass</span>
                     </div>
                   ) : (
                     <button
-                      onClick={() => handleSelectPlan(plan)}
-                      disabled={orderLoading}
-                      className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98] ${
+                      type="button"
+                      onClick={() => setSelectedPassForDetail(plan)}
+                      className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer ${
                         plan.popular
-                          ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/20'
+                          ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/25 ring-1 ring-institutional-500'
                           : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-850 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
                       }`}
                     >
-                      <span>{orderLoading && selectedPlan?.id === plan.id ? 'Preparing...' : `Get ${plan.name}`}</span>
-                      <ArrowRightIcon size={13} />
+                      <span>Select {plan.name} & View Courses</span>
+                      <ArrowRightIcon size={14} />
                     </button>
                   )}
                 </div>
@@ -413,6 +442,13 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
           setCreatedOrder(null);
         }}
         onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Top-Down Interactive Pass Details & Courses Modal */}
+      <PassDetailModal
+        isOpen={!!selectedPassForDetail}
+        pass={selectedPassForDetail}
+        onClose={() => setSelectedPassForDetail(null)}
       />
     </div>
   );

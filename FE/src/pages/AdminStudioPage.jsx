@@ -1026,7 +1026,7 @@ export const AdminStudioPage = () => {
       </div>
 
       {/* 5 Live Stats Cards (all numbers from the backend); each opens its tab */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
         {[
           { key: 'users', label: 'Total Users', value: stats?.total_users, Icon: UserIcon, tab: 'users', box: 'bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300' },
           { key: 'courses', label: 'Courses', value: stats?.total_courses, Icon: BookOpenIcon, tab: 'courses', box: 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300' },
@@ -1036,18 +1036,19 @@ export const AdminStudioPage = () => {
         ].map(({ key, label, value, Icon, tab, box, green }) => {
           const body = (
             <>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${box}`}>
-                <Icon size={24} />
+              <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 ${box}`}>
+                <Icon size={18} className="sm:hidden" />
+                <Icon size={24} className="hidden sm:block" />
               </div>
-              <div className="text-left">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-400">{label}</div>
-                <div className={`text-2xl font-extrabold font-mono ${green ? 'text-emerald-600 dark:text-emerald-400' : 'text-charcoal-900 dark:text-charcoal-100'}`}>
+              <div className="text-left min-w-0">
+                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-charcoal-400 truncate">{label}</div>
+                <div className={`text-lg sm:text-2xl font-extrabold font-mono truncate ${green ? 'text-emerald-600 dark:text-emerald-400' : 'text-charcoal-900 dark:text-charcoal-100'}`}>
                   {value ?? (loadingOverview ? '...' : 0)}
                 </div>
               </div>
             </>
           );
-          const base = 'bg-white dark:bg-charcoal-900 border rounded-2xl p-5 shadow-subtle flex items-center gap-4 w-full';
+          const base = 'bg-white dark:bg-charcoal-900 border rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-subtle flex items-center gap-2.5 sm:gap-4 w-full';
           return tab ? (
             <button
               key={key}

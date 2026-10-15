@@ -42,6 +42,10 @@ class UserProfile(BaseModel):
     enrolled_courses: List[EnrolledCourseItem] = Field(default_factory=list)
     active_passes: List[Dict[str, Any]] = Field(default_factory=list)
     typing_stats: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    is_pro: Optional[bool] = False
+    tags: List[str] = Field(default_factory=list)
+
+    model_config = {"extra": "allow"}
 
 
 class UserInDB(BaseModel):
