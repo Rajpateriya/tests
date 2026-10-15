@@ -204,18 +204,6 @@ export const AboutUsPage = () => {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 text-xs text-charcoal-600 dark:text-charcoal-300">
-            {/* <div className="space-y-2">
-              <div className="flex items-center gap-2 font-bold text-charcoal-900 dark:text-white text-sm">
-                <MapPinIcon size={16} className="text-institutional-600 dark:text-institutional-400" />
-                <span>Registered & Operating Office</span>
-              </div>
-              {/* <p className="leading-relaxed text-charcoal-500 dark:text-charcoal-400">
-                PrepMagnet<br />
-                Pragati Maidan Academic Complex,<br />
-                Mathura Road, New Delhi 110001,<br />
-                India
-              </p> */}
-            </div> */}
 
             <div className="space-y-2">
               <div className="flex items-center gap-2 font-bold text-charcoal-900 dark:text-white text-sm">
