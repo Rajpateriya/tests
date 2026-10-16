@@ -17,6 +17,9 @@ import {
   LockIcon,
   XIcon,
   ArrowRightIcon,
+  InstagramIcon,
+  LinkedinIcon,
+  KeyboardIcon,
 } from './Icons';
 
 // Modal content for legal & institutional documents
@@ -133,52 +136,59 @@ export const Footer = () => {
 
   /**
    * Unified Navigation Orchestrator:
-   * Handles page switches, smooth anchor scrolling, blueprint selector dispatches,
-   * and catalog tab state activations gracefully.
+   * Handles page switches, smooth anchor rolling/scrolling, blueprint selector dispatches,
+   * and catalog tab state activations gracefully from any page in the application.
    */
   const handleNav = ({ to = ROUTES.home, hash = null, blueprint = null, catalogTab = null, focusInputId = null }) => {
-    // If target is another page entirely (courses, typing, dashboard, etc.)
+    // If target is another page entirely (courses, typing, dashboard, terms, privacy, about, refund, etc.)
     if (to !== ROUTES.home) {
       navigate(to);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
       return;
     }
 
     // Target is on the landing page (or a section within it)
     if (pathname !== ROUTES.home) {
-      navigate(ROUTES.home);
+      // Transition to home with state & hash so TestDiscoveryPage smoothly rolls to it upon mounting!
+      navigate(
+        { pathname: ROUTES.home, hash: hash ? `#${hash}` : '' },
+        { state: { targetHash: hash, blueprint, catalogTab, focusInputId } }
+      );
+      return;
     }
 
-    const triggerSection = () => {
-      if (hash) {
-        const el = document.getElementById(hash);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Already on the landing page: execute rolling scroll and sub-states directly
+    if (blueprint) {
+      window.dispatchEvent(new CustomEvent('prepmagnet:blueprint', { detail: blueprint }));
+    }
+    if (catalogTab) {
+      window.dispatchEvent(new CustomEvent('prepmagnet:catalog-tab', { detail: catalogTab }));
+    }
+
+    if (hash) {
+      const el = document.getElementById(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (focusInputId) {
+          setTimeout(() => {
+            document.getElementById(focusInputId)?.focus();
+          }, 350);
         }
       } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-
-      // Activate sub-state if applicable
-      if (blueprint) {
-        window.dispatchEvent(new CustomEvent('prepmagnet:blueprint', { detail: blueprint }));
-      }
-      if (catalogTab) {
-        window.dispatchEvent(new CustomEvent('prepmagnet:catalog-tab', { detail: catalogTab }));
-      }
-      if (focusInputId) {
         setTimeout(() => {
-          document.getElementById(focusInputId)?.focus();
-        }, 350);
+          const retryEl = document.getElementById(hash);
+          if (retryEl) {
+            retryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 150);
       }
-    };
-
-    // Execute with brief delay to let view mounting settle if changing screens
-    setTimeout(triggerSection, 100);
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
   };
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   };
 
   return (
@@ -193,10 +203,10 @@ export const Footer = () => {
 
         {/* Upper Main Footer Grid */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-8 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8 items-start">
 
-            {/* Column 1: Brand & Academic Engine (Spans 2 columns on mobile & desktop) */}
-            <div className="col-span-2 lg:col-span-2 space-y-3.5 sm:space-y-4">
+            {/* Column 1: Brand & Academic Engine (Desktop: 3 cols, Tablet & Mobile: 2 cols / full width) */}
+            <div className="col-span-1 sm:col-span-2 lg:col-span-3 space-y-3.5 sm:space-y-4">
               <div
                 onClick={() => handleNav({ to: ROUTES.home })}
                 className="flex items-center gap-2 cursor-pointer select-none group w-fit"
@@ -219,8 +229,8 @@ export const Footer = () => {
                 India's high-trust mock examination portal. Engineered with authentic PrepMagnet CBT examination physics, strict negative scoring models, and All-India percentile benchmarks.
               </p>
 
-              {/* Engine Status & Security Badges with Live Micro-Animation */}
-              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              {/* Engine Status & Security Badges */}
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
                 <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 text-[11px] font-bold shadow-xs">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -235,209 +245,269 @@ export const Footer = () => {
                 </div>
               </div>
 
-              <div className="pt-2 text-[11px] text-charcoal-500 dark:text-charcoal-400 flex items-center gap-2">
+              <div className="pt-1 text-[11px] text-charcoal-500 dark:text-charcoal-400 flex items-center gap-2">
                 <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>PrepMagnet Authentic National CBT Simulator</span>
               </div>
             </div>
 
-            {/* Column 2: Exam Blueprints & Specifications */}
-            <div className="space-y-3">
-              <h4 className="font-bold text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5">
-                <BookOpenIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
-                <span>Exam Blueprints</span>
-              </h4>
-              <ul className="space-y-2 text-xs">
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'cgl' })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>SSC CGL (Tier I & II)</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'banking' })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>IBPS & SBI PO (Banking)</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'rrb' })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>RRB NTPC (Railways CBT)</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'psc' })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>State PSC (General Studies)</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.courses })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>Subject-wise Practice Packs</span>
-                  </button>
-                </li>
-              </ul>
+            {/* Horizontal 3-Section Container: One line horizontally on mobile (grid-cols-3), exactly 6 columns on desktop */}
+            <div className="col-span-1 sm:col-span-2 lg:col-span-6 grid grid-cols-3 gap-3 sm:gap-6 lg:gap-8 py-3.5 sm:py-4 lg:py-0 border-y lg:border-y-0 border-charcoal-200/70 dark:border-charcoal-800/70">
+              
+              {/* Column 2: Exam Blueprints */}
+              <div className="space-y-2.5 sm:space-y-3 min-w-0">
+                <h4 className="font-extrabold text-[11px] sm:text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1 sm:gap-1.5 sm:whitespace-nowrap">
+                  <BookOpenIcon size={13} className="text-institutional-600 dark:text-institutional-400 shrink-0" />
+                  <span>Exam Blueprints</span>
+                </h4>
+                <ul className="space-y-2 sm:space-y-2.5 text-[11px] sm:text-xs">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'cgl' })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>SSC CGL <span className="hidden md:inline">(Tier I & II)</span></span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'banking' })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>IBPS / SBI <span className="hidden md:inline">PO</span></span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'rrb' })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>RRB NTPC</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.home, hash: 'exam-blueprints', blueprint: 'psc' })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>State PSC</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.courses })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Practice Packs</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 3: Simulation Tools */}
+              <div className="space-y-2.5 sm:space-y-3 min-w-0">
+                <h4 className="font-extrabold text-[11px] sm:text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1 sm:gap-1.5 sm:whitespace-nowrap">
+                  <ZapIcon size={13} className="text-institutional-600 dark:text-institutional-400 shrink-0" />
+                  <span>Simulation Tools</span>
+                </h4>
+                <ul className="space-y-2 sm:space-y-2.5 text-[11px] sm:text-xs">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.home, hash: 'mock-catalog', catalogTab: 'mocks' })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Mock Catalog</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.home, hash: 'hero-sandbox' })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Test Sandbox</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.home, hash: 'rank-predictor' })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Rank Predictor</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.typing })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer font-medium leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <KeyboardIcon size={12} className="shrink-0 text-institutional-600 dark:text-institutional-400" />
+                      <span>Typing Master</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.home, hash: 'passes-section' })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Passes & Plans</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 4: Legal & Governance */}
+              <div className="space-y-2.5 sm:space-y-3 min-w-0">
+                <h4 className="font-extrabold text-[11px] sm:text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1 sm:gap-1.5 sm:whitespace-nowrap">
+                  <ShieldIcon size={13} className="text-institutional-600 dark:text-institutional-400 shrink-0" />
+                  <span>Legal & Governance</span>
+                </h4>
+                <ul className="space-y-2 sm:space-y-2.5 text-[11px] sm:text-xs">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.terms })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                      title="View Terms & Conditions"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Terms <span className="hidden md:inline">& Conditions</span></span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.privacy })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                      title="View Privacy Policy"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Privacy <span className="hidden md:inline">Policy</span></span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.about })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                      title="About PrepMagnet"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>About Us</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav({ to: ROUTES.refund })}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                      title="Cancellation & Refund Policy"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Refund <span className="hidden md:inline">Policy</span></span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setActiveLegalModal('honor')}
+                      className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
+                    >
+                      <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
+                      <span>Honor Code</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
             </div>
 
-            {/* Column 3: Platform Tools & Simulators */}
-            <div className="space-y-3">
-              <h4 className="font-bold text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5">
-                <ZapIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
-                <span>Simulation Tools</span>
+            {/* Column 5: Support Desk & Community (Desktop: 3 cols, Tablet/Mobile: 2 cols / full width card) */}
+            <div className="col-span-1 sm:col-span-2 lg:col-span-3 space-y-3">
+              <h4 className="font-extrabold text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5">
+                <MailIcon size={14} className="text-institutional-600 dark:text-institutional-400 shrink-0" />
+                <span>Candidate Support Desk</span>
               </h4>
-              <ul className="space-y-2 text-xs">
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.home, hash: 'mock-catalog', catalogTab: 'mocks' })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>Mock Tests Catalog</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.home, hash: 'hero-sandbox' })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>PrepMagnet Test-Drive Sandbox</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.home, hash: 'rank-predictor' })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>Target Rank & AIR Predictor</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.typing })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left font-medium"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>⌨️ Typing Master Speed Test</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.home, hash: 'passes-section' })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>Passes & Pricing Plans</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
 
-            {/* Column 4: Legal & Policies */}
-            <div className="space-y-3">
-              <h4 className="font-bold text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5">
-                <ShieldIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
-                <span>Legal</span>
-              </h4>
-              <ul className="space-y-2 text-xs">
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.terms })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                    title="View Terms & Conditions (Ref: Unstop Legal)"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>Terms & Conditions</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.privacy })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                    title="View Privacy Policy (Ref: Unstop Legal)"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>Privacy Policy</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.about })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                    title="About PrepMagnet"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>About Us</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => handleNav({ to: ROUTES.refund })}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                    title="Cancellation & Refund Policy"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>Refund Policy</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setActiveLegalModal('honor')}
-                    className="group flex items-center gap-1.5 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left"
-                  >
-                    <ChevronRightIcon size={12} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400" />
-                    <span>Honor Code</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            {/* Column 5: Support & Grievance Desk */}
-            <div className="col-span-2 md:col-span-1 lg:col-span-1 space-y-3">
-              <h4 className="font-bold text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1.5">
-                <MailIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
-                <span>Support Desk</span>
-              </h4>
-              <div className="space-y-2.5 text-xs">
-                <div className="flex items-center gap-2 text-charcoal-600 dark:text-charcoal-400">
-                  <div className="w-6 h-6 rounded-lg bg-institutional-50 dark:bg-institutional-950/80 flex items-center justify-center text-institutional-600 dark:text-institutional-400 shrink-0">
-                    <MailIcon size={13} />
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-charcoal-50/80 dark:bg-charcoal-850/80 border border-charcoal-200/90 dark:border-charcoal-800/90 shadow-subtle space-y-3">
+                {/* Email row with full visibility */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500">
+                    Academic Helpdesk Email
                   </div>
-                  <span className="truncate font-medium select-all">support.prepmagnet@gmail.com</span>
+                  <a
+                    href="mailto:support.prepmagnet@gmail.com"
+                    className="inline-flex items-center gap-2 text-xs font-bold text-institutional-600 dark:text-institutional-400 hover:underline transition-colors"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-institutional-100 dark:bg-institutional-950 flex items-center justify-center text-institutional-600 dark:text-institutional-400 shrink-0">
+                      <MailIcon size={13} />
+                    </div>
+                    <span className="select-all">support.prepmagnet@gmail.com</span>
+                  </a>
                 </div>
 
-                <div className="pt-2">
-                  <button
-                    onClick={() =>
-                      handleNav({
-                        to: ROUTES.home,
-                        hash: 'contact-section',
-                        focusInputId: 'contact-name',
-                      })
-                    }
-                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 font-bold hover:bg-institutional-100 dark:hover:bg-institutional-900 border border-institutional-200/90 dark:border-institutional-800 transition-all duration-200 shadow-xs hover:shadow-sm group"
-                  >
-                    <span>Raise Candidate Ticket</span>
-                    <ArrowRightIcon size={13} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
+                {/* Ticket Button */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleNav({
+                      to: ROUTES.home,
+                      hash: 'contact-section',
+                      focusInputId: 'contact-name',
+                    })
+                  }
+                  className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs transition-all duration-200 shadow-sm active:scale-95 group cursor-pointer"
+                >
+                  <span>Raise Candidate Ticket</span>
+                  <ArrowRightIcon size={13} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                {/* Social Media Community */}
+                <div className="pt-2 border-t border-charcoal-200/60 dark:border-charcoal-800/60 space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500">
+                    Official Social Community
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <a
+                      href="https://www.instagram.com/prepmagnet.official/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-500 text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
+                      title="Follow PrepMagnet on Instagram"
+                    >
+                      <InstagramIcon size={13} className="text-pink-600 dark:text-pink-400 group-hover:text-white transition-colors" />
+                      <span>Instagram</span>
+                    </a>
+                    <a
+                      href="https://www.linkedin.com/company/simplbyte/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-[#0077b5] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
+                      title="Follow SimplByte on LinkedIn"
+                    >
+                      <LinkedinIcon size={13} className="text-[#0077b5] dark:text-[#38bdf8] group-hover:text-white transition-colors" />
+                      <span>LinkedIn</span>
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

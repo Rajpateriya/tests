@@ -33,6 +33,7 @@ import {
   XIcon,
 } from '../components/Icons';
 import { AnalyticsDashboardView } from '../components/AnalyticsDashboardView';
+import { TypingAlphabetsAnimation } from '../components/TypingAlphabetsAnimation';
 
 /**
  * Competitive Mock Test Platform — Executive Student Dashboard & Learning Hub
@@ -1442,8 +1443,11 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
           TAB 4: TYPING MASTER SPEED BENCHMARKS
           ========================================================================= */}
       {activeTab === 'typing' && (
-        <div className="bg-gradient-to-r from-institutional-950 via-charcoal-900 to-institutional-900 border border-charcoal-800 rounded-3xl p-6 sm:p-8 text-white shadow-md space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="relative overflow-hidden bg-gradient-to-r from-institutional-950 via-charcoal-900 to-institutional-900 border border-charcoal-800 rounded-3xl p-6 sm:p-8 text-white shadow-md space-y-6">
+          {/* Moving Mechanical Keycaps & Speed Telemetry Ambient Background */}
+          <TypingAlphabetsAnimation variant="card" opacity={0.55} />
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-2 max-w-xl">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-blue-200 text-xs font-bold border border-white/15">
                 <span>⌨️ Government Exam Typing Master</span>

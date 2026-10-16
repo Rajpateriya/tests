@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { ROUTES } from '../routes';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -26,10 +26,16 @@ import {
   MapPinIcon,
   SendIcon,
   MessageSquareIcon,
+  InstagramIcon,
+  LinkedinIcon,
 } from '../components/Icons';
 
 import { PassDetailModal } from '../components/PassDetailModal';
 import { GlobalGlobeAnimation } from '../components/GlobalGlobeAnimation';
+import { CbtSandboxMatrixAnimation } from '../components/CbtSandboxMatrixAnimation';
+import { BlueprintSchematicAnimation } from '../components/BlueprintSchematicAnimation';
+import { RankPredictorAnimation } from '../components/RankPredictorAnimation';
+import { PassesVaultAnimation } from '../components/PassesVaultAnimation';
 
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
@@ -109,6 +115,51 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   useEffect(() => {
     loadTests();
   }, [selectedType, selectedSubject]);
+
+  const location = useLocation();
+
+  // Handle incoming deep-links, hash rolling & sub-states (from Footer or other pages)
+  useEffect(() => {
+    const hashFromUrl = location.hash ? location.hash.replace('#', '') : null;
+    const targetHash = location.state?.targetHash || hashFromUrl;
+    const targetBlueprint = location.state?.blueprint;
+    const targetCatalogTab = location.state?.catalogTab;
+    const targetFocusInputId = location.state?.focusInputId;
+
+    if (targetBlueprint && ['cgl', 'banking', 'rrb', 'psc'].includes(targetBlueprint)) {
+      setSelectedExamBlueprint(targetBlueprint);
+    }
+    if (targetCatalogTab && ['courses', 'mocks'].includes(targetCatalogTab)) {
+      setCatalogTab(targetCatalogTab);
+    }
+
+    if (targetHash) {
+      const scrollAttempt = () => {
+        const el = document.getElementById(targetHash);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (targetFocusInputId) {
+            setTimeout(() => {
+              document.getElementById(targetFocusInputId)?.focus();
+            }, 300);
+          }
+          return true;
+        }
+        return false;
+      };
+
+      if (!scrollAttempt()) {
+        const t1 = setTimeout(scrollAttempt, 100);
+        const t2 = setTimeout(scrollAttempt, 350);
+        const t3 = setTimeout(scrollAttempt, 700);
+        return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+          clearTimeout(t3);
+        };
+      }
+    }
+  }, [location.pathname, location.hash, location.state]);
 
   // Deep-link event listeners for footer / external navigation
   useEffect(() => {
@@ -437,6 +488,9 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           <div className="absolute -top-24 -right-24 w-80 h-80 bg-cyan-500/10 dark:bg-cyan-400/15 blur-3xl rounded-full pointer-events-none animate-blob" />
           <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-emerald-500/10 dark:bg-emerald-400/15 blur-3xl rounded-full pointer-events-none animate-blob-delayed" />
 
+          {/* Interactive CBT Exam Simulation Engine Matrix Animation */}
+          <CbtSandboxMatrixAnimation opacity={0.65} />
+
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800 relative z-10">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 uppercase tracking-wider mb-1.5">
@@ -637,6 +691,9 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           <div className="absolute top-1/4 -right-16 w-80 h-80 bg-institutional-500/10 dark:bg-institutional-400/15 blur-[100px] rounded-full pointer-events-none animate-drift-slow" />
           <div className="absolute -bottom-24 left-1/3 w-72 h-72 bg-indigo-500/8 dark:bg-indigo-400/12 blur-[90px] rounded-full pointer-events-none animate-blob-delayed" />
 
+          {/* Architectural Blueprint Schematic CAD CAD Vector Animation */}
+          <BlueprintSchematicAnimation opacity={0.65} />
+
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800 relative z-10">
             <div>
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-institutional-600 dark:text-institutional-400 uppercase tracking-wider mb-1">
@@ -738,8 +795,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* 5. INTERACTIVE TARGET SCORE & AIR PERCENTILE PREDICTOR                    */}
         {/* Engaging visual tool that calculates candidate standing in real time      */}
         {/* ========================================================================= */}
-        <section id="rank-predictor" className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl sm:rounded-3xl p-4 sm:p-10 shadow-subtle space-y-4 sm:space-y-6 scroll-mt-24">
-          <div className="max-w-2xl mx-auto text-center space-y-2">
+        <section id="rank-predictor" className="relative bg-white/95 dark:bg-charcoal-900/95 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl sm:rounded-3xl p-4 sm:p-10 shadow-subtle space-y-4 sm:space-y-6 scroll-mt-24 overflow-hidden">
+          {/* Statistical Gaussian Normal Distribution & AIR Percentile Bell Curve Animation */}
+          <RankPredictorAnimation opacity={0.65} />
+
+          <div className="max-w-2xl mx-auto text-center space-y-2 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
               <TargetIcon size={14} />
               <span>All-India Benchmark Calculator</span>
@@ -752,7 +812,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6 pt-1 sm:pt-2">
+          <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6 pt-1 sm:pt-2 relative z-10">
             {/* Slider */}
             <div className="space-y-2.5 sm:space-y-3">
               <div className="flex items-center justify-between text-xs font-bold">
@@ -784,21 +844,25 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
             {/* Real-time Output Cards - Compact 2-column grid on mobile */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 pt-1 sm:pt-2">
-              <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1">
+              <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1 flex flex-col justify-center">
                 <span className="text-[10px] sm:text-xs text-charcoal-500 font-semibold">Predicted Percentile</span>
                 <div className="text-xl sm:text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
                   {predictorResult.percentile}%ile
                 </div>
               </div>
 
-              <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1">
+              <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1 flex flex-col justify-center">
                 <span className="text-[10px] sm:text-xs text-charcoal-500 font-semibold">Projected AIR</span>
-                <div className="text-xl sm:text-3xl font-extrabold font-mono text-institutional-600 dark:text-institutional-400 truncate">
+                <div className={`font-extrabold font-mono text-institutional-600 dark:text-institutional-400 leading-tight ${
+                  predictorResult.rank.length > 12
+                    ? 'text-base sm:text-xl lg:text-2xl'
+                    : 'text-xl sm:text-3xl'
+                }`}>
                   {predictorResult.rank}
                 </div>
               </div>
 
-              <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1">
+              <div className="col-span-2 sm:col-span-1 p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1 flex flex-col justify-center">
                 <span className="text-[10px] sm:text-xs text-charcoal-500 font-semibold">Selection Assessment</span>
                 <div className="text-[11px] sm:text-xs font-bold text-charcoal-900 dark:text-charcoal-100 pt-0.5 leading-snug">
                   {predictorResult.tier}
@@ -1349,6 +1413,9 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           <div className="absolute -bottom-24 -right-20 w-[500px] h-[500px] bg-indigo-500/15 dark:bg-indigo-400/20 blur-[140px] rounded-full pointer-events-none animate-blob-delayed" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-emerald-500/8 dark:bg-emerald-400/12 blur-[100px] rounded-full pointer-events-none animate-float-slow" />
 
+          {/* Holographic VIP Access Pass & Golden Vault Shimmer Animation */}
+          <PassesVaultAnimation opacity={0.65} />
+
           <div className="text-center max-w-2xl mx-auto space-y-2.5 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
               <CrownIcon size={14} />
@@ -1644,6 +1711,40 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                       </div>
                       <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
                         6 Days a Week • Active During Live Mocks
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Official Social Media Community Handles */}
+                  <div className="flex items-start gap-3 pt-2 border-t border-charcoal-150 dark:border-charcoal-800">
+                    <div className="w-8 h-8 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 flex items-center justify-center shrink-0 mt-0.5 text-institutional-600 dark:text-institutional-400">
+                      <InstagramIcon size={16} />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-charcoal-400 mb-1.5">
+                        Official Social Media
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <a
+                          href="https://www.instagram.com/prepmagnet.official/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-charcoal-100/90 dark:bg-charcoal-800/90 hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-500 text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700/80 transition-all duration-200 shadow-2xs font-semibold group cursor-pointer"
+                          title="Follow PrepMagnet on Instagram"
+                        >
+                          <InstagramIcon size={13} className="text-pink-600 dark:text-pink-400 group-hover:text-white transition-colors" />
+                          <span>Instagram</span>
+                        </a>
+                        <a
+                          href="https://www.linkedin.com/company/simplbyte/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-charcoal-100/90 dark:bg-charcoal-800/90 hover:bg-[#0077b5] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700/80 transition-all duration-200 shadow-2xs font-semibold group cursor-pointer"
+                          title="Follow SimplByte on LinkedIn"
+                        >
+                          <LinkedinIcon size={13} className="text-[#0077b5] dark:text-[#38bdf8] group-hover:text-white transition-colors" />
+                          <span>LinkedIn</span>
+                        </a>
                       </div>
                     </div>
                   </div>

@@ -8,6 +8,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from '../components/Icons';
+import { TypingAlphabetsAnimation } from '../components/TypingAlphabetsAnimation';
 
 const fmtDate = (value) => new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
@@ -550,11 +551,14 @@ export const TypingMasterPage = () => {
   return (
     // The -mt/-mb + pt/pb pairs cancel the app shell's navbar/footer padding so the backdrop reaches the very top and bottom.
     <div className="relative w-full max-w-full overflow-x-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero">
-      {/* Ambient glows — wrapped in overflow-hidden container to avoid horizontal scrolling */}
+      {/* Ambient glows and moving typing alphabets background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] max-w-[140vw] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
         <div className="absolute top-[520px] -left-36 w-[520px] max-w-[140vw] h-[520px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
         <div className="absolute top-[900px] -right-36 w-[560px] max-w-[140vw] h-[560px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
+
+        {/* High-visibility mechanical keycaps & typing telemetry animation */}
+        <TypingAlphabetsAnimation variant="full" opacity={0.85} />
       </div>
 
       <main className="relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-10 space-y-5 sm:space-y-6 min-w-0">
@@ -734,9 +738,11 @@ export const TypingMasterPage = () => {
             </div>
 
             {/* Test arena: target text + input */}
-            <section className="w-full min-w-0 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden">
+            <section className="relative w-full min-w-0 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden">
               <div className="h-1.5 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500" />
-              <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0">
+              {/* Tactile mechanical keycaps and speed telemetry animation in test arena background */}
+              <TypingAlphabetsAnimation variant="card" opacity={0.48} />
+              <div className="relative z-10 p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center flex-wrap gap-2">
@@ -913,9 +919,10 @@ export const TypingMasterPage = () => {
 
             {/* Scorecard */}
             {scorecard && (
-              <section className="bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden animate-fade-in w-full min-w-0">
+              <section className="relative bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden animate-fade-in w-full min-w-0">
                 <div className="h-1.5 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500" />
-                <div className="p-4 sm:p-6 space-y-5 min-w-0">
+                <TypingAlphabetsAnimation variant="card" opacity={0.45} />
+                <div className="relative z-10 p-4 sm:p-6 space-y-5 min-w-0">
                   {/* Verdict & Score */}
                   <div
                     className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${

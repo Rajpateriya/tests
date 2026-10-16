@@ -81,6 +81,13 @@ function AppContent() {
   const [lastCompletedAttemptId, setLastCompletedAttemptId] = useState(null);
   const [authModalState, setAuthModalState] = useState({ isOpen: false, initialTab: 'login' });
 
+  // Scroll to top on route change when there is no hash
+  useEffect(() => {
+    if (!window.location.hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [pathname]);
+
   const handleOpenAuthModal = (tab = 'login') => {
     setAuthModalState({ isOpen: true, initialTab: tab });
   };
