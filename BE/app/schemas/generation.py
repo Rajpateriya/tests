@@ -80,11 +80,21 @@ class BlueprintPlanRequest(BaseModel):
     topic: Optional[str] = None
     questions_per_quiz: Optional[int] = Field(default=None, ge=1)
     difficulty: Optional[DifficultyMix] = None
+    blueprint_name: Optional[str] = Field(
+        default=None, description="Which of the subject's blueprints to plan; omit for 'Default'"
+    )
+    rotation: int = Field(
+        default=0, ge=0,
+        description="Which quiz in a batch to preview; successive values pick different subtopics",
+    )
 
 
 class AssembleRequest(BaseModel):
     target_exam: str = "SSC CGL"
     subject: str
+    blueprint_name: Optional[str] = Field(
+        default=None, description="Which of the subject's blueprints to use; omit for 'Default'"
+    )
     sub_subject: Optional[str] = None
     topic: Optional[str] = None
     quizzes: int = Field(default=1, ge=1, le=200)

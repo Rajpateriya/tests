@@ -7,6 +7,11 @@ Two modes, never mixed:
 
 A difficulty mix (easy/medium/hard percentages) is set on the blueprint and
 can be overridden on any section, topic or subtopic — the nearest one wins.
+
+A subject can hold several named blueprints, so one subject's 10 topics can be
+served by e.g. a "Part A" covering 5 of them and a "Part B" covering the other
+5, each with its own size, weights and difficulty mix. They are stored one
+document per (subject, name).
 """
 from typing import List, Optional
 
@@ -46,8 +51,12 @@ class BlueprintSection(BaseModel):
     topics: List[BlueprintTopic] = Field(min_length=1)
 
 
+DEFAULT_BLUEPRINT_NAME = "Default"
+
+
 class QuizBlueprint(BaseModel):
     subject: str
+    name: str = Field(default=DEFAULT_BLUEPRINT_NAME, min_length=1, max_length=80)
     total_questions: Optional[int] = Field(default=None, ge=1)
     difficulty: DifficultyMix = Field(
         default_factory=lambda: DifficultyMix(easy=30, medium=50, hard=20)

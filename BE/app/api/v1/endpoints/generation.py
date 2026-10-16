@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.api.v1.deps import require_admin
+from app.core.exceptions import NotFoundException
 from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.models.quiz_blueprint import QuizBlueprint
@@ -296,19 +297,52 @@ async def set_blueprint(
     section, topic or subtopic.
     """
     doc = await QuizBlueprintService(db).set_blueprint(req)
+    doc.pop("_id", None)
     return APIResponse(
         success=True,
-        message=f"Blueprint set for '{req.subject}' ({len(doc['sections'])} sections)",
-        data={"subject": doc.pop("_id"), **doc},
+        message=f"Blueprint '{req.name}' set for '{req.subject}' ({len(doc['sections'])} sections)",
+        data=doc,
+    )
+
+
+@router.get("/blueprint/{subject}/list", response_model=APIResponse[List[Dict[str, Any]]])
+async def list_blueprints(subject: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Every blueprint saved for a subject, with its size and coverage."""
+    items = await QuizBlueprintService(db).list_blueprints(subject)
+    return APIResponse(
+        success=True, message=f"{len(items)} blueprint(s) for '{subject}'", data=items
     )
 
 
 @router.get("/blueprint/{subject}", response_model=APIResponse[Dict[str, Any]])
-async def get_blueprint(subject: str, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Fetch the current quiz blueprint for a subject."""
-    doc = await QuizBlueprintService(db).require_blueprint(subject)
+async def get_blueprint(
+    subject: str,
+    name: Optional[str] = None,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Fetch one of a subject's blueprints. Omit `name` for its 'Default'."""
+    doc = await QuizBlueprintService(db).require_blueprint(subject, name)
+    doc.pop("_id", None)
+    doc.setdefault("subject", subject)
     return APIResponse(
-        success=True, message=f"Blueprint for '{subject}'", data={"subject": doc.pop("_id"), **doc}
+        success=True, message=f"Blueprint '{doc.get('name')}' for '{subject}'", data=doc
+    )
+
+
+@router.delete("/blueprint/{subject}", response_model=APIResponse[Dict[str, Any]])
+async def delete_blueprint(
+    subject: str,
+    name: str,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: remove one of a subject's blueprints. Tests already built stay."""
+    removed = await QuizBlueprintService(db).delete_blueprint(subject, name)
+    if not removed:
+        raise NotFoundException(f"'{subject}' has no blueprint named {name!r}")
+    return APIResponse(
+        success=True, message=f"Deleted blueprint '{name}' of '{subject}'",
+        data={"subject": subject, "name": name},
     )
 
 
@@ -342,6 +376,8 @@ async def plan_blueprint(
         topic=req.topic,
         questions_per_quiz=req.questions_per_quiz,
         difficulty=req.difficulty.model_dump() if req.difficulty else None,
+        name=req.blueprint_name,
+        rotation=req.rotation,
     )
     return APIResponse(success=True, message=f"{plan['questions_per_quiz']} questions per quiz", data=plan)
 
@@ -371,6 +407,7 @@ async def assemble_quizzes(
         duration_minutes=req.duration_minutes,
         positive_marks=req.positive_marks,
         negative_marks=req.negative_marks,
+        blueprint_name=req.blueprint_name,
     )
     return APIResponse(
         success=True,
