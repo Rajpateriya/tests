@@ -36,12 +36,23 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [collapsedBankTopics, setCollapsedBankTopics] = useState(() => new Set());
+  const toggleBankTopic = (key) =>
+    setCollapsedBankTopics((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
 
   const loadBank = useCallback(async () => {
     setBankError('');
     setBankLoading(true);
     try {
-      setBank(await api.generation.bank(subject, targetExam));
+      const data = await api.generation.bank(subject, targetExam);
+      setBank(data);
+      setCollapsedBankTopics(new Set(
+        [...new Set(data.rows.map((r) => `${r.sub_subject || ''}|${r.topic}`))]
+      ));
     } catch (err) {
       setBankError(errorText(err));
     } finally {
@@ -107,72 +118,16 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
       footerNote={`${quizzes} quiz${quizzes === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'} using the "${blueprintName}" blueprint, ${duration} min, +${posMarks} / −${negMarks}.`}
       footer={
         <>
-          {result?.created > 0 && onGoToMocks && (
-            <button type="button" className="btn btn-outline" onClick={onGoToMocks}>View in Mock Tests</button>
-          )}
           <button type="button" className="btn btn-primary" onClick={assemble} disabled={busy}>
             {busy ? <Busy label="Assembling..." /> : `Assemble ${quizzes} quiz${quizzes === 1 ? '' : 'zes'}`}
           </button>
+          {result?.created > 0 && onGoToMocks && (
+            <button type="button" className="btn btn-outline" onClick={onGoToMocks}>View in Mock Tests</button>
+          )}
         </>
       }
     >
       <Alert type="error">{error}</Alert>
-
-      <Section
-        title="Question bank"
-        aside={
-          <span className="pp-inline" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600, flexWrap: 'wrap' }}>
-            {bank && (
-              <>
-                <span className="pp-stat-chip"><strong>{bank.total}</strong> approved</span>
-                <span className="pp-stat-chip"><strong>{bank.unused}</strong> unused</span>
-                <span className="pp-stat-chip"><strong>{bank.pending_review}</strong> awaiting review</span>
-              </>
-            )}
-            <button type="button" className="icon-btn" title="Refresh bank" onClick={loadBank} disabled={bankLoading}>
-              <RefreshCwIcon size={15} />
-            </button>
-          </span>
-        }
-      >
-        <Alert type="error">{bankError}</Alert>
-        {!bank && bankLoading && <Busy label="Loading bank..." />}
-        {bank && !bankRows.length && (
-          <Empty>No approved questions for {subSubject || 'this subject'} and {targetExam} yet — generate some first.</Empty>
-        )}
-        {bankRows.length > 0 && (
-          <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Sub-subject</th>
-                  <th>Topic</th>
-                  <th>Subtopic</th>
-                  {LEVEL_NAMES.map((l) => <th key={l} className="num">{l}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {bankRows.map((r) => (
-                  <tr key={`${r.sub_subject}|${r.topic}|${r.subtopic}`}>
-                    <td className="muted">{r.sub_subject || '—'}</td>
-                    <td className="muted">{r.topic}</td>
-                    <td>{r.subtopic}</td>
-                    {LEVEL_NAMES.map((l) => {
-                      const cell = r.cells[l];
-                      return (
-                        <td key={l} className={`num ${cell?.unused ? '' : 'zero'}`} title="unused / total">
-                          {cell ? `${cell.unused} / ${cell.count}` : '0 / 0'}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {bankRows.length > 0 && <div className="pp-hint" style={{ marginTop: '0.4rem' }}>Each cell is unused / total. Red cells have no fresh questions left.</div>}
-      </Section>
 
       <Section title="What to build">
         <div className="pp-grid cols-4">
@@ -225,6 +180,113 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
               onChange={(e) => setNegMarks(Math.max(0, parseFloat(e.target.value) || 0))} />
           </Field>
         </div>
+      </Section>
+
+      <Section
+        title="Question bank"
+        aside={
+          <span className="pp-inline" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600, flexWrap: 'wrap' }}>
+            {bank && (
+              <>
+                <span className="pp-stat-chip"><strong>{bank.total}</strong> approved</span>
+                <span className="pp-stat-chip"><strong>{bank.unused}</strong> unused</span>
+                <span className="pp-stat-chip"><strong>{bank.pending_review}</strong> awaiting review</span>
+              </>
+            )}
+            <button type="button" className="icon-btn" title="Refresh bank" onClick={loadBank} disabled={bankLoading}>
+              <RefreshCwIcon size={15} />
+            </button>
+          </span>
+        }
+      >
+        <Alert type="error">{bankError}</Alert>
+        {!bank && bankLoading && <Busy label="Loading bank..." />}
+        {bank && !bankRows.length && (
+          <Empty>No approved questions for {subSubject || 'this subject'} and {targetExam} yet — generate some first.</Empty>
+        )}
+        {bankRows.length > 0 && (
+          <>
+            <div className="pp-inline" style={{ marginBottom: '0.4rem' }}>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setCollapsedBankTopics(new Set())}>Expand all</button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setCollapsedBankTopics(new Set(
+                  [...new Set(bankRows.map((r) => `${r.sub_subject || ''}|${r.topic}`))]
+                ))}
+              >
+                Collapse all
+              </button>
+            </div>
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Sub-subject · Topic · Subtopic</th>
+                    {LEVEL_NAMES.map((l) => <th key={l} className="num">{l}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const byTopic = [];
+                    const index = new Map();
+                    for (const r of bankRows) {
+                      const key = `${r.sub_subject || ''}|${r.topic}`;
+                      if (!index.has(key)) {
+                        index.set(key, byTopic.length);
+                        byTopic.push({ key, sub_subject: r.sub_subject, topic: r.topic, rows: [] });
+                      }
+                      byTopic[index.get(key)].rows.push(r);
+                    }
+                    return byTopic.map((group) => {
+                      const collapsed = collapsedBankTopics.has(group.key);
+                      const totals = LEVEL_NAMES.map((l) =>
+                        group.rows.reduce((sum, r) => sum + (r.cells[l]?.unused || 0), 0)
+                      );
+                      return (
+                        <React.Fragment key={group.key}>
+                          <tr>
+                            <td style={{ fontWeight: 700 }}>
+                              <button
+                                type="button"
+                                className="collapse-btn"
+                                style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}
+                                onClick={() => toggleBankTopic(group.key)}
+                                title={collapsed ? 'Expand' : 'Collapse'}
+                              >
+                                ▾
+                              </button>
+                              {group.sub_subject && <span className="muted" style={{ marginRight: 6 }}>{group.sub_subject} ·</span>}
+                              {group.topic}
+                              <span className="muted" style={{ fontWeight: 400, marginLeft: 6, fontSize: '0.78rem' }}>
+                                ({group.rows.length} subtopic{group.rows.length === 1 ? '' : 's'})
+                              </span>
+                            </td>
+                            {totals.map((t, i) => <td key={i} className="num muted">{t}</td>)}
+                          </tr>
+                          {!collapsed && group.rows.map((r) => (
+                            <tr key={`${r.sub_subject}|${r.topic}|${r.subtopic}`}>
+                              <td style={{ paddingLeft: '2rem', color: 'var(--text-secondary)' }}>{r.subtopic}</td>
+                              {LEVEL_NAMES.map((l) => {
+                                const cell = r.cells[l];
+                                return (
+                                  <td key={l} className={`num ${cell?.unused ? '' : 'zero'}`} title="unused / total">
+                                    {cell ? `${cell.unused} / ${cell.count}` : '0 / 0'}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+        {bankRows.length > 0 && <div className="pp-hint" style={{ marginTop: '0.4rem' }}>Each cell is unused / total. Red cells have no fresh questions left.</div>}
       </Section>
 
       {result && (

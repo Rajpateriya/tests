@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { UploadIcon } from '../Icons';
 import { LEVELS, mixTotal } from './pipelineUtils';
 
@@ -90,6 +91,109 @@ export const Busy = ({ label }) => (
 );
 
 export const Empty = ({ children }) => <div className="pp-empty">{children}</div>;
+
+/** A searchable "add from list" control. Native <select> renders every option at
+ *  its native width, which overflows the viewport once names run long or the list
+ *  runs into the hundreds (e.g. a taxonomy topic with 100+ subtopics) — this keeps
+ *  the dropdown's own width fixed and the option list scrollable and filterable. */
+export const Picker = ({ options, placeholder = 'Add…', onSelect, width = 280 }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [rect, setRect] = useState(null);
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
+
+  // The panel is portaled to <body> with position:fixed, so it can't be clipped by
+  // a scrolling ancestor (e.g. the table wrapper's overflow-x: auto, which forces
+  // overflow-y to clip too) — only the trigger's own coordinates decide where it sits.
+  const place = () => {
+    if (!triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    place();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocDown = (e) => {
+      if (triggerRef.current?.contains(e.target)) return;
+      if (panelRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onScrollOrResize = () => place();
+    document.addEventListener('mousedown', onDocDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      document.removeEventListener('mousedown', onDocDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [open]);
+
+  const filtered = query.trim()
+    ? options.filter((o) => o.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="form-input sm"
+        style={{ width, textAlign: 'left', color: 'var(--text-muted)', cursor: 'pointer' }}
+        onClick={() => { setOpen((o) => !o); setQuery(''); }}
+      >
+        + {placeholder}
+      </button>
+      {open && rect && createPortal(
+        <div
+          ref={panelRef}
+          style={{
+            position: 'fixed', top: rect.top, left: rect.left,
+            width: Math.max(rect.width, 220), maxWidth: 'calc(100vw - 16px)',
+            background: 'var(--bg-elevated, #fff)',
+            border: '1px solid var(--border, #ddd)', borderRadius: 'var(--radius-sm)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 1000, overflow: 'hidden',
+          }}
+        >
+          <input
+            autoFocus
+            className="form-input sm"
+            style={{ width: '100%', border: 'none', borderBottom: '1px solid var(--border, #ddd)', borderRadius: 0 }}
+            placeholder="Search…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+            {filtered.length === 0 && (
+              <div className="muted" style={{ padding: '0.5rem 0.65rem', fontSize: '0.82rem' }}>No matches.</div>
+            )}
+            {filtered.map((opt) => (
+              <div
+                key={opt}
+                onClick={() => { onSelect(opt); setOpen(false); }}
+                style={{ padding: '0.4rem 0.65rem', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--primary-bg, rgba(59,130,246,0.1))'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                {opt}
+              </div>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
 
 /** In-app replacement for window.prompt / window.confirm.
  *  Pass `prompt` for a text field; omit it for a plain confirm. */

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { EyeIcon, TargetIcon, TrashIcon } from '../Icons';
-import { Alert, Busy, Dialog, DifficultyBadge, DifficultyMix, Empty, Field, Section, Segmented, Stats, StepCard } from './PipelineUI';
+import { Alert, Busy, Dialog, DifficultyBadge, DifficultyMix, Empty, Field, Picker, Section, Segmented, Stats, StepCard } from './PipelineUI';
 import { JsonPanel } from './JsonPanel';
 import { BLUEPRINT_EXAMPLE, DEFAULT_MIX, cleanBlueprint, errorText, mixTotal, validateBlueprintJson } from './pipelineUtils';
 
@@ -66,7 +66,8 @@ const NumberCell = ({ value, onChange, min = 1, step = 1, placeholder = '1' }) =
   />
 );
 
-export const BlueprintStep = ({ subject }) => {
+export const BlueprintStep = ({ subject, taxonomyDoc }) => {
+  const taxonomyTree = taxonomyDoc?.tree || [];
   const [blueprint, setBlueprint] = useState(null);
   const [mode, setMode] = useState('counts');
   const [dirty, setDirty] = useState(false);
@@ -83,6 +84,23 @@ export const BlueprintStep = ({ subject }) => {
 
   const [planSub, setPlanSub] = useState('');
   const [planTotal, setPlanTotal] = useState('');
+  const [planQuizzes, setPlanQuizzes] = useState(1);
+  const [planShownQuiz, setPlanShownQuiz] = useState(1);
+  const [collapsedTopics, setCollapsedTopics] = useState(() => new Set());
+  const toggleTopic = (key) =>
+    setCollapsedTopics((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+
+  const [collapsedPreviewTopics, setCollapsedPreviewTopics] = useState(() => new Set());
+  const togglePreviewTopic = (key) =>
+    setCollapsedPreviewTopics((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
   const [plan, setPlan] = useState(null);
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState('');
@@ -100,6 +118,9 @@ export const BlueprintStep = ({ subject }) => {
       setBlueprint(bp);
       setMode(bp.total_questions ? 'weights' : 'counts');
       setDirty(false);
+      setCollapsedTopics(new Set(
+        bp.sections.flatMap((s, si) => s.topics.map((t) => `${si}-${t.topic}`))
+      ));
     } catch {
       setBlueprint(null);
     } finally {
@@ -171,9 +192,13 @@ export const BlueprintStep = ({ subject }) => {
   const buildStarter = async () => {
     setError('');
     try {
-      edit(await api.generation.starterBlueprint(subject, defaultCount));
+      const built = await api.generation.starterBlueprint(subject, defaultCount);
+      edit(built);
       setMode('counts');
       setPlan(null);
+      setCollapsedTopics(new Set(
+        built.sections.flatMap((s, si) => s.topics.map((t) => `${si}-${t.topic}`))
+      ));
       setMessage(`Draft built from the structure with ${defaultCount} per subtopic — adjust, then Save.`);
     } catch (err) {
       setError(errorText(err));
@@ -198,6 +223,58 @@ export const BlueprintStep = ({ subject }) => {
   const removeTopic = (si, ti) => patchSection(si, { topics: blueprint.sections[si].topics.filter((_, i) => i !== ti) });
   const removeSubtopic = (si, ti, sti) =>
     patchTopic(si, ti, { subtopics: blueprint.sections[si].topics[ti].subtopics.filter((_, i) => i !== sti) });
+
+  // Topics/subtopics already in this blueprint, so the picker only offers what's
+  // genuinely missing — and names come from the taxonomy, so they match what was
+  // actually generated into the bank rather than a free-typed string nothing can find.
+  const existingTopics = (si) => new Set((blueprint.sections[si]?.topics || []).map((t) => t.topic));
+  const existingSubtopics = (si, ti) =>
+    new Set((blueprint.sections[si]?.topics[ti]?.subtopics || []).map((st) => st.subtopic));
+
+  const availableTopics = (si) => {
+    const subSubject = blueprint.sections[si]?.sub_subject ?? null;
+    const have = existingTopics(si);
+    const seen = new Set();
+    return taxonomyTree
+      .filter((e) => (e.sub_subject || null) === subSubject)
+      .filter((e) => !have.has(e.topic) && !seen.has(e.topic) && seen.add(e.topic))
+      .map((e) => e.topic);
+  };
+
+  const availableSubtopics = (si, ti) => {
+    const subSubject = blueprint.sections[si]?.sub_subject ?? null;
+    const topic = blueprint.sections[si]?.topics[ti]?.topic;
+    const have = existingSubtopics(si, ti);
+    const names = taxonomyTree
+      .filter((e) => (e.sub_subject || null) === subSubject && e.topic === topic)
+      .flatMap((e) => e.subtopics || []);
+    return [...new Set(names)].filter((s) => !have.has(s));
+  };
+
+  const addTopic = (si, topic) => {
+    if (!topic) return;
+    patchSection(si, {
+      topics: [{ topic, subtopics: [] }, ...blueprint.sections[si].topics],
+    });
+  };
+
+  const addSubtopic = (si, ti, subtopic) => {
+    if (!subtopic) return;
+    const base = mode === 'weights' ? { subtopic } : { subtopic, count: defaultCount };
+    patchTopic(si, ti, { subtopics: [base, ...blueprint.sections[si].topics[ti].subtopics] });
+  };
+
+  const availableSections = () => {
+    const allowed = taxonomyDoc?.sub_subjects || [];
+    if (!allowed.length) return [];
+    const have = new Set(blueprint.sections.map((s) => s.sub_subject));
+    return allowed.filter((name) => !have.has(name));
+  };
+
+  const addSection = (subSubject) => {
+    if (!subSubject) return;
+    edit({ ...blueprint, sections: [{ sub_subject: subSubject, topics: [] }, ...blueprint.sections] });
+  };
 
   const save = async () => {
     setError('');
@@ -224,11 +301,17 @@ export const BlueprintStep = ({ subject }) => {
     setPlanError('');
     setPlanning(true);
     try {
-      setPlan(await api.generation.planBlueprint(subject, {
+      const result = await api.generation.planBlueprint(subject, {
         sub_subject: planSub || null,
         questions_per_quiz: planTotal ? Number(planTotal) : null,
         blueprint_name: activeName,
-      }));
+        quizzes: planQuizzes,
+      });
+      setPlan(result);
+      setPlanShownQuiz(1);
+      setCollapsedPreviewTopics(new Set(
+        [...new Set(result.quiz_plans[0].slots.map((slot) => `${slot.sub_subject || ''}|${slot.topic}`))]
+      ));
     } catch (err) {
       setPlanError(errorText(err));
     } finally {
@@ -289,9 +372,13 @@ export const BlueprintStep = ({ subject }) => {
               }
               getCurrent={() => (blueprint ? cleanBlueprint({ ...blueprint, subject }, mode) : JSON.parse(example))}
               onLoad={(data) => {
-                edit({ difficulty: DEFAULT_MIX, ...data });
+                const next = { difficulty: DEFAULT_MIX, ...data };
+                edit(next);
                 setMode(data.total_questions ? 'weights' : 'counts');
                 setPlan(null);
+                setCollapsedTopics(new Set(
+                  next.sections.flatMap((s, si) => s.topics.map((t) => `${si}-${t.topic}`))
+                ));
                 setMessage('Loaded from JSON — review, then Save.');
               }}
               onSave={async (data) => {
@@ -300,6 +387,9 @@ export const BlueprintStep = ({ subject }) => {
                 setMode(saved.total_questions ? 'weights' : 'counts');
                 setDirty(false);
                 setPlan(null);
+                setCollapsedTopics(new Set(
+                  saved.sections.flatMap((s, si) => s.topics.map((t) => `${si}-${t.topic}`))
+                ));
                 setMessage('Blueprint saved from JSON.');
               }}
             />
@@ -334,34 +424,52 @@ export const BlueprintStep = ({ subject }) => {
 
         {!loading && blueprint && (
           <>
-            <Section title="Quiz size">
-              <div className="pp-grid cols-2">
-                <Field label="Size by" hint={weights ? 'Set a total and relative weights' : 'Set the exact number per subtopic'}>
-                  <Segmented
-                    value={mode}
-                    onChange={switchMode}
-                    options={[{ value: 'counts', label: 'Exact counts' }, { value: 'weights', label: 'Total + weights' }]}
-                  />
-                </Field>
-                <Field label="Questions per quiz" hint={weights ? 'Split across subtopics by weight' : 'Sum of the counts below'}>
-                  <input
-                    type="number"
-                    min="1"
-                    className="form-input"
-                    style={{ maxWidth: 200 }}
-                    value={perQuiz ?? ''}
-                    disabled={!weights}
-                    onChange={(e) => edit({ ...blueprint, total_questions: e.target.value === '' ? null : Number(e.target.value) })}
-                  />
-                </Field>
-              </div>
-            </Section>
+            <div className="pp-grid cols-2" style={{ alignItems: 'start' }}>
+              <Section title="Quiz size">
+                <div className="pp-grid cols-2">
+                  <Field label="Size by" hint={weights ? 'Set a total and relative weights' : 'Set the exact number per subtopic'}>
+                    <Segmented
+                      value={mode}
+                      onChange={switchMode}
+                      options={[{ value: 'counts', label: 'Exact counts' }, { value: 'weights', label: 'Total + weights' }]}
+                    />
+                  </Field>
+                  <Field label="Questions per quiz" hint={weights ? 'Split across subtopics by weight' : 'Sum of the counts below'}>
+                    <input
+                      type="number"
+                      min="1"
+                      className="form-input"
+                      style={{ maxWidth: 200 }}
+                      value={perQuiz ?? ''}
+                      disabled={!weights}
+                      onChange={(e) => edit({ ...blueprint, total_questions: e.target.value === '' ? null : Number(e.target.value) })}
+                    />
+                  </Field>
+                </div>
+              </Section>
 
-            <Section title="Difficulty">
-              <DifficultyMix value={blueprint.difficulty || DEFAULT_MIX} onChange={(difficulty) => edit({ ...blueprint, difficulty })} label="Default mix for every quiz" />
-            </Section>
+              <Section title="Difficulty">
+                <DifficultyMix value={blueprint.difficulty || DEFAULT_MIX} onChange={(difficulty) => edit({ ...blueprint, difficulty })} label="Default mix for every quiz" />
+              </Section>
+            </div>
 
-            <Section title="Breakdown">
+            <Section
+              title="Breakdown"
+              aside={
+                <div className="pp-inline">
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setCollapsedTopics(new Set())}>Expand all</button>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setCollapsedTopics(new Set(
+                      blueprint.sections.flatMap((s, si) => s.topics.map((t) => `${si}-${t.topic}`))
+                    ))}
+                  >
+                    Collapse all
+                  </button>
+                </div>
+              }
+            >
               <div className="data-table-wrap">
                 <table className="data-table">
                   <thead>
@@ -376,42 +484,90 @@ export const BlueprintStep = ({ subject }) => {
                       <React.Fragment key={`s${si}`}>
                         <tr className="group-row">
                           <td>
-                            <span className="badge badge-subject">{s.sub_subject || 'Whole subject'}</span>
-                            {s.difficulty && <span className="badge badge-medium" style={{ marginLeft: 6 }}>custom mix</span>}
+                            <div className="pp-inline" style={{ alignItems: 'center' }}>
+                              <span className="badge badge-subject">{s.sub_subject || 'Whole subject'}</span>
+                              {s.difficulty && <span className="badge badge-medium" style={{ marginLeft: 6 }}>custom mix</span>}
+                              {availableTopics(si).length > 0 && (
+                                <Picker
+                                  width={260}
+                                  placeholder="Add topic…"
+                                  options={availableTopics(si)}
+                                  onSelect={(t) => addTopic(si, t)}
+                                />
+                              )}
+                            </div>
                           </td>
                           <td>{weights && <NumberCell value={s.weight} step={0.5} min={0.1} onChange={(v) => patchSection(si, { weight: v })} />}</td>
                           <td><button type="button" className="icon-btn" title="Remove section" onClick={() => removeSection(si)}><TrashIcon size={15} /></button></td>
                         </tr>
-                        {s.topics.map((t, ti) => (
-                          <React.Fragment key={`t${si}-${ti}`}>
-                            <tr>
-                              <td style={{ paddingLeft: '1.6rem', fontWeight: 700 }}>
-                                {t.topic}
-                                {t.difficulty && <span className="badge badge-medium" style={{ marginLeft: 6 }}>custom mix</span>}
-                              </td>
-                              <td>{weights && <NumberCell value={t.weight} step={0.5} min={0.1} onChange={(v) => patchTopic(si, ti, { weight: v })} />}</td>
-                              <td><button type="button" className="icon-btn" title="Remove topic" onClick={() => removeTopic(si, ti)}><TrashIcon size={15} /></button></td>
-                            </tr>
-                            {t.subtopics.map((st, sti) => (
-                              <tr key={`st${si}-${ti}-${sti}`}>
-                                <td style={{ paddingLeft: '3.1rem', color: 'var(--text-secondary)' }}>{st.subtopic}</td>
-                                <td>
-                                  {weights ? (
-                                    <NumberCell value={st.weight} step={0.5} min={0.1} onChange={(v) => patchSubtopic(si, ti, sti, { weight: v })} />
-                                  ) : (
-                                    <NumberCell value={st.count} onChange={(v) => patchSubtopic(si, ti, sti, { count: v })} />
-                                  )}
+                        {s.topics.map((t, ti) => {
+                          const key = `${si}-${t.topic}`;
+                          const collapsed = collapsedTopics.has(key);
+                          return (
+                            <React.Fragment key={`t${si}-${t.topic}`}>
+                              <tr>
+                                <td style={{ paddingLeft: '1.6rem', fontWeight: 700 }}>
+                                  <div className="pp-inline" style={{ alignItems: 'center' }}>
+                                    <button
+                                      type="button"
+                                      className="collapse-btn"
+                                      style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}
+                                      onClick={() => toggleTopic(key)}
+                                      title={collapsed ? 'Expand' : 'Collapse'}
+                                    >
+                                      ▾
+                                    </button>
+                                    <span>
+                                      {t.topic}
+                                      <span className="muted" style={{ fontWeight: 400, marginLeft: 6, fontSize: '0.78rem' }}>
+                                        ({t.subtopics.length})
+                                      </span>
+                                      {t.difficulty && <span className="badge badge-medium" style={{ marginLeft: 6 }}>custom mix</span>}
+                                    </span>
+                                    {availableSubtopics(si, ti).length > 0 && (
+                                      <Picker
+                                        width={240}
+                                        placeholder="Add subtopic…"
+                                        options={availableSubtopics(si, ti)}
+                                        onSelect={(s) => addSubtopic(si, ti, s)}
+                                      />
+                                    )}
+                                  </div>
                                 </td>
-                                <td><button type="button" className="icon-btn" title="Remove subtopic" onClick={() => removeSubtopic(si, ti, sti)}><TrashIcon size={15} /></button></td>
+                                <td>{weights && <NumberCell value={t.weight} step={0.5} min={0.1} onChange={(v) => patchTopic(si, ti, { weight: v })} />}</td>
+                                <td><button type="button" className="icon-btn" title="Remove topic" onClick={() => removeTopic(si, ti)}><TrashIcon size={15} /></button></td>
                               </tr>
-                            ))}
-                          </React.Fragment>
-                        ))}
+                              {!collapsed && t.subtopics.map((st, sti) => (
+                                <tr key={`st${si}-${t.topic}-${st.subtopic}`}>
+                                  <td style={{ paddingLeft: '3.1rem', color: 'var(--text-secondary)' }}>{st.subtopic}</td>
+                                  <td>
+                                    {weights ? (
+                                      <NumberCell value={st.weight} step={0.5} min={0.1} onChange={(v) => patchSubtopic(si, ti, sti, { weight: v })} />
+                                    ) : (
+                                      <NumberCell value={st.count} onChange={(v) => patchSubtopic(si, ti, sti, { count: v })} />
+                                    )}
+                                  </td>
+                                  <td><button type="button" className="icon-btn" title="Remove subtopic" onClick={() => removeSubtopic(si, ti, sti)}><TrashIcon size={15} /></button></td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })}
                       </React.Fragment>
                     ))}
                   </tbody>
                 </table>
               </div>
+              {availableSections().length > 0 && (
+                <div className="pp-inline" style={{ marginTop: '0.6rem' }}>
+                  <Picker
+                    width={260}
+                    placeholder="Add sub-subject section…"
+                    options={availableSections()}
+                    onSelect={addSection}
+                  />
+                </div>
+              )}
             </Section>
           </>
         )}
@@ -441,38 +597,116 @@ export const BlueprintStep = ({ subject }) => {
               <input type="number" min="1" className="form-input" value={planTotal} placeholder={String(perQuiz || '')}
                 onChange={(e) => setPlanTotal(e.target.value)} />
             </Field>
+            <Field
+              label="Quizzes to preview"
+              hint="Each quiz rotates onto a different set of subtopics — plan the whole batch to see real coverage"
+            >
+              <input type="number" min="1" max="200" className="form-input" value={planQuizzes}
+                onChange={(e) => setPlanQuizzes(Math.max(1, parseInt(e.target.value, 10) || 1))} />
+            </Field>
           </div>
 
-          {plan && (
-            <>
-              <Stats
-                items={[
-                  { label: 'Questions per quiz', value: plan.questions_per_quiz, tone: 'primary' },
-                  { label: 'Easy', value: plan.by_difficulty.Easy, tone: 'success' },
-                  { label: 'Medium', value: plan.by_difficulty.Medium, tone: 'warning' },
-                  { label: 'Hard', value: plan.by_difficulty.Hard, tone: 'danger' },
-                ]}
-              />
-              <div className="data-table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr><th>Sub-subject</th><th>Topic</th><th>Subtopic</th><th>Difficulty</th><th className="num">Questions</th></tr>
-                  </thead>
-                  <tbody>
-                    {plan.slots.map((slot, i) => (
-                      <tr key={i}>
-                        <td className="muted">{slot.sub_subject || '—'}</td>
-                        <td className="muted">{slot.topic}</td>
-                        <td>{slot.subtopic}</td>
-                        <td><DifficultyBadge level={slot.difficulty} /></td>
-                        <td className="num">{slot.count}</td>
-                      </tr>
+          {plan && (() => {
+            const shown = plan.quiz_plans[Math.min(planShownQuiz, plan.quiz_plans.length) - 1];
+            return (
+              <>
+                <Stats
+                  items={[
+                    ...(plan.quizzes > 1 ? [{ label: 'Subtopics reached (whole batch)', value: `${plan.subtopics_reached}` }] : []),
+                    { label: 'Questions in this quiz', value: shown.questions, tone: 'primary' },
+                    { label: 'Easy', value: shown.by_difficulty.Easy, tone: 'success' },
+                    { label: 'Medium', value: shown.by_difficulty.Medium, tone: 'warning' },
+                    { label: 'Hard', value: shown.by_difficulty.Hard, tone: 'danger' },
+                  ]}
+                />
+
+                {plan.quizzes > 1 && (
+                  <div className="pp-inline" style={{ flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+                    {plan.quiz_plans.map((qp) => (
+                      <button
+                        key={qp.quiz}
+                        type="button"
+                        className={`btn btn-sm ${qp.quiz === planShownQuiz ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => setPlanShownQuiz(qp.quiz)}
+                      >
+                        Quiz #{qp.quiz}
+                      </button>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+                  </div>
+                )}
+
+                <div className="pp-inline" style={{ marginBottom: '0.4rem' }}>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setCollapsedPreviewTopics(new Set())}>Expand all</button>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setCollapsedPreviewTopics(new Set(
+                      [...new Set(shown.slots.map((slot) => `${slot.sub_subject || ''}|${slot.topic}`))]
+                    ))}
+                  >
+                    Collapse all
+                  </button>
+                </div>
+
+                <div className="data-table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr><th>Sub-subject · Topic · Subtopic</th><th>Difficulty</th><th className="num">Questions</th></tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const byTopic = [];
+                        const index = new Map();
+                        for (const slot of shown.slots) {
+                          const key = `${slot.sub_subject || ''}|${slot.topic}`;
+                          if (!index.has(key)) {
+                            index.set(key, byTopic.length);
+                            byTopic.push({ key, sub_subject: slot.sub_subject, topic: slot.topic, rows: [] });
+                          }
+                          byTopic[index.get(key)].rows.push(slot);
+                        }
+                        return byTopic.map((group) => {
+                          const collapsed = collapsedPreviewTopics.has(group.key);
+                          const total = group.rows.reduce((sum, r) => sum + r.count, 0);
+                          return (
+                            <React.Fragment key={group.key}>
+                              <tr>
+                                <td style={{ fontWeight: 700 }}>
+                                  <button
+                                    type="button"
+                                    className="collapse-btn"
+                                    style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}
+                                    onClick={() => togglePreviewTopic(group.key)}
+                                    title={collapsed ? 'Expand' : 'Collapse'}
+                                  >
+                                    ▾
+                                  </button>
+                                  {group.sub_subject && <span className="muted" style={{ marginRight: 6 }}>{group.sub_subject} ·</span>}
+                                  {group.topic}
+                                  <span className="muted" style={{ fontWeight: 400, marginLeft: 6, fontSize: '0.78rem' }}>
+                                    ({group.rows.length} subtopic{group.rows.length === 1 ? '' : 's'})
+                                  </span>
+                                </td>
+                                <td />
+                                <td className="num">{total}</td>
+                              </tr>
+                              {!collapsed && group.rows.map((slot, i) => (
+                                <tr key={i}>
+                                  <td style={{ paddingLeft: '2rem', color: 'var(--text-secondary)' }}>{slot.subtopic}</td>
+                                  <td><DifficultyBadge level={slot.difficulty} /></td>
+                                  <td className="num">{slot.count}</td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            );
+          })()}
         </StepCard>
       )}
 

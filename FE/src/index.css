@@ -2177,6 +2177,22 @@ input, select, textarea {
   background: var(--danger-bg);
 }
 
+.collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.38rem;
+  margin-right: 6px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: transform var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+
+.collapse-btn:hover {
+  color: var(--primary);
+  background: var(--primary-bg, rgba(59, 130, 246, 0.1));
+}
+
 .pp-empty {
   padding: 1.75rem 1rem;
   text-align: center;
