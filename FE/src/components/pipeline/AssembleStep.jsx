@@ -199,6 +199,15 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
         </div>
       </Section>
 
+      <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850/60 border border-charcoal-200 dark:border-charcoal-800">
+        <span className="text-xs text-charcoal-500 dark:text-charcoal-400">
+          {`${quizzes} quiz${quizzes === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'} using the "${blueprintName}" blueprint, ${duration} min, +${posMarks} / −${negMarks}.`}
+        </span>
+        <button type="button" className={BTN_PRIMARY} onClick={assemble} disabled={busy}>
+          {busy ? <Busy label="Assembling..." /> : `Assemble ${quizzes} quiz${quizzes === 1 ? '' : 'zes'}`}
+        </button>
+      </div>
+
       <Section
         title="Question bank"
         aside={
