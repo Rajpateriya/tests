@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { EyeIcon, TargetIcon, TrashIcon } from '../Icons';
-import { Alert, Busy, DifficultyBadge, DifficultyMix, Empty, Field, Section, Segmented, Stats, StepCard } from './PipelineUI';
+import { Alert, Busy, Dialog, DifficultyBadge, DifficultyMix, Empty, Field, Section, Segmented, Stats, StepCard } from './PipelineUI';
 import { JsonPanel } from './JsonPanel';
 import { BLUEPRINT_EXAMPLE, DEFAULT_MIX, cleanBlueprint, errorText, mixTotal, validateBlueprintJson } from './pipelineUtils';
 
@@ -76,18 +76,27 @@ export const BlueprintStep = ({ subject }) => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  // A subject can hold several blueprints — e.g. "Part A" over 5 topics and
+  // "Part B" over the other 5 — each with its own size, weights and mix.
+  const [names, setNames] = useState([]);
+  const [activeName, setActiveName] = useState('Default');
+
   const [planSub, setPlanSub] = useState('');
   const [planTotal, setPlanTotal] = useState('');
   const [plan, setPlan] = useState(null);
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (name = activeName) => {
     setLoading(true);
     setError('');
     setPlan(null);
     try {
-      const bp = await api.generation.getBlueprint(subject);
+      const list = await api.generation.listBlueprints(subject).catch(() => []);
+      setNames(list.map((b) => b.name));
+      const wanted = list.some((b) => b.name === name) ? name : (list[0]?.name || 'Default');
+      setActiveName(wanted);
+      const bp = await api.generation.getBlueprint(subject, wanted);
       setBlueprint(bp);
       setMode(bp.total_questions ? 'weights' : 'counts');
       setDirty(false);
@@ -96,11 +105,62 @@ export const BlueprintStep = ({ subject }) => {
     } finally {
       setLoading(false);
     }
+    // activeName is read as the default argument only; re-running on every rename
+    // would fight the user mid-edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subject]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load('Default');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subject]);
+
+  // { kind: 'new' | 'delete' | 'switch', to?: string }
+  const [dialog, setDialog] = useState(null);
+  const [dialogError, setDialogError] = useState('');
+  const [dialogBusy, setDialogBusy] = useState(false);
+
+  const closeDialog = () => {
+    setDialog(null);
+    setDialogError('');
+    setDialogBusy(false);
+  };
+
+  const switchBlueprint = (name) => {
+    if (name === activeName) return;
+    if (dirty) return setDialog({ kind: 'switch', to: name });
+    setMessage('');
+    load(name);
+  };
+
+  const createBlueprint = (name) => {
+    if (names.some((n) => n.toLowerCase() === name.toLowerCase()))
+      return setDialogError(`"${subject}" already has a blueprint named "${name}".`);
+    closeDialog();
+    setError('');
+    setActiveName(name);
+    setBlueprint({ subject, name, total_questions: null, difficulty: DEFAULT_MIX, sections: [] });
+    setMode('counts');
+    setDirty(true);
+    setPlan(null);
+    setMessage(`New blueprint "${name}" — click Build from structure, remove the topics it should not cover, then Save.`);
+  };
+
+  const removeBlueprint = async () => {
+    setDialogBusy(true);
+    setDialogError('');
+    try {
+      await api.generation.deleteBlueprint(subject, activeName);
+      const gone = activeName;
+      closeDialog();
+      setDirty(false);
+      setMessage(`Deleted blueprint "${gone}".`);
+      load('Default');
+    } catch (err) {
+      setDialogError(errorText(err));
+      setDialogBusy(false);
+    }
+  };
 
   const edit = (next) => {
     setBlueprint(next);
@@ -145,11 +205,14 @@ export const BlueprintStep = ({ subject }) => {
     if (mixTotal(blueprint.difficulty) !== 100) return setError('Difficulty mix must add up to 100%.');
     setSaving(true);
     try {
-      const saved = await api.generation.saveBlueprint(cleanBlueprint({ ...blueprint, subject }, mode));
+      const saved = await api.generation.saveBlueprint(
+        cleanBlueprint({ ...blueprint, subject, name: activeName }, mode)
+      );
       setBlueprint(saved);
+      setNames((prev) => (prev.includes(activeName) ? prev : [...prev, activeName].sort()));
       setDirty(false);
       setPlan(null);
-      setMessage('Blueprint saved.');
+      setMessage(`Blueprint "${activeName}" saved.`);
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -164,6 +227,7 @@ export const BlueprintStep = ({ subject }) => {
       setPlan(await api.generation.planBlueprint(subject, {
         sub_subject: planSub || null,
         questions_per_quiz: planTotal ? Number(planTotal) : null,
+        blueprint_name: activeName,
       }));
     } catch (err) {
       setPlanError(errorText(err));
@@ -185,6 +249,29 @@ export const BlueprintStep = ({ subject }) => {
         subtitle="The shape of one quiz: how many questions come from each subtopic and the easy / medium / hard mix."
         actions={
           <>
+            <div className="pp-inline">
+              <select
+                className="form-input sm"
+                style={{ maxWidth: 200 }}
+                title="Which blueprint of this subject to edit"
+                value={activeName}
+                onChange={(e) => switchBlueprint(e.target.value)}
+              >
+                {(names.includes(activeName) ? names : [...names, activeName]).map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setDialog({ kind: 'new' })}>New</button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setDialog({ kind: 'delete' })}
+                disabled={!names.includes(activeName) || names.length < 2}
+                title={names.length < 2 ? "A subject needs at least one blueprint" : `Delete "${activeName}"`}
+              >
+                Delete
+              </button>
+            </div>
             <div className="pp-inline">
               <button type="button" className="btn btn-secondary btn-sm" onClick={buildStarter}>Build from structure</button>
               <input type="number" min="1" className="form-input sm pp-num" style={{ width: 56 }} title="Questions per subtopic in the draft"
@@ -388,6 +475,45 @@ export const BlueprintStep = ({ subject }) => {
           )}
         </StepCard>
       )}
+
+      <Dialog
+        open={dialog?.kind === 'new'}
+        title="New blueprint"
+        body={`A second blueprint for ${subject} — give it the topics it should cover, its own size, weights and difficulty mix. Existing blueprints are untouched.`}
+        prompt
+        placeholder="e.g. Part A"
+        confirmLabel="Create"
+        error={dialogError}
+        onConfirm={createBlueprint}
+        onClose={closeDialog}
+      />
+
+      <Dialog
+        open={dialog?.kind === 'delete'}
+        title={`Delete "${activeName}"?`}
+        body={`This removes the blueprint from ${subject}. Tests already assembled from it are kept.`}
+        confirmLabel="Delete"
+        danger
+        busy={dialogBusy}
+        error={dialogError}
+        onConfirm={removeBlueprint}
+        onClose={closeDialog}
+      />
+
+      <Dialog
+        open={dialog?.kind === 'switch'}
+        title="Discard unsaved changes?"
+        body={`"${activeName}" has edits that have not been saved. Switching to "${dialog?.to}" will lose them.`}
+        confirmLabel="Discard and switch"
+        danger
+        onConfirm={() => {
+          const to = dialog.to;
+          closeDialog();
+          setMessage('');
+          load(to);
+        }}
+        onClose={closeDialog}
+      />
     </>
   );
 };

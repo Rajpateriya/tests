@@ -66,6 +66,7 @@ export function cleanBlueprint(blueprint, mode) {
   };
   return {
     subject: blueprint.subject,
+    name: blueprint.name || 'Default',
     total_questions: weights ? Number(blueprint.total_questions) || null : null,
     difficulty: blueprint.difficulty || DEFAULT_MIX,
     sections: blueprint.sections.map((s) =>

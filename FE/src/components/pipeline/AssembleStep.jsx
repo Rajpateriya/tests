@@ -24,6 +24,8 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
   const [bankError, setBankError] = useState('');
   const [bankLoading, setBankLoading] = useState(false);
   const [subSubject, setSubSubject] = useState('');
+  const [blueprintNames, setBlueprintNames] = useState([]);
+  const [blueprintName, setBlueprintName] = useState('Default');
   const [quizzes, setQuizzes] = useState(2);
   const [perQuiz, setPerQuiz] = useState('');
   const [maxReuse, setMaxReuse] = useState(1);
@@ -51,6 +53,19 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
     loadBank();
   }, [loadBank]);
 
+  useEffect(() => {
+    let cancelled = false;
+    api.generation.listBlueprints(subject)
+      .then((list) => {
+        if (cancelled) return;
+        const found = list.map((b) => b.name);
+        setBlueprintNames(found);
+        setBlueprintName((prev) => (found.includes(prev) ? prev : found[0] || 'Default'));
+      })
+      .catch(() => { if (!cancelled) setBlueprintNames([]); });
+    return () => { cancelled = true; };
+  }, [subject]);
+
   const subSubjects = taxonomyDoc?.sub_subjects || [];
 
   const assemble = async () => {
@@ -61,6 +76,7 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
       const res = await api.generation.assemble({
         target_exam: targetExam,
         subject,
+        blueprint_name: blueprintName || null,
         sub_subject: subSubject || null,
         quizzes,
         questions_per_quiz: perQuiz ? Number(perQuiz) : null,
@@ -88,7 +104,7 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
       title="Assemble quizzes"
       tag={`${subject} · ${targetExam}`}
       subtitle="Builds ready-to-take tests from the bank, each following the saved blueprint exactly. Least-used questions go first; only complete quizzes are created."
-      footerNote={`${quizzes} quiz${quizzes === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'}, ${duration} min, +${posMarks} / −${negMarks}.`}
+      footerNote={`${quizzes} quiz${quizzes === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'} using the "${blueprintName}" blueprint, ${duration} min, +${posMarks} / −${negMarks}.`}
       footer={
         <>
           {result?.created > 0 && onGoToMocks && (
@@ -160,6 +176,18 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
 
       <Section title="What to build">
         <div className="pp-grid cols-4">
+          <Field label="Blueprint" hint={blueprintNames.length > 1 ? `${blueprintNames.length} saved for this subject` : 'Which saved blueprint to follow'}>
+            <select
+              className="form-input"
+              value={blueprintName}
+              onChange={(e) => setBlueprintName(e.target.value)}
+              disabled={blueprintNames.length < 2}
+            >
+              {(blueprintNames.length ? blueprintNames : [blueprintName]).map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </Field>
           <Field label="Sub-subject">
             <select className="form-input" value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
               <option value="">Whole subject</option>
@@ -234,15 +262,19 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
           {result.substituted?.length > 0 && (
             <>
               <div className="pp-section-title" style={{ marginTop: '1rem' }}>
-                <span>Filled from another difficulty</span>
+                <span>Filled from elsewhere</span>
               </div>
               <Alert type="info">
-                Where a subtopic had no unused questions at the blueprint's difficulty, the nearest other difficulty of the same subtopic was used instead, so the quizzes keep their size and topics. Their difficulty mix is slightly different from the blueprint.
+                Where a subtopic had no unused questions left, the quiz was kept at full size by
+                falling back — first to the same subtopic's nearest difficulty, then to a sibling
+                subtopic under the same topic, and only as a last resort to another topic. The
+                "Taken from" column shows which. Difficulty mix, and for borrowed rows the topic
+                balance, differ slightly from the blueprint.
               </Alert>
               <div className="data-table-wrap" style={{ marginTop: '0.6rem' }}>
                 <table className="data-table">
                   <thead>
-                    <tr><th>Topic</th><th>Subtopic</th><th>Wanted</th><th>Used instead</th><th className="num">Questions</th></tr>
+                    <tr><th>Topic</th><th>Subtopic</th><th>Wanted</th><th>Used instead</th><th>Taken from</th><th className="num">Questions</th></tr>
                   </thead>
                   <tbody>
                     {result.substituted.map((s, i) => (
@@ -251,6 +283,11 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
                         <td>{s.subtopic}</td>
                         <td><DifficultyBadge level={s.wanted} /></td>
                         <td><DifficultyBadge level={s.used} /></td>
+                        <td className={s.borrowed_from ? '' : 'muted'}>
+                          {s.borrowed_topic
+                            ? `${s.borrowed_topic} / ${s.borrowed_from}`
+                            : s.borrowed_from || 'same subtopic'}
+                        </td>
                         <td className="num">{s.count}</td>
                       </tr>
                     ))}

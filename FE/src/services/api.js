@@ -569,7 +569,17 @@ export const api = {
         `/generation/bank/${encodeURIComponent(subject)}${targetExam ? `?target_exam=${encodeURIComponent(targetExam)}` : ''}`
       ),
 
-    getBlueprint: (subject) => pipelineRequest(`/generation/blueprint/${encodeURIComponent(subject)}`),
+    getBlueprint: (subject, name) =>
+      pipelineRequest(
+        `/generation/blueprint/${encodeURIComponent(subject)}${name ? `?name=${encodeURIComponent(name)}` : ''}`
+      ),
+    listBlueprints: (subject) =>
+      pipelineRequest(`/generation/blueprint/${encodeURIComponent(subject)}/list`),
+    deleteBlueprint: (subject, name) =>
+      pipelineRequest(
+        `/generation/blueprint/${encodeURIComponent(subject)}?name=${encodeURIComponent(name)}`,
+        { method: 'DELETE' }
+      ),
     starterBlueprint: (subject, defaultCount = 2) =>
       pipelineRequest(
         `/generation/blueprint/${encodeURIComponent(subject)}/generate-starter?default_count=${defaultCount}`,

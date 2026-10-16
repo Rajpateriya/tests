@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { UploadIcon } from '../Icons';
 import { LEVELS, mixTotal } from './pipelineUtils';
 
@@ -90,6 +90,74 @@ export const Busy = ({ label }) => (
 );
 
 export const Empty = ({ children }) => <div className="pp-empty">{children}</div>;
+
+/** In-app replacement for window.prompt / window.confirm.
+ *  Pass `prompt` for a text field; omit it for a plain confirm. */
+export const Dialog = ({
+  open,
+  title,
+  body,
+  prompt,
+  placeholder,
+  initialValue = '',
+  confirmLabel = 'OK',
+  danger = false,
+  error = '',
+  busy = false,
+  onConfirm,
+  onClose,
+}) => {
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    if (open) setValue(initialValue);
+  }, [open, initialValue]);
+
+  if (!open) return null;
+  const submit = () => {
+    if (prompt && !value.trim()) return;
+    onConfirm(value.trim());
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={() => !busy && onClose()}>
+      <div className="modal-dialog-box pp" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>{title}</h3>
+          <button type="button" onClick={onClose} style={{ fontSize: '1.1rem', color: 'var(--text-muted)' }} aria-label="Close">✕</button>
+        </div>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+          {body && <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{body}</p>}
+          {prompt && (
+            <input
+              autoFocus
+              className="form-input"
+              placeholder={placeholder}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submit();
+                if (e.key === 'Escape') onClose();
+              }}
+            />
+          )}
+          <Alert type="error">{error}</Alert>
+        </div>
+        <div className="modal-footer">
+          <button type="button" className="btn btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
+          <button
+            type="button"
+            className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
+            onClick={submit}
+            disabled={busy || (prompt && !value.trim())}
+          >
+            {busy ? <Busy label="Working..." /> : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const DifficultyBadge = ({ level }) => (
   <span className={`badge badge-${(level || 'medium').toLowerCase()}`}>{level}</span>
