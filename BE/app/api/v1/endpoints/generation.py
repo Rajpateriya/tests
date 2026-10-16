@@ -369,7 +369,8 @@ async def plan_blueprint(
     req: BlueprintPlanRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Preview one quiz's exact slots (subtopic x difficulty x count) — nothing is created."""
+    """Preview a batch of quizzes — each one's exact slots (subtopic x difficulty x count)
+    plus which quizzes every subtopic lands in. Nothing is created."""
     plan = await QuizBlueprintService(db).plan(
         subject,
         sub_subject=req.sub_subject,
@@ -377,9 +378,14 @@ async def plan_blueprint(
         questions_per_quiz=req.questions_per_quiz,
         difficulty=req.difficulty.model_dump() if req.difficulty else None,
         name=req.blueprint_name,
-        rotation=req.rotation,
+        quizzes=req.quizzes,
     )
-    return APIResponse(success=True, message=f"{plan['questions_per_quiz']} questions per quiz", data=plan)
+    return APIResponse(
+        success=True,
+        message=f"{plan['questions_per_quiz']} questions per quiz, "
+                f"{plan['subtopics_reached']} subtopics reached across {plan['quizzes']} quiz(zes)",
+        data=plan,
+    )
 
 
 # ── Assembly ──────────────────────────────────────────────────────

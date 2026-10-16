@@ -83,9 +83,9 @@ class BlueprintPlanRequest(BaseModel):
     blueprint_name: Optional[str] = Field(
         default=None, description="Which of the subject's blueprints to plan; omit for 'Default'"
     )
-    rotation: int = Field(
-        default=0, ge=0,
-        description="Which quiz in a batch to preview; successive values pick different subtopics",
+    quizzes: int = Field(
+        default=1, ge=1, le=200,
+        description="How many consecutive quizzes to plan; each rotates onto different subtopics",
     )
 
 

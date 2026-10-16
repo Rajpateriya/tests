@@ -164,20 +164,45 @@ class QuizBlueprintService:
         questions_per_quiz: Optional[int] = None,
         difficulty: Optional[Dict[str, int]] = None,
         name: Optional[str] = None,
-        rotation: int = 0,
+        quizzes: int = 1,
     ) -> Dict[str, Any]:
+        """Plan `quizzes` consecutive quizzes. Each one rotates onto a different set of
+        subtopics, so a batch is the only way to see which subtopics the blueprint
+        actually reaches — one quiz alone always looks like a fixed list."""
         blueprint = await self.require_blueprint(subject, name)
-        slots = plan_quiz(blueprint, sub_subject, topic, questions_per_quiz, difficulty, rotation)
-        by_difficulty = {level.capitalize(): 0 for level in LEVELS}
-        for slot in slots:
-            by_difficulty[slot["difficulty"]] += slot["count"]
+
+        quiz_plans, coverage = [], {}
+        for n in range(quizzes):
+            slots = plan_quiz(blueprint, sub_subject, topic, questions_per_quiz, difficulty, n)
+            mix = {level.capitalize(): 0 for level in LEVELS}
+            for slot in slots:
+                mix[slot["difficulty"]] += slot["count"]
+                key = (slot["sub_subject"], slot["topic"], slot["subtopic"])
+                entry = coverage.setdefault(key, {
+                    "sub_subject": slot["sub_subject"], "topic": slot["topic"],
+                    "subtopic": slot["subtopic"], "quizzes": [], "questions": 0,
+                })
+                if n + 1 not in entry["quizzes"]:
+                    entry["quizzes"].append(n + 1)
+                entry["questions"] += slot["count"]
+            quiz_plans.append({
+                "quiz": n + 1,
+                "questions": sum(slot["count"] for slot in slots),
+                "by_difficulty": mix,
+                "slots": slots,
+            })
+
+        first = quiz_plans[0]
         return {
             "subject": subject,
             "blueprint": blueprint.get("name", DEFAULT_BLUEPRINT_NAME),
             "sub_subject": sub_subject,
             "topic": topic,
-            "rotation": rotation,
-            "questions_per_quiz": sum(slot["count"] for slot in slots),
-            "by_difficulty": by_difficulty,
-            "slots": slots,
+            "quizzes": quizzes,
+            "questions_per_quiz": first["questions"],
+            "by_difficulty": first["by_difficulty"],
+            "slots": first["slots"],
+            "quiz_plans": quiz_plans,
+            "coverage": sorted(coverage.values(), key=lambda c: (c["topic"], c["subtopic"])),
+            "subtopics_reached": len(coverage),
         }
