@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { EyeIcon, TargetIcon, TrashIcon } from '../Icons';
-import { Alert, Busy, Dialog, DifficultyBadge, DifficultyMix, Empty, Field, Picker, Section, Segmented, Stats, StepCard } from './PipelineUI';
+import {
+  Alert, BTN_OUTLINE, BTN_OUTLINE_SM, BTN_PRIMARY, Busy, CollapseButton, Dialog,
+  DifficultyBadge, DifficultyMix, Empty, Field, INPUT_CLS, Picker, Section, Segmented, Stats, StepCard,
+} from './PipelineUI';
 import { JsonPanel } from './JsonPanel';
 import { BLUEPRINT_EXAMPLE, DEFAULT_MIX, cleanBlueprint, errorText, mixTotal, validateBlueprintJson } from './pipelineUtils';
 
@@ -59,7 +62,7 @@ const NumberCell = ({ value, onChange, min = 1, step = 1, placeholder = '1' }) =
     type="number"
     min={min}
     step={step}
-    className="form-input sm pp-num"
+    className={`${INPUT_CLS} w-24 py-1.5`}
     value={value ?? ''}
     placeholder={placeholder}
     onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
@@ -332,10 +335,9 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
         subtitle="The shape of one quiz: how many questions come from each subtopic and the easy / medium / hard mix."
         actions={
           <>
-            <div className="pp-inline">
+            <div className="flex items-center gap-2 flex-wrap">
               <select
-                className="form-input sm"
-                style={{ maxWidth: 200 }}
+                className={`${INPUT_CLS} w-auto max-w-[200px] py-1.5`}
                 title="Which blueprint of this subject to edit"
                 value={activeName}
                 onChange={(e) => switchBlueprint(e.target.value)}
@@ -344,10 +346,10 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => setDialog({ kind: 'new' })}>New</button>
+              <button type="button" className={BTN_OUTLINE_SM} onClick={() => setDialog({ kind: 'new' })}>New</button>
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className={BTN_OUTLINE_SM}
                 onClick={() => setDialog({ kind: 'delete' })}
                 disabled={!names.includes(activeName) || names.length < 2}
                 title={names.length < 2 ? "A subject needs at least one blueprint" : `Delete "${activeName}"`}
@@ -355,11 +357,11 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                 Delete
               </button>
             </div>
-            <div className="pp-inline">
-              <button type="button" className="btn btn-secondary btn-sm" onClick={buildStarter}>Build from structure</button>
-              <input type="number" min="1" className="form-input sm pp-num" style={{ width: 56 }} title="Questions per subtopic in the draft"
+            <div className="flex items-center gap-2 flex-wrap">
+              <button type="button" className={BTN_OUTLINE_SM} onClick={buildStarter}>Build from structure</button>
+              <input type="number" min="1" className={`${INPUT_CLS} w-16 py-1.5`} title="Questions per subtopic in the draft"
                 value={defaultCount} onChange={(e) => setDefaultCount(Math.max(1, parseInt(e.target.value, 10) || 1))} />
-              <span className="pp-hint" style={{ marginTop: 0 }}>per subtopic</span>
+              <span className="text-[11px] text-charcoal-400 dark:text-charcoal-500">per subtopic</span>
             </div>
             <JsonPanel
               title="Blueprint"
@@ -405,9 +407,13 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
         footer={
           blueprint && (
             <>
-              {dirty && <span className="badge badge-medium">Unsaved changes</span>}
-              <button type="button" className="btn btn-outline" onClick={load} disabled={saving || !dirty}>Discard</button>
-              <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
+              {dirty && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[11px] font-bold">
+                  Unsaved changes
+                </span>
+              )}
+              <button type="button" className={BTN_OUTLINE} onClick={load} disabled={saving || !dirty}>Discard</button>
+              <button type="button" className={BTN_PRIMARY} onClick={save} disabled={saving}>
                 {saving ? <Busy label="Saving..." /> : 'Save blueprint'}
               </button>
             </>
@@ -424,9 +430,9 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
 
         {!loading && blueprint && (
           <>
-            <div className="pp-grid cols-2" style={{ alignItems: 'start' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
               <Section title="Quiz size">
-                <div className="pp-grid cols-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Size by" hint={weights ? 'Set a total and relative weights' : 'Set the exact number per subtopic'}>
                     <Segmented
                       value={mode}
@@ -438,8 +444,7 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                     <input
                       type="number"
                       min="1"
-                      className="form-input"
-                      style={{ maxWidth: 200 }}
+                      className={`${INPUT_CLS} max-w-[200px]`}
                       value={perQuiz ?? ''}
                       disabled={!weights}
                       onChange={(e) => edit({ ...blueprint, total_questions: e.target.value === '' ? null : Number(e.target.value) })}
@@ -456,11 +461,11 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
             <Section
               title="Breakdown"
               aside={
-                <div className="pp-inline">
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setCollapsedTopics(new Set())}>Expand all</button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button type="button" className={BTN_OUTLINE_SM} onClick={() => setCollapsedTopics(new Set())}>Expand all</button>
                   <button
                     type="button"
-                    className="btn btn-outline btn-sm"
+                    className={BTN_OUTLINE_SM}
                     onClick={() => setCollapsedTopics(new Set(
                       blueprint.sections.flatMap((s, si) => s.topics.map((t) => `${si}-${t.topic}`))
                     ))}
@@ -470,23 +475,29 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                 </div>
               }
             >
-              <div className="data-table-wrap">
-                <table className="data-table">
-                  <thead>
+              <div className="overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                     <tr>
-                      <th>Sub-subject · Topic · Subtopic</th>
-                      <th style={{ width: 130 }}>{weights ? 'Weight' : 'Questions'}</th>
-                      <th style={{ width: 48 }} />
+                      <th className="px-3 py-2.5">Sub-subject · Topic · Subtopic</th>
+                      <th className="px-3 py-2.5 w-[130px]">{weights ? 'Weight' : 'Questions'}</th>
+                      <th className="px-3 py-2.5 w-12" />
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800">
                     {blueprint.sections.map((s, si) => (
                       <React.Fragment key={`s${si}`}>
-                        <tr className="group-row">
-                          <td>
-                            <div className="pp-inline" style={{ alignItems: 'center' }}>
-                              <span className="badge badge-subject">{s.sub_subject || 'Whole subject'}</span>
-                              {s.difficulty && <span className="badge badge-medium" style={{ marginLeft: 6 }}>custom mix</span>}
+                        <tr className="bg-charcoal-50 dark:bg-charcoal-850/80 font-extrabold">
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 text-[10px] font-extrabold uppercase tracking-wider">
+                                {s.sub_subject || 'Whole subject'}
+                              </span>
+                              {s.difficulty && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 text-[11px] font-bold">
+                                  custom mix
+                                </span>
+                              )}
                               {availableTopics(si).length > 0 && (
                                 <Picker
                                   width={260}
@@ -497,32 +508,30 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                               )}
                             </div>
                           </td>
-                          <td>{weights && <NumberCell value={s.weight} step={0.5} min={0.1} onChange={(v) => patchSection(si, { weight: v })} />}</td>
-                          <td><button type="button" className="icon-btn" title="Remove section" onClick={() => removeSection(si)}><TrashIcon size={15} /></button></td>
+                          <td className="px-3 py-2">{weights && <NumberCell value={s.weight} step={0.5} min={0.1} onChange={(v) => patchSection(si, { weight: v })} />}</td>
+                          <td className="px-3 py-2">
+                            <button type="button" className="p-1.5 rounded-lg text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors" title="Remove section" onClick={() => removeSection(si)}><TrashIcon size={15} /></button>
+                          </td>
                         </tr>
                         {s.topics.map((t, ti) => {
                           const key = `${si}-${t.topic}`;
                           const collapsed = collapsedTopics.has(key);
                           return (
                             <React.Fragment key={`t${si}-${t.topic}`}>
-                              <tr>
-                                <td style={{ paddingLeft: '1.6rem', fontWeight: 700 }}>
-                                  <div className="pp-inline" style={{ alignItems: 'center' }}>
-                                    <button
-                                      type="button"
-                                      className="collapse-btn"
-                                      style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}
-                                      onClick={() => toggleTopic(key)}
-                                      title={collapsed ? 'Expand' : 'Collapse'}
-                                    >
-                                      ▾
-                                    </button>
+                              <tr className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                                <td className="px-3 py-2 pl-7 font-bold">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <CollapseButton collapsed={collapsed} onClick={() => toggleTopic(key)} title={collapsed ? 'Expand' : 'Collapse'} />
                                     <span>
                                       {t.topic}
-                                      <span className="muted" style={{ fontWeight: 400, marginLeft: 6, fontSize: '0.78rem' }}>
+                                      <span className="font-normal ml-1.5 text-[0.78rem] text-charcoal-500 dark:text-charcoal-400">
                                         ({t.subtopics.length})
                                       </span>
-                                      {t.difficulty && <span className="badge badge-medium" style={{ marginLeft: 6 }}>custom mix</span>}
+                                      {t.difficulty && (
+                                        <span className="ml-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 text-[11px] font-bold">
+                                          custom mix
+                                        </span>
+                                      )}
                                     </span>
                                     {availableSubtopics(si, ti).length > 0 && (
                                       <Picker
@@ -534,20 +543,24 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                                     )}
                                   </div>
                                 </td>
-                                <td>{weights && <NumberCell value={t.weight} step={0.5} min={0.1} onChange={(v) => patchTopic(si, ti, { weight: v })} />}</td>
-                                <td><button type="button" className="icon-btn" title="Remove topic" onClick={() => removeTopic(si, ti)}><TrashIcon size={15} /></button></td>
+                                <td className="px-3 py-2">{weights && <NumberCell value={t.weight} step={0.5} min={0.1} onChange={(v) => patchTopic(si, ti, { weight: v })} />}</td>
+                                <td className="px-3 py-2">
+                                  <button type="button" className="p-1.5 rounded-lg text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors" title="Remove topic" onClick={() => removeTopic(si, ti)}><TrashIcon size={15} /></button>
+                                </td>
                               </tr>
                               {!collapsed && t.subtopics.map((st, sti) => (
-                                <tr key={`st${si}-${t.topic}-${st.subtopic}`}>
-                                  <td style={{ paddingLeft: '3.1rem', color: 'var(--text-secondary)' }}>{st.subtopic}</td>
-                                  <td>
+                                <tr key={`st${si}-${t.topic}-${st.subtopic}`} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                                  <td className="px-3 py-2 pl-12 text-charcoal-500 dark:text-charcoal-400">{st.subtopic}</td>
+                                  <td className="px-3 py-2">
                                     {weights ? (
                                       <NumberCell value={st.weight} step={0.5} min={0.1} onChange={(v) => patchSubtopic(si, ti, sti, { weight: v })} />
                                     ) : (
                                       <NumberCell value={st.count} onChange={(v) => patchSubtopic(si, ti, sti, { count: v })} />
                                     )}
                                   </td>
-                                  <td><button type="button" className="icon-btn" title="Remove subtopic" onClick={() => removeSubtopic(si, ti, sti)}><TrashIcon size={15} /></button></td>
+                                  <td className="px-3 py-2">
+                                    <button type="button" className="p-1.5 rounded-lg text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors" title="Remove subtopic" onClick={() => removeSubtopic(si, ti, sti)}><TrashIcon size={15} /></button>
+                                  </td>
                                 </tr>
                               ))}
                             </React.Fragment>
@@ -559,7 +572,7 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                 </table>
               </div>
               {availableSections().length > 0 && (
-                <div className="pp-inline" style={{ marginTop: '0.6rem' }}>
+                <div className="flex items-center gap-2 flex-wrap mt-2.5">
                   <Picker
                     width={260}
                     placeholder="Add sub-subject section…"
@@ -580,28 +593,28 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
           tag="uses the saved blueprint"
           subtitle="The exact subtopic × difficulty breakdown of a single quiz. Nothing is created."
           footer={
-            <button type="button" className="btn btn-secondary" onClick={preview} disabled={planning || dirty}>
+            <button type="button" className={BTN_OUTLINE} onClick={preview} disabled={planning || dirty}>
               {planning ? <Busy label="Planning..." /> : dirty ? 'Save first to preview' : 'Preview'}
             </button>
           }
         >
           <Alert type="error">{planError}</Alert>
-          <div className="pp-grid cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Sub-subject">
-              <select className="form-input" value={planSub} onChange={(e) => setPlanSub(e.target.value)}>
+              <select className={INPUT_CLS} value={planSub} onChange={(e) => setPlanSub(e.target.value)}>
                 <option value="">Whole blueprint</option>
                 {blueprint.sections.filter((s) => s.sub_subject).map((s) => <option key={s.sub_subject} value={s.sub_subject}>{s.sub_subject} only</option>)}
               </select>
             </Field>
             <Field label="Questions per quiz" hint="Empty = blueprint size">
-              <input type="number" min="1" className="form-input" value={planTotal} placeholder={String(perQuiz || '')}
+              <input type="number" min="1" className={INPUT_CLS} value={planTotal} placeholder={String(perQuiz || '')}
                 onChange={(e) => setPlanTotal(e.target.value)} />
             </Field>
             <Field
               label="Quizzes to preview"
               hint="Each quiz rotates onto a different set of subtopics — plan the whole batch to see real coverage"
             >
-              <input type="number" min="1" max="200" className="form-input" value={planQuizzes}
+              <input type="number" min="1" max="200" className={INPUT_CLS} value={planQuizzes}
                 onChange={(e) => setPlanQuizzes(Math.max(1, parseInt(e.target.value, 10) || 1))} />
             </Field>
           </div>
@@ -621,12 +634,16 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                 />
 
                 {plan.quizzes > 1 && (
-                  <div className="pp-inline" style={{ flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+                  <div className="flex items-center gap-2 flex-wrap mb-2.5">
                     {plan.quiz_plans.map((qp) => (
                       <button
                         key={qp.quiz}
                         type="button"
-                        className={`btn btn-sm ${qp.quiz === planShownQuiz ? 'btn-primary' : 'btn-outline'}`}
+                        className={
+                          qp.quiz === planShownQuiz
+                            ? 'px-3 py-1.5 rounded-lg text-xs font-extrabold bg-institutional-600 text-white shadow-sm'
+                            : 'px-3 py-1.5 rounded-lg text-xs font-bold text-charcoal-600 dark:text-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors'
+                        }
                         onClick={() => setPlanShownQuiz(qp.quiz)}
                       >
                         Quiz #{qp.quiz}
@@ -635,11 +652,11 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                   </div>
                 )}
 
-                <div className="pp-inline" style={{ marginBottom: '0.4rem' }}>
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setCollapsedPreviewTopics(new Set())}>Expand all</button>
+                <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                  <button type="button" className={BTN_OUTLINE_SM} onClick={() => setCollapsedPreviewTopics(new Set())}>Expand all</button>
                   <button
                     type="button"
-                    className="btn btn-outline btn-sm"
+                    className={BTN_OUTLINE_SM}
                     onClick={() => setCollapsedPreviewTopics(new Set(
                       [...new Set(shown.slots.map((slot) => `${slot.sub_subject || ''}|${slot.topic}`))]
                     ))}
@@ -648,12 +665,16 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                   </button>
                 </div>
 
-                <div className="data-table-wrap">
-                  <table className="data-table">
-                    <thead>
-                      <tr><th>Sub-subject · Topic · Subtopic</th><th>Difficulty</th><th className="num">Questions</th></tr>
+                <div className="overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="px-3 py-2.5">Sub-subject · Topic · Subtopic</th>
+                        <th className="px-3 py-2.5">Difficulty</th>
+                        <th className="px-3 py-2.5 text-right">Questions</th>
+                      </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800">
                       {(() => {
                         const byTopic = [];
                         const index = new Map();
@@ -670,31 +691,23 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                           const total = group.rows.reduce((sum, r) => sum + r.count, 0);
                           return (
                             <React.Fragment key={group.key}>
-                              <tr>
-                                <td style={{ fontWeight: 700 }}>
-                                  <button
-                                    type="button"
-                                    className="collapse-btn"
-                                    style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}
-                                    onClick={() => togglePreviewTopic(group.key)}
-                                    title={collapsed ? 'Expand' : 'Collapse'}
-                                  >
-                                    ▾
-                                  </button>
-                                  {group.sub_subject && <span className="muted" style={{ marginRight: 6 }}>{group.sub_subject} ·</span>}
+                              <tr className="bg-charcoal-50 dark:bg-charcoal-850/80 font-extrabold">
+                                <td className="px-3 py-2">
+                                  <CollapseButton collapsed={collapsed} onClick={() => togglePreviewTopic(group.key)} title={collapsed ? 'Expand' : 'Collapse'} />
+                                  {group.sub_subject && <span className="text-charcoal-500 dark:text-charcoal-400 mr-1.5">{group.sub_subject} ·</span>}
                                   {group.topic}
-                                  <span className="muted" style={{ fontWeight: 400, marginLeft: 6, fontSize: '0.78rem' }}>
+                                  <span className="font-normal ml-1.5 text-[0.78rem] text-charcoal-500 dark:text-charcoal-400">
                                     ({group.rows.length} subtopic{group.rows.length === 1 ? '' : 's'})
                                   </span>
                                 </td>
-                                <td />
-                                <td className="num">{total}</td>
+                                <td className="px-3 py-2" />
+                                <td className="px-3 py-2 text-right">{total}</td>
                               </tr>
                               {!collapsed && group.rows.map((slot, i) => (
-                                <tr key={i}>
-                                  <td style={{ paddingLeft: '2rem', color: 'var(--text-secondary)' }}>{slot.subtopic}</td>
-                                  <td><DifficultyBadge level={slot.difficulty} /></td>
-                                  <td className="num">{slot.count}</td>
+                                <tr key={i} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                                  <td className="px-3 py-2 pl-8 text-charcoal-500 dark:text-charcoal-400">{slot.subtopic}</td>
+                                  <td className="px-3 py-2"><DifficultyBadge level={slot.difficulty} /></td>
+                                  <td className="px-3 py-2 text-right">{slot.count}</td>
                                 </tr>
                               ))}
                             </React.Fragment>

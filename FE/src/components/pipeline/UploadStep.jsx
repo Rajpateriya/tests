@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../../services/api';
 import { UploadIcon } from '../Icons';
-import { Alert, Busy, Dropzone, Field, Section, Segmented, Stats, StepCard } from './PipelineUI';
+import { Alert, BTN_PRIMARY, Busy, Dropzone, Field, INPUT_CLS, Section, Segmented, Stats, StepCard } from './PipelineUI';
 import { errorText } from './pipelineUtils';
 
 export const UploadStep = ({ subject, taxonomyDoc, targetExam, onUploaded }) => {
@@ -68,7 +68,7 @@ export const UploadStep = ({ subject, taxonomyDoc, targetExam, onUploaded }) => 
           : `Papers are stored for ${targetExam} — change the exam at the top of the page.`
       }
       footer={
-        <button type="button" className="btn btn-primary" onClick={upload} disabled={busy || !files.length}>
+        <button type="button" className={BTN_PRIMARY} onClick={upload} disabled={busy || !files.length}>
           {busy ? <Busy label="Uploading & tagging…" /> : `Upload ${files.length || ''} ${isTheory ? 'theory' : 'paper'} PDF${files.length === 1 ? '' : 's'}`}
         </button>
       }
@@ -76,7 +76,7 @@ export const UploadStep = ({ subject, taxonomyDoc, targetExam, onUploaded }) => 
       <Alert type="error">{error}</Alert>
 
       <Section title="Where it goes">
-        <div className="pp-grid cols-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field
             label="Sub-subject"
             hint={
@@ -87,7 +87,7 @@ export const UploadStep = ({ subject, taxonomyDoc, targetExam, onUploaded }) => 
                   : 'Leave on Auto for mixed papers: each question is tagged from the list.'
             }
           >
-            <select className="form-input" value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
+            <select className={INPUT_CLS} value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
               <option value="">{subSubjects.length ? 'Auto — LLM picks from the list' : '—'}</option>
               {subSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -110,28 +110,28 @@ export const UploadStep = ({ subject, taxonomyDoc, targetExam, onUploaded }) => 
             {result.kind === 'theory' ? 'Theory' : 'Papers'} uploaded to {result.subject}
             {result.sub_subject ? ` → ${result.sub_subject}` : ''} · {result.files_processed} file{result.files_processed === 1 ? '' : 's'}
           </Alert>
-          <div style={{ marginTop: '0.75rem' }}><Stats items={stats(result)} /></div>
-          <div className="data-table-wrap" style={{ marginTop: '0.75rem' }}>
-            <table className="data-table">
-              <thead>
+          <div className="mt-3"><Stats items={stats(result)} /></div>
+          <div className="mt-3 overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th>File</th>
-                  {result.kind === 'theory' && <th>Topic</th>}
-                  <th className="num">Stored</th>
-                  <th className="num">Skipped</th>
-                  <th className="num">Failed</th>
-                  <th className="num">Unresolved</th>
+                  <th className="px-3 py-2.5">File</th>
+                  {result.kind === 'theory' && <th className="px-3 py-2.5">Topic</th>}
+                  <th className="px-3 py-2.5 text-right">Stored</th>
+                  <th className="px-3 py-2.5 text-right">Skipped</th>
+                  <th className="px-3 py-2.5 text-right">Failed</th>
+                  <th className="px-3 py-2.5 text-right">Unresolved</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800">
                 {result.per_file.map((f) => (
-                  <tr key={f.source_pdf}>
-                    <td>{f.source_pdf}</td>
-                    {result.kind === 'theory' && <td className="muted">{f.topic || '—'}</td>}
-                    <td className="num">{f.chunks_ingested ?? f.questions_ingested}</td>
-                    <td className="num">{f.chunks_duplicate ?? f.duplicates_skipped}</td>
-                    <td className="num">{f.chunks_failed ?? f.questions_failed}</td>
-                    <td className="num">{f.sub_subject_unresolved}</td>
+                  <tr key={f.source_pdf} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                    <td className="px-3 py-2">{f.source_pdf}</td>
+                    {result.kind === 'theory' && <td className="px-3 py-2 text-charcoal-400 dark:text-charcoal-500">{f.topic || '—'}</td>}
+                    <td className="px-3 py-2 text-right">{f.chunks_ingested ?? f.questions_ingested}</td>
+                    <td className="px-3 py-2 text-right">{f.chunks_duplicate ?? f.duplicates_skipped}</td>
+                    <td className="px-3 py-2 text-right">{f.chunks_failed ?? f.questions_failed}</td>
+                    <td className="px-3 py-2 text-right">{f.sub_subject_unresolved}</td>
                   </tr>
                 ))}
               </tbody>

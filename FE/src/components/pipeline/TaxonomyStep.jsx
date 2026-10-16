@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { LayersIcon, PlusIcon, TrashIcon } from '../Icons';
-import { Alert, Busy, Empty, Field, Section, Segmented, StepCard } from './PipelineUI';
+import { Alert, Busy, Empty, Field, INPUT_CLS, Section, Segmented, StepCard, BTN_PRIMARY } from './PipelineUI';
 import { JsonPanel } from './JsonPanel';
 import {
   TAXONOMY_EXAMPLE,
@@ -22,15 +22,18 @@ const SubtopicChips = ({ subtopics, onChange }) => {
     setDraft('');
   };
   return (
-    <div className="pp-chips">
+    <div className="flex flex-wrap items-center gap-2">
       {subtopics.map((s) => (
-        <span className="chip" key={s}>
+        <span
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-charcoal-100 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold text-charcoal-700 dark:text-charcoal-200"
+          key={s}
+        >
           {s}
-          <button type="button" title="Remove subtopic" onClick={() => onChange(subtopics.filter((x) => x !== s))}>×</button>
+          <button type="button" title="Remove subtopic" className="text-charcoal-400 hover:text-rose-600 ml-1" onClick={() => onChange(subtopics.filter((x) => x !== s))}>×</button>
         </span>
       ))}
       <input
-        className="form-input sm"
+        className={`${INPUT_CLS} w-48`}
         placeholder="+ Subtopic, press Enter"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
@@ -51,24 +54,37 @@ const TopicList = ({ topics, onChange }) => {
   return (
     <>
       {topics.map((topic, i) => (
-        <div className="pp-topic" key={i}>
-          <div className="pp-topic-head">
-            <span className="badge badge-topic">Topic</span>
+        <div className="p-3 rounded-xl border border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/60 dark:bg-charcoal-850/40 space-y-2.5" key={i}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 text-[10px] font-extrabold uppercase tracking-wider">
+              Topic
+            </span>
             <input
-              className="form-input sm"
+              className={`${INPUT_CLS} flex-1 min-w-[180px]`}
               placeholder="e.g. Chemical Reactions and Equations"
               value={topic.name}
               onChange={(e) => update(i, { name: e.target.value })}
             />
-            <span className="pp-branch-meta">{topic.subtopics.length} subtopic{topic.subtopics.length === 1 ? '' : 's'}</span>
-            <button type="button" className="icon-btn" title="Remove topic" onClick={() => onChange(topics.filter((_, idx) => idx !== i))}>
+            <span className="text-[11px] font-semibold text-charcoal-400 dark:text-charcoal-500 whitespace-nowrap">
+              {topic.subtopics.length} subtopic{topic.subtopics.length === 1 ? '' : 's'}
+            </span>
+            <button
+              type="button"
+              className="p-1.5 rounded-lg text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+              title="Remove topic"
+              onClick={() => onChange(topics.filter((_, idx) => idx !== i))}
+            >
               <TrashIcon size={16} />
             </button>
           </div>
           <SubtopicChips subtopics={topic.subtopics} onChange={(subtopics) => update(i, { subtopics })} />
         </div>
       ))}
-      <button type="button" className="pp-link-btn" onClick={() => onChange([...topics, { name: '', subtopics: [] }])}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-institutional-600 dark:text-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors"
+        onClick={() => onChange([...topics, { name: '', subtopics: [] }])}
+      >
         <PlusIcon size={15} />
         Add topic
       </button>
@@ -151,7 +167,7 @@ export const TaxonomyStep = ({ subject, taxonomyDoc, onSaved }) => {
       }
       footerNote="Saving replaces the whole structure. Subtopics added automatically by uploads are already shown — keep them unless you mean to drop them."
       footer={
-        <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
+        <button type="button" className={BTN_PRIMARY} onClick={save} disabled={saving}>
           {saving ? <Busy label="Saving..." /> : 'Save structure'}
         </button>
       }
@@ -160,9 +176,9 @@ export const TaxonomyStep = ({ subject, taxonomyDoc, onSaved }) => {
       <Alert type="error">{error}</Alert>
 
       <Section title="Subject">
-        <div className="pp-grid cols-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Subject name" hint={subject ? 'Renaming creates a separate subject.' : 'e.g. Science, Quantitative Aptitude'}>
-            <input className="form-input" placeholder="e.g. Science" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className={INPUT_CLS} placeholder="e.g. Science" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
           <Field label="Organised as" hint={editor.hasSubSubjects ? 'Science → Physics / Chemistry / Biology → topics' : 'Topics directly under the subject'}>
             <Segmented
@@ -175,30 +191,34 @@ export const TaxonomyStep = ({ subject, taxonomyDoc, onSaved }) => {
       </Section>
 
       <Section title={`Structure · ${subtopicTotal} subtopic${subtopicTotal === 1 ? '' : 's'}`}>
-        <div className="pp-tree">
+        <div className="space-y-3">
           {editor.hasSubSubjects ? (
             <>
               {editor.subSubjects.map((sub, i) => (
-                <div className="pp-branch" key={i}>
-                  <div className="pp-branch-head">
-                    <span className="badge badge-subject">Sub-subject</span>
+                <div className="p-3.5 rounded-2xl border border-charcoal-200 dark:border-charcoal-800 space-y-3" key={i}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-institutional-50 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800 text-[10px] font-extrabold uppercase tracking-wider">
+                      Sub-subject
+                    </span>
                     <input
-                      className="form-input sm"
+                      className={`${INPUT_CLS} flex-1 min-w-[180px]`}
                       placeholder="e.g. Chemistry"
                       value={sub.name}
                       onChange={(e) => updateSub(i, { name: e.target.value })}
                     />
-                    <span className="pp-branch-meta">{sub.topics.length} topic{sub.topics.length === 1 ? '' : 's'}</span>
+                    <span className="text-[11px] font-semibold text-charcoal-400 dark:text-charcoal-500 whitespace-nowrap">
+                      {sub.topics.length} topic{sub.topics.length === 1 ? '' : 's'}
+                    </span>
                     <button
                       type="button"
-                      className="icon-btn"
+                      className="p-1.5 rounded-lg text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                       title="Remove sub-subject"
                       onClick={() => setEditor({ ...editor, subSubjects: editor.subSubjects.filter((_, idx) => idx !== i) })}
                     >
                       <TrashIcon size={16} />
                     </button>
                   </div>
-                  <div className="pp-branch-body">
+                  <div className="space-y-2.5 pl-1">
                     {!sub.topics.length && <Empty>No topics yet — they can also be filled in automatically when you upload theory for {sub.name || 'this sub-subject'}.</Empty>}
                     <TopicList topics={sub.topics} onChange={(topics) => updateSub(i, { topics })} />
                   </div>
@@ -206,7 +226,7 @@ export const TaxonomyStep = ({ subject, taxonomyDoc, onSaved }) => {
               ))}
               <button
                 type="button"
-                className="pp-link-btn"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-institutional-600 dark:text-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors"
                 onClick={() => setEditor({ ...editor, subSubjects: [...editor.subSubjects, { name: '', topics: [] }] })}
               >
                 <PlusIcon size={15} />
@@ -214,10 +234,8 @@ export const TaxonomyStep = ({ subject, taxonomyDoc, onSaved }) => {
               </button>
             </>
           ) : (
-            <div className="pp-branch">
-              <div className="pp-branch-body">
-                <TopicList topics={editor.topics} onChange={(topics) => setEditor({ ...editor, topics })} />
-              </div>
+            <div className="space-y-2.5">
+              <TopicList topics={editor.topics} onChange={(topics) => setEditor({ ...editor, topics })} />
             </div>
           )}
         </div>

@@ -1,7 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { LayersIcon, RefreshCwIcon } from '../Icons';
-import { Alert, Busy, DifficultyBadge, Empty, Field, Section, Stats, StepCard } from './PipelineUI';
+import {
+  Alert,
+  BTN_OUTLINE,
+  BTN_OUTLINE_SM,
+  BTN_PRIMARY,
+  Busy,
+  CollapseButton,
+  DifficultyBadge,
+  Empty,
+  Field,
+  INPUT_CLS,
+  Section,
+  Stats,
+  StepCard,
+} from './PipelineUI';
 import { errorText } from './pipelineUtils';
 
 const LEVEL_NAMES = ['Easy', 'Medium', 'Hard'];
@@ -18,6 +32,9 @@ function pivot(rows) {
 }
 
 const intInput = (setter, min = 1) => (e) => setter(Math.max(min, parseInt(e.target.value, 10) || min));
+
+const PILL_CLS =
+  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-charcoal-100 dark:bg-charcoal-800 text-[11px] font-bold text-charcoal-600 dark:text-charcoal-300';
 
 export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, onGoToMocks }) => {
   const [bank, setBank] = useState(null);
@@ -118,11 +135,11 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
       footerNote={`${quizzes} quiz${quizzes === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'} using the "${blueprintName}" blueprint, ${duration} min, +${posMarks} / −${negMarks}.`}
       footer={
         <>
-          <button type="button" className="btn btn-primary" onClick={assemble} disabled={busy}>
+          <button type="button" className={BTN_PRIMARY} onClick={assemble} disabled={busy}>
             {busy ? <Busy label="Assembling..." /> : `Assemble ${quizzes} quiz${quizzes === 1 ? '' : 'zes'}`}
           </button>
           {result?.created > 0 && onGoToMocks && (
-            <button type="button" className="btn btn-outline" onClick={onGoToMocks}>View in Mock Tests</button>
+            <button type="button" className={BTN_OUTLINE} onClick={onGoToMocks}>View in Mock Tests</button>
           )}
         </>
       }
@@ -130,10 +147,10 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
       <Alert type="error">{error}</Alert>
 
       <Section title="What to build">
-        <div className="pp-grid cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Field label="Blueprint" hint={blueprintNames.length > 1 ? `${blueprintNames.length} saved for this subject` : 'Which saved blueprint to follow'}>
             <select
-              className="form-input"
+              className={INPUT_CLS}
               value={blueprintName}
               onChange={(e) => setBlueprintName(e.target.value)}
               disabled={blueprintNames.length < 2}
@@ -144,39 +161,39 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
             </select>
           </Field>
           <Field label="Sub-subject">
-            <select className="form-input" value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
+            <select className={INPUT_CLS} value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
               <option value="">Whole subject</option>
               {subSubjects.map((s) => <option key={s} value={s}>{s} only</option>)}
             </select>
           </Field>
           <Field label="Quizzes">
-            <input type="number" min="1" max="200" className="form-input" value={quizzes} onChange={intInput(setQuizzes)} />
+            <input type="number" min="1" max="200" className={INPUT_CLS} value={quizzes} onChange={intInput(setQuizzes)} />
           </Field>
           <Field label="Questions per quiz" hint="Empty = blueprint size">
-            <input type="number" min="1" className="form-input" value={perQuiz} placeholder="Blueprint"
+            <input type="number" min="1" className={INPUT_CLS} value={perQuiz} placeholder="Blueprint"
               onChange={(e) => setPerQuiz(e.target.value)} />
           </Field>
           <Field label="Max tests per question" hint="1 = never repeat a question">
-            <input type="number" min="1" className="form-input" value={maxReuse} onChange={intInput(setMaxReuse)} />
+            <input type="number" min="1" className={INPUT_CLS} value={maxReuse} onChange={intInput(setMaxReuse)} />
           </Field>
         </div>
       </Section>
 
       <Section title="Test settings">
-        <div className="pp-grid cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Field label="Title prefix" hint="Tests are numbered #1, #2, …">
-            <input className="form-input" value={titlePrefix} placeholder={`${subSubject || subject} Mock`}
+            <input className={INPUT_CLS} value={titlePrefix} placeholder={`${subSubject || subject} Mock`}
               onChange={(e) => setTitlePrefix(e.target.value)} />
           </Field>
           <Field label="Duration (min)">
-            <input type="number" min="1" className="form-input" value={duration} onChange={intInput(setDuration)} />
+            <input type="number" min="1" className={INPUT_CLS} value={duration} onChange={intInput(setDuration)} />
           </Field>
           <Field label="Marks per correct">
-            <input type="number" step="0.5" min="0.5" className="form-input" value={posMarks}
+            <input type="number" step="0.5" min="0.5" className={INPUT_CLS} value={posMarks}
               onChange={(e) => setPosMarks(parseFloat(e.target.value) || 2)} />
           </Field>
           <Field label="Negative marks">
-            <input type="number" step="0.25" min="0" className="form-input" value={negMarks}
+            <input type="number" step="0.25" min="0" className={INPUT_CLS} value={negMarks}
               onChange={(e) => setNegMarks(Math.max(0, parseFloat(e.target.value) || 0))} />
           </Field>
         </div>
@@ -185,15 +202,21 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
       <Section
         title="Question bank"
         aside={
-          <span className="pp-inline" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600, flexWrap: 'wrap' }}>
+          <span className="flex items-center gap-2 flex-wrap normal-case tracking-normal font-semibold">
             {bank && (
               <>
-                <span className="pp-stat-chip"><strong>{bank.total}</strong> approved</span>
-                <span className="pp-stat-chip"><strong>{bank.unused}</strong> unused</span>
-                <span className="pp-stat-chip"><strong>{bank.pending_review}</strong> awaiting review</span>
+                <span className={PILL_CLS}><strong>{bank.total}</strong> approved</span>
+                <span className={PILL_CLS}><strong>{bank.unused}</strong> unused</span>
+                <span className={PILL_CLS}><strong>{bank.pending_review}</strong> awaiting review</span>
               </>
             )}
-            <button type="button" className="icon-btn" title="Refresh bank" onClick={loadBank} disabled={bankLoading}>
+            <button
+              type="button"
+              title="Refresh bank"
+              onClick={loadBank}
+              disabled={bankLoading}
+              className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-charcoal-400 hover:text-institutional-600 hover:bg-institutional-50 dark:hover:bg-institutional-950/40 transition-colors disabled:opacity-50"
+            >
               <RefreshCwIcon size={15} />
             </button>
           </span>
@@ -206,11 +229,11 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
         )}
         {bankRows.length > 0 && (
           <>
-            <div className="pp-inline" style={{ marginBottom: '0.4rem' }}>
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => setCollapsedBankTopics(new Set())}>Expand all</button>
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <button type="button" className={BTN_OUTLINE_SM} onClick={() => setCollapsedBankTopics(new Set())}>Expand all</button>
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className={BTN_OUTLINE_SM}
                 onClick={() => setCollapsedBankTopics(new Set(
                   [...new Set(bankRows.map((r) => `${r.sub_subject || ''}|${r.topic}`))]
                 ))}
@@ -218,15 +241,15 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
                 Collapse all
               </button>
             </div>
-            <div className="data-table-wrap">
-              <table className="data-table">
-                <thead>
+            <div className="overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                   <tr>
-                    <th>Sub-subject · Topic · Subtopic</th>
-                    {LEVEL_NAMES.map((l) => <th key={l} className="num">{l}</th>)}
+                    <th className="px-3 py-2.5">Sub-subject · Topic · Subtopic</th>
+                    {LEVEL_NAMES.map((l) => <th key={l} className="px-3 py-2.5 text-right">{l}</th>)}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800">
                   {(() => {
                     const byTopic = [];
                     const index = new Map();
@@ -245,32 +268,36 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
                       );
                       return (
                         <React.Fragment key={group.key}>
-                          <tr>
-                            <td style={{ fontWeight: 700 }}>
-                              <button
-                                type="button"
-                                className="collapse-btn"
-                                style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}
+                          <tr className="bg-charcoal-50 dark:bg-charcoal-850/80 font-extrabold">
+                            <td className="px-3 py-2">
+                              <CollapseButton
+                                collapsed={collapsed}
                                 onClick={() => toggleBankTopic(group.key)}
                                 title={collapsed ? 'Expand' : 'Collapse'}
-                              >
-                                ▾
-                              </button>
-                              {group.sub_subject && <span className="muted" style={{ marginRight: 6 }}>{group.sub_subject} ·</span>}
+                              />
+                              {group.sub_subject && (
+                                <span className="text-charcoal-500 dark:text-charcoal-400 mr-1.5">{group.sub_subject} ·</span>
+                              )}
                               {group.topic}
-                              <span className="muted" style={{ fontWeight: 400, marginLeft: 6, fontSize: '0.78rem' }}>
+                              <span className="text-charcoal-500 dark:text-charcoal-400 font-normal ml-1.5 text-[11px]">
                                 ({group.rows.length} subtopic{group.rows.length === 1 ? '' : 's'})
                               </span>
                             </td>
-                            {totals.map((t, i) => <td key={i} className="num muted">{t}</td>)}
+                            {totals.map((t, i) => (
+                              <td key={i} className="px-3 py-2 text-right text-charcoal-500 dark:text-charcoal-400">{t}</td>
+                            ))}
                           </tr>
                           {!collapsed && group.rows.map((r) => (
-                            <tr key={`${r.sub_subject}|${r.topic}|${r.subtopic}`}>
-                              <td style={{ paddingLeft: '2rem', color: 'var(--text-secondary)' }}>{r.subtopic}</td>
+                            <tr key={`${r.sub_subject}|${r.topic}|${r.subtopic}`} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                              <td className="px-3 py-2 pl-8 text-charcoal-600 dark:text-charcoal-300">{r.subtopic}</td>
                               {LEVEL_NAMES.map((l) => {
                                 const cell = r.cells[l];
                                 return (
-                                  <td key={l} className={`num ${cell?.unused ? '' : 'zero'}`} title="unused / total">
+                                  <td
+                                    key={l}
+                                    title="unused / total"
+                                    className={`px-3 py-2 text-right ${cell?.unused ? '' : 'text-rose-500 dark:text-rose-400'}`}
+                                  >
                                     {cell ? `${cell.unused} / ${cell.count}` : '0 / 0'}
                                   </td>
                                 );
@@ -286,7 +313,11 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
             </div>
           </>
         )}
-        {bankRows.length > 0 && <div className="pp-hint" style={{ marginTop: '0.4rem' }}>Each cell is unused / total. Red cells have no fresh questions left.</div>}
+        {bankRows.length > 0 && (
+          <div className="mt-2 text-xs text-charcoal-500 dark:text-charcoal-400">
+            Each cell is unused / total. Red cells have no fresh questions left.
+          </div>
+        )}
       </Section>
 
       {result && (
@@ -295,7 +326,7 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
             Created {result.created} of {result.requested} quiz{result.requested === 1 ? '' : 'zes'}, {result.questions_per_quiz} questions each.
             {result.not_created ? ` The bank supports ${result.max_possible} — see what's missing below.` : ' They now appear under Mock Tests.'}
           </Alert>
-          <div style={{ marginTop: '0.75rem' }}>
+          <div className="mt-3">
             <Stats
               items={[
                 { label: 'Created', value: result.created, tone: 'success' },
@@ -306,15 +337,21 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
             />
           </div>
           {result.tests.length > 0 && (
-            <div className="data-table-wrap" style={{ marginTop: '0.75rem' }}>
-              <table className="data-table">
-                <thead><tr><th>Test</th><th className="num">Questions</th><th>ID</th></tr></thead>
-                <tbody>
+            <div className="mt-3 overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="px-3 py-2.5">Test</th>
+                    <th className="px-3 py-2.5 text-right">Questions</th>
+                    <th className="px-3 py-2.5">ID</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800">
                   {result.tests.map((t) => (
-                    <tr key={t.id}>
-                      <td style={{ fontWeight: 700 }}>{t.title}</td>
-                      <td className="num">{t.total_questions}</td>
-                      <td className="muted" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{t.id}</td>
+                    <tr key={t.id} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                      <td className="px-3 py-2 font-extrabold text-charcoal-900 dark:text-white">{t.title}</td>
+                      <td className="px-3 py-2 text-right">{t.total_questions}</td>
+                      <td className="px-3 py-2 text-charcoal-500 dark:text-charcoal-400 font-mono text-[11px]">{t.id}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -323,8 +360,8 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
           )}
           {result.substituted?.length > 0 && (
             <>
-              <div className="pp-section-title" style={{ marginTop: '1rem' }}>
-                <span>Filled from elsewhere</span>
+              <div className="mt-4 text-[11px] font-extrabold uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500">
+                Filled from elsewhere
               </div>
               <Alert type="info">
                 Where a subtopic had no unused questions left, the quiz was kept at full size by
@@ -333,24 +370,31 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
                 "Taken from" column shows which. Difficulty mix, and for borrowed rows the topic
                 balance, differ slightly from the blueprint.
               </Alert>
-              <div className="data-table-wrap" style={{ marginTop: '0.6rem' }}>
-                <table className="data-table">
-                  <thead>
-                    <tr><th>Topic</th><th>Subtopic</th><th>Wanted</th><th>Used instead</th><th>Taken from</th><th className="num">Questions</th></tr>
+              <div className="mt-2.5 overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="px-3 py-2.5">Topic</th>
+                      <th className="px-3 py-2.5">Subtopic</th>
+                      <th className="px-3 py-2.5">Wanted</th>
+                      <th className="px-3 py-2.5">Used instead</th>
+                      <th className="px-3 py-2.5">Taken from</th>
+                      <th className="px-3 py-2.5 text-right">Questions</th>
+                    </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800">
                     {result.substituted.map((s, i) => (
-                      <tr key={i}>
-                        <td className="muted">{s.topic}</td>
-                        <td>{s.subtopic}</td>
-                        <td><DifficultyBadge level={s.wanted} /></td>
-                        <td><DifficultyBadge level={s.used} /></td>
-                        <td className={s.borrowed_from ? '' : 'muted'}>
+                      <tr key={i} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                        <td className="px-3 py-2 text-charcoal-500 dark:text-charcoal-400">{s.topic}</td>
+                        <td className="px-3 py-2">{s.subtopic}</td>
+                        <td className="px-3 py-2"><DifficultyBadge level={s.wanted} /></td>
+                        <td className="px-3 py-2"><DifficultyBadge level={s.used} /></td>
+                        <td className={`px-3 py-2 ${s.borrowed_from ? '' : 'text-charcoal-500 dark:text-charcoal-400'}`}>
                           {s.borrowed_topic
                             ? `${s.borrowed_topic} / ${s.borrowed_from}`
                             : s.borrowed_from || 'same subtopic'}
                         </td>
-                        <td className="num">{s.count}</td>
+                        <td className="px-3 py-2 text-right">{s.count}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -360,22 +404,28 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
           )}
           {result.missing.length > 0 && (
             <>
-              <div className="pp-section-title" style={{ marginTop: '1rem' }}>
-                <span>Subtopics too short at every difficulty — generate more, then assemble again</span>
+              <div className="mt-4 text-[11px] font-extrabold uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500">
+                Subtopics too short at every difficulty — generate more, then assemble again
               </div>
-              <div className="data-table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr><th>Sub-subject</th><th>Topic</th><th>Subtopic</th><th className="num">Needed / quiz</th><th className="num">Unused left</th></tr>
+              <div className="overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="px-3 py-2.5">Sub-subject</th>
+                      <th className="px-3 py-2.5">Topic</th>
+                      <th className="px-3 py-2.5">Subtopic</th>
+                      <th className="px-3 py-2.5 text-right">Needed / quiz</th>
+                      <th className="px-3 py-2.5 text-right">Unused left</th>
+                    </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800">
                     {result.missing.map((m, i) => (
-                      <tr key={i}>
-                        <td className="muted">{m.sub_subject || '—'}</td>
-                        <td className="muted">{m.topic}</td>
-                        <td>{m.subtopic}</td>
-                        <td className="num">{m.needed_per_quiz}</td>
-                        <td className="num zero">{m.available}</td>
+                      <tr key={i} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                        <td className="px-3 py-2 text-charcoal-500 dark:text-charcoal-400">{m.sub_subject || '—'}</td>
+                        <td className="px-3 py-2 text-charcoal-500 dark:text-charcoal-400">{m.topic}</td>
+                        <td className="px-3 py-2">{m.subtopic}</td>
+                        <td className="px-3 py-2 text-right">{m.needed_per_quiz}</td>
+                        <td className="px-3 py-2 text-right text-rose-500 dark:text-rose-400">{m.available}</td>
                       </tr>
                     ))}
                   </tbody>

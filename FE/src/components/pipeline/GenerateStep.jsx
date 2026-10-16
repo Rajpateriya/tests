@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { SparklesIcon } from '../Icons';
-import { Alert, Busy, DifficultyMix, Field, Section, Segmented, Stats, StepCard } from './PipelineUI';
+import { Alert, BTN_PRIMARY, Busy, DifficultyMix, Field, INPUT_CLS, Section, Segmented, Stats, StepCard } from './PipelineUI';
 import { DEFAULT_MIX, LEVELS, errorText, mixTotal, topicsFor } from './pipelineUtils';
 
 const Split = ({ value, highlight }) => (
-  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: highlight ? 'var(--danger)' : undefined, fontWeight: highlight ? 700 : 400 }}>
+  <span className={`font-mono text-[13px] ${highlight ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-charcoal-700 dark:text-charcoal-300'}`}>
     {LEVELS.map((l) => value?.[l] ?? 0).join(' / ')}
   </span>
 );
@@ -70,7 +70,7 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
       subtitle="Each subtopic in scope is filled up to the target, split by difficulty and grounded in its theory. Only missing questions are generated, so running it again just tops up."
       footerNote={`${scopeLabel}: ${subtopicCount} subtopic${subtopicCount === 1 ? '' : 's'} × ${perSubtopic} = up to ${subtopicCount * perSubtopic} questions in the bank.`}
       footer={
-        <button type="button" className="btn btn-primary" onClick={run} disabled={busy || mixTotal(mix) !== 100 || !subtopicCount}>
+        <button type="button" className={BTN_PRIMARY} onClick={run} disabled={busy || mixTotal(mix) !== 100 || !subtopicCount}>
           {busy ? <Busy label={`Generating… ${elapsed}s`} /> : 'Generate questions'}
         </button>
       }
@@ -78,21 +78,21 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
       <Alert type="error">{error}</Alert>
 
       <Section title="Scope">
-        <div className="pp-grid cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="Sub-subject">
-            <select className="form-input" value={subSubject} onChange={(e) => { setSubSubject(e.target.value); setTopic(''); }} disabled={!subSubjects.length}>
+            <select className={INPUT_CLS} value={subSubject} onChange={(e) => { setSubSubject(e.target.value); setTopic(''); }} disabled={!subSubjects.length}>
               <option value="">{subSubjects.length ? 'All sub-subjects' : 'Whole subject'}</option>
               {subSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
           <Field label="Topic">
-            <select className="form-input" value={topic} onChange={(e) => setTopic(e.target.value)}>
+            <select className={INPUT_CLS} value={topic} onChange={(e) => setTopic(e.target.value)}>
               <option value="">All topics</option>
               {topics.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </Field>
           <Field label="Target per subtopic" hint="Questions to have in the bank for each subtopic">
-            <input type="number" min="1" max="200" className="form-input" value={perSubtopic}
+            <input type="number" min="1" max="200" className={INPUT_CLS} value={perSubtopic}
               onChange={(e) => setPerSubtopic(Math.min(200, Math.max(1, parseInt(e.target.value, 10) || 1)))} />
           </Field>
         </div>
@@ -103,7 +103,7 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
       </Section>
 
       <Section title="Source and style">
-        <div className="pp-grid cols-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field
             label="When a subtopic has no theory"
             hint={
@@ -120,7 +120,7 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
           </Field>
           <Field label="Exam style notes (optional)" hint={`Added to the built-in ${targetExam} style. e.g. "statement-based, application questions, avoid trivia".`}>
             <textarea
-              className="form-input"
+              className={INPUT_CLS}
               rows={3}
               maxLength={500}
               placeholder="Describe how this exam's questions look"
@@ -142,20 +142,20 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
             {result.shortfall ? ` — ${result.shortfall} still short. Run again, or upload more theory for those subtopics.` : '.'}
           </Alert>
           {result.saved_from_ai_knowledge > 0 && (
-            <div style={{ marginTop: '0.6rem' }}>
+            <div className="mt-2.5">
               <Alert type="warning">
                 {result.saved_from_ai_knowledge} of these were written from the AI's own knowledge (no theory) and are marked "AI knowledge" in the bank. They are not checked against any source.
               </Alert>
             </div>
           )}
           {result.skipped_no_theory?.length > 0 && (
-            <div style={{ marginTop: '0.6rem' }}>
+            <div className="mt-2.5">
               <Alert type="warning">
                 Skipped — no theory uploaded yet: {result.skipped_no_theory.map((s) => [s.sub_subject, s.topic, s.subtopic].filter(Boolean).join(' › ')).join(', ')}
               </Alert>
             </div>
           )}
-          <div style={{ marginTop: '0.75rem' }}>
+          <div className="mt-3">
             <Stats
               items={[
                 { label: 'Saved to bank', value: result.saved, tone: 'success' },
@@ -165,40 +165,48 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
               ]}
             />
           </div>
-          <div className="data-table-wrap" style={{ marginTop: '0.75rem' }}>
-            <table className="data-table">
-              <thead>
+          <div className="mt-3 overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th>Sub-subject</th>
-                  <th>Topic</th>
-                  <th>Subtopic</th>
-                  <th>Target</th>
-                  <th>Had</th>
-                  <th>Added</th>
-                  <th>Short</th>
-                  <th className="num">Dupes</th>
+                  <th className="px-3 py-2.5">Sub-subject</th>
+                  <th className="px-3 py-2.5">Topic</th>
+                  <th className="px-3 py-2.5">Subtopic</th>
+                  <th className="px-3 py-2.5">Target</th>
+                  <th className="px-3 py-2.5">Had</th>
+                  <th className="px-3 py-2.5">Added</th>
+                  <th className="px-3 py-2.5">Short</th>
+                  <th className="px-3 py-2.5 text-right">Dupes</th>
                 </tr>
                 <tr>
-                  <th colSpan={3} />
-                  <th colSpan={4} style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, paddingTop: 0 }}>easy / medium / hard</th>
-                  <th />
+                  <th colSpan={3} className="px-3" />
+                  <th colSpan={4} className="px-3 pt-0 font-semibold normal-case tracking-normal text-[10px]">easy / medium / hard</th>
+                  <th className="px-3" />
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800">
                 {result.per_subtopic.map((r) => (
-                  <tr key={`${r.sub_subject}|${r.topic}|${r.subtopic}`}>
-                    <td className="muted">{r.sub_subject || '—'}</td>
-                    <td className="muted">{r.topic}</td>
-                    <td>
+                  <tr key={`${r.sub_subject}|${r.topic}|${r.subtopic}`} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50">
+                    <td className="px-3 py-2 text-charcoal-400 dark:text-charcoal-500">{r.sub_subject || '—'}</td>
+                    <td className="px-3 py-2 text-charcoal-400 dark:text-charcoal-500">{r.topic}</td>
+                    <td className="px-3 py-2">
                       {r.subtopic}
-                      {r.skipped === 'no_theory' && <span className="badge badge-hard" style={{ marginLeft: 6 }}>no theory</span>}
-                      {r.source === 'ai_knowledge' && <span className="badge badge-medium" style={{ marginLeft: 6 }}>AI knowledge</span>}
+                      {r.skipped === 'no_theory' && (
+                        <span className="ml-1.5 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800">
+                          no theory
+                        </span>
+                      )}
+                      {r.source === 'ai_knowledge' && (
+                        <span className="ml-1.5 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+                          AI knowledge
+                        </span>
+                      )}
                     </td>
-                    <td><Split value={r.target} /></td>
-                    <td><Split value={r.already_in_bank} /></td>
-                    <td><Split value={r.accepted} /></td>
-                    <td><Split value={r.shortfall} highlight={Object.values(r.shortfall || {}).some(Boolean)} /></td>
-                    <td className="num">{r.duplicates_rejected}</td>
+                    <td className="px-3 py-2"><Split value={r.target} /></td>
+                    <td className="px-3 py-2"><Split value={r.already_in_bank} /></td>
+                    <td className="px-3 py-2"><Split value={r.accepted} /></td>
+                    <td className="px-3 py-2"><Split value={r.shortfall} highlight={Object.values(r.shortfall || {}).some(Boolean)} /></td>
+                    <td className="px-3 py-2 text-right">{r.duplicates_rejected}</td>
                   </tr>
                 ))}
               </tbody>
