@@ -152,16 +152,6 @@ class PassService:
         """
         pass_doc = await self.pass_repo.get_by_id(pass_id)
         if not pass_doc:
-            # Fallback for legacy static plan IDs (e.g. PASS_MONTHLY, PASS_ANNUAL)
-            legacy_id_map = {
-                "PASS_7_DAYS": "pass_monthly",
-                "PASS_MONTHLY": "pass_monthly",
-                "PASS_ANNUAL": "pass_annual",
-            }
-            mapped = legacy_id_map.get(pass_id)
-            if mapped:
-                pass_doc = await self.pass_repo.get_by_id(mapped)
-        if not pass_doc:
             raise NotFoundException(f"Pass '{pass_id}' not found")
 
         user = await self.user_repo.get_by_id(user_id)
@@ -270,15 +260,6 @@ class PassService:
         to the pass and all courses covered under it.
         """
         pass_doc = await self.pass_repo.get_by_id(pass_id)
-        if not pass_doc:
-            legacy_id_map = {
-                "PASS_7_DAYS": "pass_monthly",
-                "PASS_MONTHLY": "pass_monthly",
-                "PASS_ANNUAL": "pass_annual",
-            }
-            mapped = legacy_id_map.get(pass_id)
-            if mapped:
-                pass_doc = await self.pass_repo.get_by_id(mapped)
         if not pass_doc:
             raise NotFoundException(f"Pass '{pass_id}' not found")
 

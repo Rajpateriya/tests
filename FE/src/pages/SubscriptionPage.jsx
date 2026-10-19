@@ -49,21 +49,17 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
           id: p.id,
           name: p.title,
           title: p.title,
-          badge: p.badge || (p.duration_days > 100 ? 'SAVE 40%' : 'POPULAR'),
-          popular: !!p.badge || p.duration_days > 100,
+          badge: p.badge || null,
+          popular: !!p.badge,
           duration_days: p.duration_days,
           base_price: p.base_price,
           original_price: p.original_price,
           max_coins_discount: p.max_coins_discount,
           covered_course_ids: p.covered_course_ids || [],
           covered_courses: p.covered_courses || [],
-          description: p.tagline || 'Targeted Pass Built for Exam Cycles',
-          tagline: p.tagline || 'Targeted Pass Built for Exam Cycles',
-          features: p.features || [
-            'Full-length official simulations',
-            'Deep error analytics & AI solutions',
-            'All-India percentile tracking'
-          ]
+          description: p.tagline || '',
+          tagline: p.tagline || '',
+          features: p.features || []
         })));
       } else {
         setPlans([]);
@@ -271,7 +267,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
           <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch justify-center">
             {plans.map((plan) => {
             const isCurrent = currentPlanId === plan.id;
-            const maxCoinDiscount = plan.max_coins_discount || 500;
+            const maxCoinDiscount = plan.max_coins_discount || 0;
             const coinsEligible = applyCoins ? Math.min(coinsBalance, maxCoinDiscount) : 0;
             const discountRupees = Math.round(coinsEligible * 0.10);
             const finalPayable = Math.max(1, plan.base_price - discountRupees);
@@ -324,7 +320,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
                         ₹{finalPayable}
                       </span>
                       <span className="text-xs text-charcoal-500 font-bold">
-                        / {plan.duration_days > 100 ? '365 Days' : `${plan.duration_days} Days`}
+                        / {plan.duration_days} Days
                       </span>
                     </div>
 

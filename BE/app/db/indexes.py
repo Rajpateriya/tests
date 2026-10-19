@@ -118,7 +118,7 @@ async def init_db_indexes(db: AsyncIOMotorDatabase) -> None:
         logger.warning(f"Could not create pending_registrations indexes: {e}")
     # Remove legacy mock/default passes so empty state returns 'No passes available'
     try:
-        res = await db.passes.delete_many({"_id": {"$in": ["pass_monthly", "pass_annual"]}})
+        res = await db.passes.delete_many({"_id": {"$in": ["pass_monthly", "pass_annual", "pass_7_days"]}})
         if res.deleted_count:
             logger.info(f"Purged {res.deleted_count} default/mock passes from database.")
     except Exception as e:

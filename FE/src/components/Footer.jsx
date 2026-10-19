@@ -209,20 +209,17 @@ export const Footer = () => {
             <div className="col-span-1 sm:col-span-2 lg:col-span-3 space-y-3.5 sm:space-y-4">
               <div
                 onClick={() => handleNav({ to: ROUTES.home })}
-                className="flex items-center gap-2 cursor-pointer select-none group w-fit"
+                className="flex items-center gap-3 cursor-pointer select-none group w-fit"
                 title="Go to PrepMagnet Home"
               >
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-institutional-600 to-institutional-800 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-institutional-600/20 group-hover:scale-105 group-hover:shadow-institutional-600/30 transition-all duration-300">
-                  <SparklesIcon size={16} className="group-hover:rotate-12 transition-transform duration-300" />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-base tracking-tight text-charcoal-950 dark:text-white group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
-                    PrepMagnet
-                  </span>
-                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 font-mono tracking-wider border border-institutional-200/80 dark:border-institutional-800/80 shadow-xs">
-                    PRO
-                  </span>
-                </div>
+                <img
+                  src="/prepmagnet.png"
+                  alt="PrepMagnet Logo"
+                  className="w-10 h-10 sm:w-11 sm:h-11 object-contain group-hover:scale-105 transition-transform duration-200 drop-shadow-xs"
+                />
+                <span className="font-extrabold text-xl sm:text-2xl tracking-tight text-charcoal-950 dark:text-white group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                  PrepMagnet
+                </span>
               </div>
 
               <p className="text-xs text-charcoal-500 dark:text-charcoal-400 leading-relaxed max-w-sm">

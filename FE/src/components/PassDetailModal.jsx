@@ -37,10 +37,9 @@ export const PassDetailModal = ({
   if (!isOpen || !pass) return null;
 
   const coinsBalance = user?.profile?.coins_balance ?? 0;
-  const isAnnual = (pass.duration_days || 0) > 100;
   const basePrice = pass.base_price || 0;
-  const originalPrice = pass.original_price || (isAnnual ? 899 : 249);
-  const maxCoinsAllowed = pass.max_coins_discount || (isAnnual ? 1000 : 500);
+  const originalPrice = pass.original_price || basePrice;
+  const maxCoinsAllowed = pass.max_coins_discount || 0;
 
   // Coin calculations: 100 coins = ₹10 (0.10 Rs per coin)
   // Max coins applied keeping at least ₹1 payable
@@ -49,7 +48,7 @@ export const PassDetailModal = ({
   const coinsToApply = applyCoins && user ? Math.min(coinsBalance, effectiveCoinCap) : 0;
   const discountFromCoins = Math.round(coinsToApply * 0.10);
   const finalPayable = Math.max(1, Math.round(basePrice - discountFromCoins));
-  const totalSavings = (originalPrice - finalPayable);
+  const totalSavings = originalPrice > finalPayable ? originalPrice - finalPayable : 0;
 
   const coveredCourses = pass.covered_courses || [];
 
@@ -189,10 +188,12 @@ export const PassDetailModal = ({
               {/* Header Info */}
               <div className="space-y-2 pr-8">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-gradient-to-r from-institutional-600 to-indigo-600 text-white shadow-xs">
-                    <SparklesIcon size={12} />
-                    <span>{pass.badge || (isAnnual ? 'SAVE 40%' : 'MOST POPULAR')}</span>
-                  </span>
+                  {pass.badge && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-gradient-to-r from-institutional-600 to-indigo-600 text-white shadow-xs">
+                      <SparklesIcon size={12} />
+                      <span>{pass.badge}</span>
+                    </span>
+                  )}
                   <span className="text-xs font-bold text-charcoal-500 dark:text-charcoal-400 bg-charcoal-100 dark:bg-charcoal-800 px-2.5 py-0.5 rounded-full font-mono">
                     ⏱ {pass.duration_days} Days Full Access
                   </span>
@@ -339,33 +340,25 @@ export const PassDetailModal = ({
               {/* =========================================================================
                   PLATFORM FEATURES & CBT PERKS
                   ========================================================================= */}
-              <div className="space-y-2.5">
-                <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400 flex items-center gap-1.5">
-                  <ShieldIcon size={14} className="text-institutional-600" />
-                  <span>Platform Engine Features Included</span>
-                </h3>
+              {pass.features && pass.features.length > 0 && (
+                <div className="space-y-2.5">
+                  <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400 flex items-center gap-1.5">
+                    <ShieldIcon size={14} className="text-institutional-600" />
+                    <span>Platform Engine Features Included</span>
+                  </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  {(pass.features && pass.features.length > 0
-                    ? pass.features
-                    : [
-                        '365 Days All-Access Membership',
-                        'PrepMagnet CBT Examination Interface',
-                        'All-India Percentile & Predicted AIR Benchmark',
-                        'Speed vs. Accuracy Tradeoff Diagnostics',
-                        'Typing Master Skill Engine Included',
-                        'Priority Faculty Dispute Resolution',
-                      ]
-                  ).map((feat, idx) => (
-                    <div key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-charcoal-50/70 dark:bg-charcoal-800/40 border border-charcoal-150 dark:border-charcoal-800">
-                      <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                      <span className="text-charcoal-800 dark:text-charcoal-200 text-[11px] font-medium leading-tight">
-                        {feat}
-                      </span>
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {pass.features.map((feat, idx) => (
+                      <div key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-charcoal-50/70 dark:bg-charcoal-800/40 border border-charcoal-150 dark:border-charcoal-800">
+                        <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <span className="text-charcoal-800 dark:text-charcoal-200 text-[11px] font-medium leading-tight">
+                          {feat}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Error Alert if any */}
               {errorMessage && (

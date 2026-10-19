@@ -82,14 +82,31 @@ class CartService:
     # ── Public API ────────────────────────────────────────────────────────────
 
     async def get_cart(self, user_id: str) -> Dict[str, Any]:
-        """Return the user's current cart with live pricing."""
+        """Return the user's current cart with live pricing. Auto-removes enrolled courses."""
         cart = await self._get_or_create_cart(user_id)
-        item_ids = [i["course_id"] for i in cart.get("items", [])]
+        existing_items = cart.get("items", [])
+
+        # Check enrolled courses for this user
+        user = await self.user_repo.get_by_id(user_id)
+        enrolled_ids = set()
+        if user:
+            for enr in user.get("profile", {}).get("enrolled_courses", []):
+                enrolled_ids.add(enr.get("course_id", ""))
+
+        # Auto-remove any course from cart if user is already enrolled
+        already_enrolled = [i["course_id"] for i in existing_items if i.get("course_id") in enrolled_ids]
+        if already_enrolled:
+            await self.carts_col.update_one(
+                {"_id": cart["_id"]},
+                {"$pull": {"items": {"course_id": {"$in": already_enrolled}}}},
+            )
+            item_ids = [i["course_id"] for i in existing_items if i.get("course_id") not in enrolled_ids]
+        else:
+            item_ids = [i["course_id"] for i in existing_items]
+
         items = await self._hydrate_items(user_id, item_ids)
 
-        user = await self.user_repo.get_by_id(user_id)
         coins = user.get("profile", {}).get("coins_balance", 0) if user else 0
-
         subtotal = sum(i["discounted_price"] for i in items)
         return {
             "cart_id": str(cart["_id"]),

@@ -342,11 +342,7 @@ function AppContent() {
           {/* Multi-Course Cart */}
           <Route
             path={ROUTES.cart}
-            element={
-              <RequireRole role="user">
-                <CartPage />
-              </RequireRole>
-            }
+            element={<CartPage />}
           />
 
           {/* Anything else goes home */}

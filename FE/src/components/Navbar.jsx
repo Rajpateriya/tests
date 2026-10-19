@@ -267,9 +267,11 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           onClick={() => handleNavClick(ROUTES.home)}
           className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
         >
-          <div className="w-8 h-8 rounded-full bg-institutional-600 text-white flex items-center justify-center font-bold text-xs shadow-sm group-hover:scale-105 transition-transform">
-            <SparklesIcon size={16} />
-          </div>
+          <img
+            src="/prepmagnet.png"
+            alt="PrepMagnet Logo"
+            className="w-9 h-9 sm:w-10 sm:h-10 object-contain group-hover:scale-105 transition-transform drop-shadow-xs"
+          />
           <div className="flex items-center gap-1">
             <span className="font-extrabold text-sm sm:text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
               PrepMagnet
@@ -449,32 +451,30 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           {/* Notifications Bell */}
           <NotificationBell sessionKey={user?.id} isAdmin={isAdmin} />
 
-          {/* Cart Icon with Live Badge */}
-          {!isAdmin && (
-            <button
-              onClick={() => {
-                if (!user) {
-                  onOpenAuthModal?.('login');
-                } else {
-                  handleNavClick(ROUTES.cart);
-                }
-              }}
-              className={`relative p-1.5 sm:p-2 rounded-full transition-colors focus:outline-none cursor-pointer ${
-                isOn(ROUTES.cart)
-                  ? 'bg-institutional-100 text-institutional-700 dark:bg-institutional-900/60 dark:text-institutional-300'
-                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-              }`}
-              aria-label="Shopping Cart"
-              title={cartCount > 0 ? `${cartCount} course(s) in cart` : 'Cart'}
-            >
-              <CartIcon size={16} />
-              {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-institutional-600 text-white text-[9px] font-extrabold flex items-center justify-center shadow-xs">
-                  {cartCount > 9 ? '9+' : cartCount}
-                </span>
-              )}
-            </button>
-          )}
+          {/* Cart Icon with Live Badge (Visible to both Students and Admins) */}
+          <button
+            onClick={() => {
+              if (!user) {
+                onOpenAuthModal?.('login');
+              } else {
+                handleNavClick(ROUTES.cart);
+              }
+            }}
+            className={`relative p-1.5 sm:p-2 rounded-full transition-colors focus:outline-none cursor-pointer ${
+              isOn(ROUTES.cart)
+                ? 'bg-institutional-100 text-institutional-700 dark:bg-institutional-900/60 dark:text-institutional-300'
+                : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+            }`}
+            aria-label="Shopping Cart"
+            title={cartCount > 0 ? `${cartCount} course(s) in cart` : 'Cart'}
+          >
+            <CartIcon size={16} />
+            {cartCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-institutional-600 text-white text-[9px] font-extrabold flex items-center justify-center shadow-xs">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
+          </button>
 
           {/* Theme Toggle Button */}
           <button
@@ -648,6 +648,20 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         >
                           AI Question Pipeline
                         </button>
+                        <button
+                          onClick={() => {
+                            handleNavClick(ROUTES.cart);
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium flex items-center justify-between"
+                        >
+                          <span>Shopping Cart</span>
+                          {cartCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-institutional-600 text-white text-[10px] font-bold">
+                              {cartCount}
+                            </span>
+                          )}
+                        </button>
                       </>
                     )}
                   </div>
@@ -707,9 +721,11 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
             {/* Header: Brand & Close Button */}
             <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-institutional-600 text-white flex items-center justify-center font-bold text-xs">
-                  <SparklesIcon size={14} />
-                </div>
+                <img
+                  src="/prepmagnet.png"
+                  alt="PrepMagnet Logo"
+                  className="w-8 h-8 object-contain"
+                />
                 <span className="font-extrabold text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
                   PrepMagnet
                 </span>
@@ -985,6 +1001,25 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                       <span>Courses Management</span>
                     </div>
                     <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={() => handleNavClick(ROUTES.cart)}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.cart)
+                        ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <CartIcon size={16} className="text-institutional-600 dark:text-institutional-400" />
+                      <span>Shopping Cart</span>
+                    </div>
+                    {cartCount > 0 && (
+                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-institutional-600 text-white text-[11px] font-extrabold flex items-center justify-center">
+                        {cartCount}
+                      </span>
+                    )}
                   </button>
 
                   <button

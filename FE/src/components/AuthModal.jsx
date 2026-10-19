@@ -255,8 +255,8 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-150 dark:border-charcoal-800 relative z-10 shrink-0 gap-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-blue-500 text-white flex items-center justify-center shadow-md shrink-0">
-              {isForgotMode ? <KeyIcon size={17} /> : <SparklesIcon size={17} />}
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 flex items-center justify-center shadow-xs shrink-0 overflow-hidden p-1">
+              {isForgotMode ? <KeyIcon size={17} className="text-institutional-600" /> : <img src="/prepmagnet.png" alt="PrepMagnet Logo" className="w-full h-full object-contain" />}
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5 truncate">

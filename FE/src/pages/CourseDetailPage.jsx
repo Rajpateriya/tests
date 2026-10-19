@@ -46,7 +46,7 @@ const PAGE_MAIN = 'relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5
 export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backLabel = 'Courses' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToCart, isInCart } = useCart();
+  const { addToCart, isInCart, refreshCart } = useCart();
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartNotice, setCartNotice] = useState(null);
   const [course, setCourse] = useState(null);
@@ -107,6 +107,7 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
     setCheckoutOpen(false);
     setEnrollMessage(`You have enrolled in ${course.title}! You can now take every quiz and mock test below.`);
     load();
+    refreshCart();
   };
 
   if (loading) {

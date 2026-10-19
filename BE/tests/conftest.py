@@ -28,7 +28,10 @@ def mock_razorpay():
         "currency": "INR",
         "status": "created",
     }
-    with patch("razorpay.Client", return_value=mock_rzp):
+    with patch("app.core.razorpay.get_razorpay_client", return_value=mock_rzp), \
+         patch("app.core.config.settings.RAZORPAY_KEY_ID", "rzp_test_mock_12345"), \
+         patch("app.core.config.settings.RAZORPAY_KEY_SECRET", "mock_secret_key_12345"), \
+         patch("razorpay.Client", return_value=mock_rzp):
         yield mock_rzp
 
 

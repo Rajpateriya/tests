@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router';
@@ -968,6 +969,18 @@ export const AdminStudioPage = () => {
     })
   );
 
+  // Prevent background page from scrolling when any modal in AdminStudioPage is open
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(passModal || selectedUser || enrolledModal || resolvingTicket);
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [passModal, selectedUser, enrolledModal, resolvingTicket]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-7 font-sans text-charcoal-900 dark:text-charcoal-100">
       {/* Toast Notification */}
@@ -1497,9 +1510,9 @@ export const AdminStudioPage = () => {
       )}
 
       {/* EDIT USER PROFILE MODAL */}
-      {selectedUser && (
+      {selectedUser && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-charcoal-950/75 backdrop-blur-md animate-fade-in font-sans"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-charcoal-950/80 backdrop-blur-md animate-fade-in font-sans"
           onClick={() => setSelectedUser(null)}
         >
           <div
@@ -1710,7 +1723,8 @@ export const AdminStudioPage = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* TAB 2: COURSES (create a course, tag generated tests to it, see who enrolled) */}
@@ -2154,9 +2168,9 @@ export const AdminStudioPage = () => {
       )}
 
       {/* ENROLLED USERS MODAL */}
-      {enrolledModal && (
+      {enrolledModal && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-charcoal-950/75 backdrop-blur-md animate-fade-in font-sans"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-charcoal-950/80 backdrop-blur-md animate-fade-in font-sans"
           onClick={() => setEnrolledModal(null)}
         >
           <div
@@ -2230,7 +2244,8 @@ export const AdminStudioPage = () => {
               </table>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* TAB 3: MOCK TESTS (every available test, newest first; infinite scroll, server-side search) */}
@@ -2759,9 +2774,9 @@ export const AdminStudioPage = () => {
       )}
 
       {/* Resolve-with-reason prompt: the reason goes straight into the user's notification */}
-      {resolvingTicket && (
+      {resolvingTicket && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-charcoal-950/80 backdrop-blur-md animate-fade-in font-sans"
           onClick={() => setResolvingTicket(null)}
         >
           <div
@@ -2804,7 +2819,8 @@ export const AdminStudioPage = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* TAB 4: INFRASTRUCTURE & TELEMETRY */}
@@ -3036,11 +3052,17 @@ export const AdminStudioPage = () => {
       )}
 
       {/* MODAL: CREATE / EDIT PASS */}
-      {passModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-950/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-scale-in">
+      {passModal && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-charcoal-950/80 backdrop-blur-md animate-fade-in font-sans"
+          onClick={() => setPassModal(null)}
+        >
+          <div
+            className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-charcoal-150 dark:border-charcoal-800">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-charcoal-150 dark:border-charcoal-800 shrink-0">
               <div className="flex items-center gap-2">
                 <CrownIcon size={20} className="text-amber-500" />
                 <h3 className="text-base font-black text-charcoal-950 dark:text-white">
@@ -3048,8 +3070,9 @@ export const AdminStudioPage = () => {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setPassModal(null)}
-                className="p-2 text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 rounded-xl"
+                className="p-2 text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 rounded-xl cursor-pointer"
               >
                 <XIcon size={18} />
               </button>
@@ -3337,7 +3360,8 @@ export const AdminStudioPage = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

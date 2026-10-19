@@ -267,39 +267,7 @@ async def seed_test_database(db: AsyncIOMotorDatabase) -> None:
     for c in courses:
         await db["courses"].replace_one({"_id": c["_id"]}, c, upsert=True)
 
-    # 6. Test Passes
-    passes = [
-        {
-            "_id": "pass_monthly",
-            "title": "Monthly Pass",
-            "tagline": "Full-length official simulations.",
-            "badge": "MOST POPULAR",
-            "duration_days": 30,
-            "base_price": 149.0,
-            "original_price": 249.0,
-            "max_coins_discount": 500,
-            "covered_course_ids": ["course-ssc-cgl-2026"],
-            "features": ["30 Days Full Platform Access"],
-            "is_active": True,
-            "created_at": now,
-        },
-        {
-            "_id": "pass_annual",
-            "title": "Annual Pass",
-            "tagline": "All exam access pass.",
-            "badge": "SAVE 40%",
-            "duration_days": 365,
-            "base_price": 499.0,
-            "original_price": 899.0,
-            "max_coins_discount": 1000,
-            "covered_course_ids": ["course-ssc-cgl-2026"],
-            "features": ["365 Days All-Access Membership"],
-            "is_active": True,
-            "created_at": now,
-        },
-    ]
-    for p in passes:
-        await db["passes"].replace_one({"_id": p["_id"]}, p, upsert=True)
+    # 6. Test Passes: dynamic and unseeded; created by admin through tests if needed
 
     # 7. Test Typing Passages
     typing = [

@@ -43,7 +43,7 @@ export const CoursesPage = ({ onStartTest }) => {
   const navigate = useNavigate();
   const openCourse = useOpenCourse();
   const { user } = useAuth();
-  const { addToCart, isInCart } = useCart();
+  const { addToCart, isInCart, refreshCart } = useCart();
   const [addingCourseId, setAddingCourseId] = useState(null);
   const [cartNotice, setCartNotice] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -166,9 +166,10 @@ export const CoursesPage = ({ onStartTest }) => {
   const handlePaymentSuccess = () => {
     setCheckoutModalOpen(false);
     setEnrollSuccessMessage(`You have enrolled in ${selectedCourseForCheckout?.title}! You can now practice all subject-wise quizzes.`);
-    // Refresh course list to update enrolled state
+    // Refresh course list to update enrolled state and cart
     fetchCourses();
     fetchUserCoins();
+    refreshCart();
   };
 
   const filteredCourses = courses.filter((c) => {

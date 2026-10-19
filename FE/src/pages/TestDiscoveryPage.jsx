@@ -62,8 +62,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   const [sandboxPaletteState, setSandboxPaletteState] = useState('ANSWERED'); // 'ANSWERED' | 'REVIEW' | 'NOT_VISITED'
   const [showSandboxExplanation, setShowSandboxExplanation] = useState(false);
 
-  // Interactive Passes Section State (Monthly vs Annual & Detail Modal)
-  const [landingBillingCycle, setLandingBillingCycle] = useState('yearly'); // 'yearly' | 'monthly'
+  // Dynamic Passes Section (Detail Modal)
   const [selectedPassForDetail, setSelectedPassForDetail] = useState(null);
 
   // Interactive Candidate Grievance & Helpdesk Form State
@@ -1338,7 +1337,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   S
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Saurabh Mishra</div>
+                  <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Raj Pateriya</div>
                   <div className="text-[11px] text-charcoal-400">ASO in Ministry of External Affairs</div>
                 </div>
               </div>
@@ -1359,7 +1358,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   A
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Ananya Deshmukh</div>
+                  <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Abhay Gupta</div>
                   <div className="text-[11px] text-charcoal-400">Probationary Officer (State Bank)</div>
                 </div>
               </div>
@@ -1380,7 +1379,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   R
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Rohit Verma</div>
+                  <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Prabhanshu Tiwari</div>
                   <div className="text-[11px] text-charcoal-400">Central Board of Indirect Taxes (CBIC)</div>
                 </div>
               </div>
@@ -1412,35 +1411,9 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               Full-length official simulations, deep error analytics, and All-India percentile tracking.
             </p>
 
-            {/* Monthly vs Annual Toggle */}
-            <div className="inline-flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-full border border-charcoal-200 dark:border-charcoal-700 text-xs font-bold gap-1 mt-1 shadow-inner">
-              <button
-                type="button"
-                className={`px-3.5 sm:px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${landingBillingCycle === 'monthly'
-                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                  }`}
-                onClick={() => setLandingBillingCycle('monthly')}
-              >
-                Monthly Pass
-              </button>
-              <button
-                type="button"
-                className={`px-3.5 sm:px-4 py-1.5 rounded-full transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${landingBillingCycle === 'yearly'
-                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm font-extrabold'
-                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                  }`}
-                onClick={() => setLandingBillingCycle('yearly')}
-              >
-                <span>Annual Pass</span>
-                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-                  SAVE 40%
-                </span>
-              </button>
-            </div>
           </div>
 
-          {/* Cards Grid - Balanced & Responsive Centered Grid (No Empty Slots) */}
+          {/* Cards Grid - Balanced & Responsive Centered Grid */}
           <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch justify-center">
             {passesLoading ? (
               /* Shimmer Loading Skeletons */
@@ -1452,26 +1425,20 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               ))
             ) : passes.length > 0 ? (
               passes.map((p) => {
-                const isAnnual = p.duration_days > 100;
-                const isMonthly = p.duration_days <= 100;
-                const isHighlighted = landingBillingCycle === 'yearly' ? isAnnual : isMonthly;
                 const coveredCourses = p.covered_courses || [];
                 const coveredCount = coveredCourses.length || p.covered_course_ids?.length || 0;
 
                 return (
                   <div
                     key={p.id}
-                    className={`group relative rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl bg-white dark:bg-charcoal-900 border overflow-hidden ${isHighlighted || isAnnual
-                      ? 'border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted ring-2 ring-institutional-500/20'
-                      : 'border-charcoal-200 dark:border-charcoal-800 shadow-subtle hover:border-institutional-400'
-                      }`}
+                    className="group relative rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-400 dark:hover:border-institutional-500 shadow-subtle overflow-hidden"
                   >
-                    {/* Top Ribbon Badge */}
-                    {(p.badge || isAnnual) && (
+                    {/* Top Ribbon Badge - Only if set on backend */}
+                    {p.badge && (
                       <div className="absolute top-0 right-0">
                         <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[10px] tracking-wider uppercase px-3 py-1 rounded-bl-2xl shadow-sm flex items-center gap-1.5">
                           <SparklesIcon size={11} />
-                          <span>{p.badge || 'SAVE 40%'}</span>
+                          <span>{p.badge}</span>
                         </div>
                       </div>
                     )}
@@ -1484,9 +1451,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         </h3>
                       </div>
 
-                      <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-400 mb-4 leading-relaxed">
-                        {p.tagline}
-                      </p>
+                      {p.tagline && (
+                        <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-400 mb-4 leading-relaxed">
+                          {p.tagline}
+                        </p>
+                      )}
 
                       {/* Pricing Tier */}
                       <div className="flex items-baseline gap-2 pb-4 border-b border-charcoal-150 dark:border-charcoal-800 mb-4">
@@ -1494,7 +1463,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                           ₹{p.base_price}
                         </span>
                         <span className="text-xs font-bold text-charcoal-500">
-                          / {p.duration_days > 100 ? '365 Days' : `${p.duration_days} Days`}
+                          / {p.duration_days} Days
                         </span>
                         {p.original_price > p.base_price && (
                           <span className="text-sm text-charcoal-400 line-through font-mono ml-2">
@@ -1508,61 +1477,54 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         )}
                       </div>
 
-                      {/* Dynamic Courses Unlocked Box (100% Backend Driven) */}
-                      <div className="mb-4 p-3.5 rounded-xl sm:rounded-2xl bg-institutional-50/70 dark:bg-institutional-950/40 border border-institutional-200/60 dark:border-institutional-800/60 space-y-2">
-                        <div className="flex items-center justify-between text-xs font-bold text-institutional-900 dark:text-institutional-200">
-                          <span className="flex items-center gap-1.5">
-                            <BookOpenIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
-                            <span>Includes {coveredCount} Prime Courses</span>
-                          </span>
-                          <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">
-                            Instant All-Access
-                          </span>
+                      {/* Dynamic Courses Unlocked Box */}
+                      {coveredCount > 0 && (
+                        <div className="mb-4 p-3.5 rounded-xl sm:rounded-2xl bg-institutional-50/70 dark:bg-institutional-950/40 border border-institutional-200/60 dark:border-institutional-800/60 space-y-2">
+                          <div className="flex items-center justify-between text-xs font-bold text-institutional-900 dark:text-institutional-200">
+                            <span className="flex items-center gap-1.5">
+                              <BookOpenIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
+                              <span>Includes {coveredCount} Prime Courses</span>
+                            </span>
+                            <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">
+                              Instant All-Access
+                            </span>
+                          </div>
+
+                          {/* Exam Tags from Real MongoDB Courses */}
+                          {coveredCourses.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {coveredCourses.map((c) => (
+                                <span
+                                  key={c.id}
+                                  className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 border border-charcoal-200/80 dark:border-charcoal-700 shadow-2xs"
+                                >
+                                  {c.target_exam || c.title}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
+                      )}
 
-                        {/* Exam Tags from Real MongoDB Courses */}
-                        {coveredCourses.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {coveredCourses.map((c) => (
-                              <span
-                                key={c.id}
-                                className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 border border-charcoal-200/80 dark:border-charcoal-700 shadow-2xs"
-                              >
-                                {c.target_exam || c.title}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Benefits from Backend */}
-                      <div className="space-y-2 mb-6">
-                        {(p.features && p.features.length > 0
-                          ? p.features.slice(0, 5)
-                          : [
-                            'Full-Length Tier-I & Tier-II Simulation Mocks',
-                            'All-India Percentile & AIR Benchmark',
-                            'Speed vs. Accuracy Tradeoff Diagnostics',
-                            'Instant Answer Keys & Explanations',
-                          ]
-                        ).map((feat, idx) => (
-                          <div key={idx} className="flex items-start gap-2 text-xs">
-                            <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                            <span className="text-charcoal-700 dark:text-charcoal-300 font-medium leading-tight">{feat}</span>
-                          </div>
-                        ))}
-                      </div>
+                      {/* Benefits from Backend (only if defined) */}
+                      {p.features && p.features.length > 0 && (
+                        <div className="space-y-2 mb-6">
+                          {p.features.slice(0, 5).map((feat, idx) => (
+                            <div key={idx} className="flex items-start gap-2 text-xs">
+                              <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                              <span className="text-charcoal-700 dark:text-charcoal-300 font-medium leading-tight">{feat}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Interactive CTA to open details modal from the top */}
+                    {/* Interactive CTA to open details modal */}
                     <div className="pt-3 border-t border-charcoal-150 dark:border-charcoal-800/80">
                       <button
                         type="button"
                         onClick={() => setSelectedPassForDetail(p)}
-                        className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 group/btn active:scale-[0.98] cursor-pointer ${isHighlighted || isAnnual
-                          ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/25 ring-1 ring-institutional-500'
-                          : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
-                          }`}
+                        className="w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/25 active:scale-[0.98] cursor-pointer"
                       >
                         <span>Select {p.title} & View Courses</span>
                         <ArrowRightIcon size={14} className="group-hover/btn:translate-x-1 transition-transform shrink-0" />

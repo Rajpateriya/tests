@@ -300,6 +300,12 @@ class CourseService:
             {"$set": {"status": "PAID", "payment_id": payment_id, "updated_at": now}}
         )
 
+        # Auto-remove enrolled course from user's cart
+        await self.db.carts.update_one(
+            {"user_id": user_id},
+            {"$pull": {"items": {"course_id": course["_id"]}}}
+        )
+
         new_coins = updated_user.get("profile", {}).get("coins_balance", 0) if updated_user else 0
 
         return CourseEnrollmentResponse(
@@ -344,6 +350,12 @@ class CourseService:
         await self.db.courses.update_one(
             {"_id": course["_id"]},
             {"$inc": {"enrolled_count": 1}}
+        )
+
+        # Auto-remove enrolled course from user's cart
+        await self.db.carts.update_one(
+            {"user_id": user_id},
+            {"$pull": {"items": {"course_id": course["_id"]}}}
         )
         new_coins = updated_user.get("profile", {}).get("coins_balance", 0) if updated_user else 0
         return CourseEnrollmentResponse(

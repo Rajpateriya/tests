@@ -22,14 +22,11 @@ async def test_passes_and_coins_flow(client: AsyncClient):
     student_token = student_login.json()["data"]["tokens"]["access_token"]
     student_headers = {"Authorization": f"Bearer {student_token}"}
 
-    # 3. Check public passes endpoint
+    # 3. Check public passes endpoint (initially empty because seeding is removed)
     passes_resp = await client.get("/api/v1/subscriptions/passes")
     assert passes_resp.status_code == 200
     passes_data = passes_resp.json()["data"]
-    assert len(passes_data) >= 2
-    pass_ids = [p["id"] for p in passes_data]
-    assert "pass_monthly" in pass_ids
-    assert "pass_annual" in pass_ids
+    assert len(passes_data) == 0
 
     # 4. Fetch list of courses to test pass coverage
     courses_resp = await client.get("/api/v1/courses", headers=student_headers)
