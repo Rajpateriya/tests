@@ -28,7 +28,6 @@ import {
   HelpCircleIcon,
   RefreshCwIcon,
   MessageSquareIcon,
-  LockIcon,
   SearchIcon,
   XIcon,
 } from '../components/Icons';
@@ -986,72 +985,6 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Submission & Solution Review Section (Persistent for Today's Question) */}
-                  {verificationResult && dailyQuestion && (
-                    <div className="p-5 sm:p-6 rounded-2xl bg-charcoal-50/70 dark:bg-charcoal-850/60 border border-charcoal-200/80 dark:border-charcoal-750 space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-charcoal-200/60 dark:border-charcoal-750">
-                        <div className="flex items-center gap-2 text-xs font-bold text-charcoal-700 dark:text-charcoal-300">
-                          <CheckCircleIcon size={16} className="text-emerald-600" />
-                          <span>Today's Question Review & Official Derivation</span>
-                        </div>
-                        <span className="text-[11px] font-mono text-charcoal-500">
-                          {dailyQuestion.subject} • {dailyQuestion.topic}
-                        </span>
-                      </div>
-
-                      {/* Question Text */}
-                      <div className="text-xs sm:text-sm font-bold text-charcoal-900 dark:text-white leading-relaxed bg-white dark:bg-charcoal-800 p-4 rounded-xl border border-charcoal-200 dark:border-charcoal-700">
-                        {dailyQuestion.question_text}
-                      </div>
-
-                      {/* Options Review */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {(dailyQuestion.options || []).map((opt) => {
-                          const isCorrect = verificationResult.correct_option === opt.id;
-                          const isChosen = selectedOption === opt.id;
-                          const isChosenWrong = isChosen && !verificationResult.is_correct;
-
-                          let style = 'bg-white dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 opacity-60';
-                          if (isCorrect) {
-                            style = 'bg-emerald-50 dark:bg-emerald-950/70 border-emerald-500 text-emerald-950 dark:text-emerald-100 ring-2 ring-emerald-500/30 font-bold';
-                          } else if (isChosenWrong) {
-                            style = 'bg-rose-50 dark:bg-rose-950/70 border-rose-500 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/30 font-bold';
-                          }
-
-                          return (
-                            <div key={opt.id} className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${style}`}>
-                              <span className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] ${
-                                isCorrect ? 'bg-emerald-600 text-white' : isChosenWrong ? 'bg-rose-600 text-white' : 'bg-charcoal-100 dark:bg-charcoal-700'
-                              }`}>
-                                {opt.id}
-                              </span>
-                              <span className="flex-1">{opt.text}</span>
-                              {isCorrect && <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300">✓ Correct</span>}
-                              {isChosenWrong && <span className="text-[10px] font-extrabold text-rose-700 dark:text-rose-300">Your Choice</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Official Explanation */}
-                      <div className="p-4 rounded-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-700 text-xs space-y-1.5">
-                        <div className="font-bold text-[11px] uppercase tracking-wider text-institutional-600 dark:text-institutional-400 flex items-center gap-1.5">
-                          <SparklesIcon size={12} />
-                          <span>Official PrepMagnet Derivation:</span>
-                        </div>
-                        <p className="text-charcoal-700 dark:text-charcoal-300 leading-relaxed font-sans">
-                          {verificationResult.solution_explanation}
-                        </p>
-                      </div>
-
-                      {/* Lock Notice */}
-                      <div className="text-center pt-2 text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium flex items-center justify-center gap-1.5">
-                        <LockIcon size={12} className="text-charcoal-400" />
-                        <span>Today's practice quota is locked. Only 1 question is permitted per day to build daily consistency.</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               ) : dailyQuestion ? (
                 /* Active Question Arena (Only Shown Before Attempting) */
