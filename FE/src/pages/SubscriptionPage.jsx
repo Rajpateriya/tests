@@ -143,11 +143,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
   ];
 
   return (
-    <div className="relative overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-radial-glow">
-      {/* Moving Ambient Glows */}
-      <div className="absolute -top-32 left-1/4 w-[600px] h-[350px] bg-institutional-500/10 dark:bg-institutional-500/15 blur-[130px] rounded-full pointer-events-none" />
-      <div className="absolute top-96 -right-20 w-[500px] h-[500px] bg-amber-500/10 dark:bg-amber-500/15 blur-[130px] rounded-full pointer-events-none" />
-
+    <div className="relative overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 relative z-10 animate-fade-in">
 
         {/* Active Pass Banner (if user has active pass) */}

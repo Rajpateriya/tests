@@ -345,13 +345,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   const activeBlueprint = EXAM_BLUEPRINTS[selectedExamBlueprint];
 
   return (
-    <div className="relative overflow-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero">
-      {/* Dynamic Animated Ambient Background Glows */}
-      <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
-      <div className="absolute top-[680px] -left-36 w-[550px] h-[550px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
-      <div className="absolute top-[1500px] -right-36 w-[600px] h-[600px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
-      <div className="absolute top-[2300px] -left-20 w-[500px] h-[500px] bg-sky-500/8 dark:bg-sky-400/10 blur-[120px] rounded-full pointer-events-none animate-drift-slow" />
-
+    <div className="relative overflow-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-20 sm:space-y-28 relative z-10">
         {/* ========================================================================= */}
         {/* 1. HERO SECTION: Inspiring, Authoritative Institutional Positioning       */}

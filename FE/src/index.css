@@ -2,17 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Sleek Academic Background Mesh & Ambient Glows */
+/* Sleek Global Academic Background Mesh & Ambient Glows */
+.bg-subtle-mesh {
+  background-size: 32px 32px;
+  background-image: radial-gradient(rgba(100, 116, 139, 0.18) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 20%, black 35%, transparent 95%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 20%, black 35%, transparent 95%);
+}
+.dark .bg-subtle-mesh, html.dark .bg-subtle-mesh {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+}
+
 .bg-grid-pattern {
   background-size: 36px 36px;
   background-image: 
-    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
 }
 .dark .bg-grid-pattern, html.dark .bg-grid-pattern, body.dark .bg-grid-pattern {
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
 }
 
 /* 1. Academic Architectural Blueprint Grid */
@@ -110,12 +120,16 @@
 }
 
 .bg-mesh-hero {
+  background-repeat: no-repeat;
+  background-size: cover;
   background-image: 
     radial-gradient(at 20% 15%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
     radial-gradient(at 80% 10%, rgba(16, 185, 129, 0.06) 0px, transparent 45%),
     radial-gradient(at 50% 60%, rgba(124, 58, 237, 0.05) 0px, transparent 55%);
 }
 .dark .bg-mesh-hero, html.dark .bg-mesh-hero {
+  background-repeat: no-repeat;
+  background-size: cover;
   background-image: 
     radial-gradient(at 20% 15%, rgba(59, 130, 246, 0.14) 0px, transparent 50%),
     radial-gradient(at 80% 10%, rgba(16, 185, 129, 0.10) 0px, transparent 45%),

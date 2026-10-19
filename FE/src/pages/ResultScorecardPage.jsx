@@ -166,12 +166,7 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
   }
 
   return (
-    <div className="relative overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-radial-glow min-h-screen">
-      {/* Moving Ambient Scorecard Glows */}
-      <div className="absolute -top-32 left-1/3 w-[500px] h-[350px] bg-emerald-500/10 dark:bg-emerald-500/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
-      <div className="absolute top-1/2 -right-24 w-[450px] h-[450px] bg-institutional-500/10 dark:bg-institutional-500/15 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
-      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-amber-500/8 dark:bg-amber-500/12 blur-[120px] rounded-full pointer-events-none animate-drift-slow" />
-
+    <div className="relative overflow-hidden font-sans text-charcoal-900 dark:text-charcoal-100 min-h-screen">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10">
         {isCelebratory && <Confetti duration={3000} />}
 

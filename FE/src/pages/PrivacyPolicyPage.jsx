@@ -45,11 +45,7 @@ export const PrivacyPolicyPage = () => {
   };
 
   return (
-    <div className="relative overflow-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 pb-16 font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero min-h-screen">
-      {/* Ambient background glows */}
-      <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-[600px] -left-36 w-[520px] h-[520px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none" />
-
+    <div className="relative overflow-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 pb-16 font-sans text-charcoal-900 dark:text-charcoal-100 min-h-screen">
       <main className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
 
         {/* Breadcrumb */}

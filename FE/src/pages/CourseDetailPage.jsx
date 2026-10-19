@@ -32,16 +32,10 @@ const COVER_GLOW = {
   backgroundImage: 'radial-gradient(circle at 90% -20%, rgba(255,255,255,0.38), transparent 55%)',
 };
 
-const Backdrop = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-    <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[720px] max-w-[140vw] h-[420px] bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none animate-blob" />
-    <div className="absolute top-[520px] -left-36 w-[520px] max-w-[140vw] h-[520px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
-    <div className="absolute top-[900px] -right-36 w-[560px] max-w-[140vw] h-[560px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
-  </div>
-);
+const Backdrop = () => null;
 
 // The -mt/-mb + pt/pb pairs cancel the app shell's navbar/footer padding so the backdrop reaches the very top and bottom.
-const PAGE_SHELL = 'relative w-full max-w-full overflow-x-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100 bg-grid-pattern bg-mesh-hero';
+const PAGE_SHELL = 'relative w-full max-w-full overflow-x-hidden -mt-20 pt-20 sm:-mt-24 sm:pt-24 -mb-12 pb-12 font-sans text-charcoal-900 dark:text-charcoal-100';
 const PAGE_MAIN = 'relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-10 min-w-0';
 
 export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backLabel = 'Courses' }) => {

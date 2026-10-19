@@ -198,7 +198,23 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 flex flex-col font-sans transition-colors duration-200 relative">
+      {/* Global Sleek Ambient Background & Soft Engineering Grid (Consistent Across All Pages) */}
+      {!isExam && (
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 select-none" aria-hidden="true">
+          {/* Top Radiant Institutional Glow */}
+          <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[920px] h-[520px] bg-gradient-to-b from-institutional-500/12 via-indigo-500/8 to-transparent dark:from-institutional-600/22 dark:via-indigo-600/14 dark:to-transparent blur-[140px] rounded-full" />
+          
+          {/* Atmospheric Color Diffusion Orbs */}
+          <div className="absolute top-[22%] -left-36 w-[600px] h-[600px] bg-sky-500/5 dark:bg-sky-500/9 blur-[150px] rounded-full" />
+          <div className="absolute top-[52%] -right-36 w-[650px] h-[650px] bg-purple-500/5 dark:bg-purple-600/9 blur-[160px] rounded-full" />
+          <div className="absolute top-[82%] left-[12%] w-[520px] h-[520px] bg-emerald-500/5 dark:bg-emerald-500/8 blur-[140px] rounded-full" />
+
+          {/* Delicate Technical Micro-Dot Grid with Smooth Radial Vignette Mask */}
+          <div className="absolute inset-0 bg-subtle-mesh opacity-75 dark:opacity-45" />
+        </div>
+      )}
+
       {/* Start-test failure (shown instead of silently opening a demo exam) */}
       {startError && (
         <div className="fixed top-24 inset-x-0 z-50 flex justify-center px-4" role="alert">
@@ -216,7 +232,7 @@ function AppContent() {
       {!isExam && <Navbar activeAttempt={activeAttempt} onOpenAuthModal={handleOpenAuthModal} />}
 
       {/* Main Content Area (With top padding pt-20 to accommodate floating navbar) */}
-      <div className={`flex-1 w-full min-w-0 ${!isExam ? 'pt-20 sm:pt-24 pb-12' : ''}`}>
+      <div className={`flex-1 w-full min-w-0 relative z-10 ${!isExam ? 'pt-20 sm:pt-24 pb-12' : ''}`}>
         <Routes>
           {/* Public Test Discovery / Landing Page */}
           <Route
