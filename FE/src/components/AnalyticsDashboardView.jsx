@@ -170,7 +170,7 @@ export const AnalyticsDashboardView = ({
         bestScore: dashboard?.best_score ?? 0,
         percentile: dashboard?.overall_percentile ?? 0,
         globalRank: dashboard?.global_rank ?? 0,
-        avgSpeed: Math.round(dashboard?.avg_speed_seconds || 58),
+        avgSpeed: dashboard?.avg_speed_seconds ? Math.round(dashboard.avg_speed_seconds) : 0,
       };
     }
 
@@ -193,14 +193,14 @@ export const AnalyticsDashboardView = ({
     const avgScore = Number((totalScore / Math.max(1, scores.length)).toFixed(1));
     const avgAccuracy = Number((totalAcc / Math.max(1, accs.length)).toFixed(1));
     const bestScore = Math.max(...scores);
-    const percentile = Math.min(99.4, Math.max(12, Number((avgAccuracy * 1.08).toFixed(1))));
+    const percentile = dashboard?.overall_percentile ?? (avgAccuracy > 0 ? Number(avgAccuracy.toFixed(1)) : 0);
 
     const totalSeconds = filteredAttempts.reduce((s, a) => s + (a.total_time_taken_seconds || 0), 0);
     const totalQuestions = filteredAttempts.reduce(
-      (s, a) => s + (a.total_questions || a.correct_count + a.incorrect_count || 1),
+      (s, a) => s + (a.total_questions || (a.correct_count || 0) + (a.incorrect_count || 0) || 0),
       0
     );
-    const avgSpeed = Math.round(totalSeconds / Math.max(1, totalQuestions)) || 54;
+    const avgSpeed = totalQuestions > 0 ? Math.round(totalSeconds / totalQuestions) : 0;
 
     return {
       totalMocks: filteredAttempts.length,
@@ -208,7 +208,7 @@ export const AnalyticsDashboardView = ({
       avgAccuracy,
       bestScore,
       percentile,
-      globalRank: Math.max(1, Math.round(450 * (1 - percentile / 100))),
+      globalRank: dashboard?.global_rank ?? 0,
       avgSpeed,
     };
   }, [isCourseSpecific, filteredAttempts, dashboard]);
@@ -236,7 +236,7 @@ export const AnalyticsDashboardView = ({
     );
     const skipped = filteredAttempts.reduce((acc, a) => acc + (a.unattempted_count || 0), 0);
     const total = correct + negative + skipped;
-    const accuracy = total > 0 ? Number(((correct / (correct + negative || 1)) * 100).toFixed(1)) : 0;
+    const accuracy = total > 0 ? Number(((correct / Math.max(1, correct + negative)) * 100).toFixed(1)) : 0;
     return {
       correct,
       correctMarks: Number((correct * 2).toFixed(1)),
@@ -247,6 +247,48 @@ export const AnalyticsDashboardView = ({
       accuracy,
     };
   }, [filteredAttempts]);
+
+  // Dynamic Donut Chart Geometry (Circumference C ≈ 414.7)
+  const donutGeometry = useMemo(() => {
+    const C = 414.7;
+    const total = disposition.total;
+    if (total === 0) {
+      return {
+        correctDash: 0,
+        negativeDash: 0,
+        skippedDash: 0,
+        correctOffset: 0,
+        negativeOffset: 0,
+        skippedOffset: 0,
+        correctPct: 0,
+        negativePct: 0,
+        skippedPct: 0,
+      };
+    }
+    const correctPct = Number(((disposition.correct / total) * 100).toFixed(1));
+    const negativePct = Number(((disposition.negative / total) * 100).toFixed(1));
+    const skippedPct = Number(Math.max(0, 100 - correctPct - negativePct).toFixed(1));
+
+    const correctDash = Math.max(0, (disposition.correct / total) * C);
+    const negativeDash = Math.max(0, (disposition.negative / total) * C);
+    const skippedDash = Math.max(0, (disposition.skipped / total) * C);
+
+    const correctOffset = 0;
+    const negativeOffset = -correctDash;
+    const skippedOffset = -(correctDash + negativeDash);
+
+    return {
+      correctDash,
+      negativeDash,
+      skippedDash,
+      correctOffset,
+      negativeOffset,
+      skippedOffset,
+      correctPct,
+      negativePct,
+      skippedPct,
+    };
+  }, [disposition]);
 
   // Sectional Mastery dataset computed dynamically for the selected course
   const sectionalMastery = useMemo(() => {
@@ -304,10 +346,10 @@ export const AnalyticsDashboardView = ({
       }
 
       if (accuracy === undefined) {
-        accuracy = isCourseSpecific && filteredAttempts.length === 0 ? 0 : 75;
+        accuracy = 0;
       }
 
-      const topperAccuracy = accuracy > 0 ? Math.min(100, Math.round(accuracy + 9)) : 92;
+      const topperAccuracy = 85;
 
       let shortName = subj;
       if (subj.includes('Reasoning')) shortName = 'Reasoning';
@@ -317,9 +359,9 @@ export const AnalyticsDashboardView = ({
       else if (subj.length > 14) shortName = subj.slice(0, 12) + '...';
 
       const topics = [
-        { name: 'Core Foundations & Formulae', score: Math.min(100, Math.round(accuracy * 1.05)) },
-        { name: 'Applied Multi-Step Problem Solving', score: Math.round(accuracy * 0.95) },
-        { name: 'Speed Drills & Mental Math', score: Math.round(accuracy * 0.9) },
+        { name: 'Core Foundations & Formulae', score: Math.round(accuracy) },
+        { name: 'Applied Problem Solving', score: Math.round(accuracy) },
+        { name: 'Speed Drills & Pacing', score: Math.round(accuracy) },
       ];
 
       return {
@@ -328,9 +370,9 @@ export const AnalyticsDashboardView = ({
         shortName,
         accuracy: Math.round(accuracy),
         topperAccuracy,
-        speedSec: 46,
-        topperSpeedSec: 36,
-        questions: accuracy > 0 ? `${Math.round(accuracy * 0.8)} / 80 Qs` : '0 Qs Attempted',
+        speedSec: courseKPIs.avgSpeed || 0,
+        topperSpeedSec: 50,
+        questions: accuracy > 0 ? `${Math.round(accuracy)}% Mastery` : '0 Qs Attempted',
         status:
           accuracy >= 80
             ? 'Mastered'
@@ -343,7 +385,7 @@ export const AnalyticsDashboardView = ({
         topics,
       };
     });
-  }, [isCourseSpecific, activeCourse, dashboard, filteredAttempts]);
+  }, [isCourseSpecific, activeCourse, dashboard, courseKPIs.avgSpeed]);
 
   // Dynamic SVG Radar Geometry calculated from sectionalMastery
   const radarCenter = { x: 145, y: 110 };
@@ -433,6 +475,29 @@ export const AnalyticsDashboardView = ({
     });
     return { ...worst, gap: maxGap };
   }, [sectionalMastery]);
+
+  // Real difficulty metrics from backend or calculated fallback
+  const diffStats = useMemo(() => {
+    const raw = dashboard?.difficulty_stats || {};
+    return {
+      easy: raw.easy || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 },
+      medium: raw.medium || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 },
+      hard: raw.hard || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 },
+    };
+  }, [dashboard]);
+
+  // Dynamic Speed vs Precision Quadrant Matrix from real syllabus performance
+  const quadrantMapping = useMemo(() => {
+    const attempted = sectionalMastery.filter((s) => s.accuracy > 0);
+    const avgSpeed = courseKPIs.avgSpeed > 0 ? courseKPIs.avgSpeed : 60;
+
+    const bullseye = attempted.find((s) => s.accuracy >= 75 && s.speedSec <= avgSpeed);
+    const methodical = attempted.find((s) => s.accuracy >= 75 && s.speedSec > avgSpeed);
+    const risk = attempted.find((s) => s.accuracy < 75 && s.speedSec <= avgSpeed);
+    const bottleneck = attempted.find((s) => s.accuracy < 75 && s.speedSec > avgSpeed);
+
+    return { bullseye, methodical, risk, bottleneck };
+  }, [sectionalMastery, courseKPIs.avgSpeed]);
 
   return (
     <div className="space-y-6">
@@ -570,7 +635,9 @@ export const AnalyticsDashboardView = ({
           <div className="p-4 rounded-2xl bg-charcoal-50/70 dark:bg-charcoal-800/40 border border-charcoal-200/80 dark:border-charcoal-750 space-y-1 relative overflow-hidden group hover:border-institutional-500/50 transition-colors">
             <div className="flex items-center justify-between text-xs font-bold text-charcoal-500">
               <span className="truncate">{isCourseSpecific ? `${activeCourse.target_exam} Accuracy` : 'Overall Accuracy'}</span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-mono text-[11px] font-black">+4.2% ↑</span>
+              <span className="text-emerald-700 dark:text-emerald-400 font-mono text-[11px] font-black">
+                {courseKPIs.totalMocks > 0 ? (courseKPIs.avgAccuracy >= 70 ? 'Proficient' : 'In Progress') : 'Baseline'}
+              </span>
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-black font-mono text-charcoal-900 dark:text-white">
@@ -600,7 +667,11 @@ export const AnalyticsDashboardView = ({
               </span>
             </div>
             <p className="text-[11px] text-charcoal-500">
-              Top <strong>{(100 - courseKPIs.percentile).toFixed(1)}%</strong> of active candidates
+              {courseKPIs.percentile > 0 ? (
+                <>Top <strong>{(100 - courseKPIs.percentile).toFixed(1)}%</strong> of active candidates</>
+              ) : (
+                <>Attempt mocks to establish percentile</>
+              )}
             </p>
             <div className="w-full h-1.5 rounded-full bg-charcoal-200 dark:bg-charcoal-700 overflow-hidden mt-2">
               <div
@@ -641,15 +712,20 @@ export const AnalyticsDashboardView = ({
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-black font-mono text-charcoal-900 dark:text-white">
-                {courseKPIs.avgSpeed || 54}s
+                {courseKPIs.avgSpeed > 0 ? `${courseKPIs.avgSpeed}s` : '--'}
               </span>
-              <span className="text-xs font-mono text-charcoal-400">/ Question</span>
+              <span className="text-xs font-mono text-charcoal-400">{courseKPIs.avgSpeed > 0 ? '/ Question' : 'No attempts'}</span>
             </div>
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
-              ✓ Optimal exam pacing (Benchmark: &lt;60s)
+            <p className="text-[11px] text-charcoal-500 font-medium">
+              {courseKPIs.avgSpeed > 0
+                ? (courseKPIs.avgSpeed <= 60 ? '✓ Optimal exam pacing (<60s)' : '⚠️ Dwell time exceeds 60s target')
+                : 'Target Benchmark: <60s / Q'}
             </p>
             <div className="w-full h-1.5 rounded-full bg-charcoal-200 dark:bg-charcoal-700 overflow-hidden mt-2">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '85%' }} />
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                style={{ width: `${courseKPIs.avgSpeed > 0 ? Math.min(100, Math.round((60 / Math.max(30, courseKPIs.avgSpeed)) * 100)) : 0}%` }}
+              />
             </div>
           </div>
         </div>
@@ -1118,7 +1194,7 @@ export const AnalyticsDashboardView = ({
                 />
 
                 {/* Circumference = 2 * PI * 66 ≈ 414.7 */}
-                {/* Correct Slice (77.2%): ~320 */}
+                {/* Correct Slice */}
                 <circle
                   cx="100"
                   cy="100"
@@ -1126,8 +1202,8 @@ export const AnalyticsDashboardView = ({
                   fill="transparent"
                   stroke="url(#correctGrad)"
                   strokeWidth={activeDisposition === 'correct' ? '24' : activeDisposition === 'all' ? '18' : '14'}
-                  strokeDasharray="316 415"
-                  strokeDashoffset="0"
+                  strokeDasharray={`${donutGeometry.correctDash} 415`}
+                  strokeDashoffset={donutGeometry.correctOffset}
                   strokeLinecap="round"
                   className="transition-all duration-300 cursor-pointer"
                   opacity={activeDisposition === 'all' || activeDisposition === 'correct' ? 1 : 0.35}
@@ -1140,7 +1216,7 @@ export const AnalyticsDashboardView = ({
                   onClick={() => setPinnedDisposition(prev => prev === 'correct' ? null : 'correct')}
                 />
 
-                {/* Negative Slice (13.0%): ~54 */}
+                {/* Negative Slice */}
                 <circle
                   cx="100"
                   cy="100"
@@ -1148,8 +1224,8 @@ export const AnalyticsDashboardView = ({
                   fill="transparent"
                   stroke="url(#negativeGrad)"
                   strokeWidth={activeDisposition === 'negative' ? '24' : activeDisposition === 'all' ? '18' : '14'}
-                  strokeDasharray="50 415"
-                  strokeDashoffset="-322"
+                  strokeDasharray={`${donutGeometry.negativeDash} 415`}
+                  strokeDashoffset={donutGeometry.negativeOffset}
                   strokeLinecap="round"
                   className="transition-all duration-300 cursor-pointer"
                   opacity={activeDisposition === 'all' || activeDisposition === 'negative' ? 1 : 0.35}
@@ -1162,7 +1238,7 @@ export const AnalyticsDashboardView = ({
                   onClick={() => setPinnedDisposition(prev => prev === 'negative' ? null : 'negative')}
                 />
 
-                {/* Skipped Slice (9.8%): ~40 */}
+                {/* Skipped Slice */}
                 <circle
                   cx="100"
                   cy="100"
@@ -1170,8 +1246,8 @@ export const AnalyticsDashboardView = ({
                   fill="transparent"
                   stroke="url(#skippedGrad)"
                   strokeWidth={activeDisposition === 'skipped' ? '24' : activeDisposition === 'all' ? '18' : '14'}
-                  strokeDasharray="34 415"
-                  strokeDashoffset="-378"
+                  strokeDasharray={`${donutGeometry.skippedDash} 415`}
+                  strokeDashoffset={donutGeometry.skippedOffset}
                   strokeLinecap="round"
                   className="transition-all duration-300 cursor-pointer"
                   opacity={activeDisposition === 'all' || activeDisposition === 'skipped' ? 1 : 0.35}
@@ -1199,11 +1275,11 @@ export const AnalyticsDashboardView = ({
                   }`}
                 >
                   {activeDisposition === 'correct'
-                    ? '142'
+                    ? disposition.correct
                     : activeDisposition === 'negative'
-                    ? '24'
+                    ? disposition.negative
                     : activeDisposition === 'skipped'
-                    ? '18'
+                    ? disposition.skipped
                     : `${disposition.accuracy}%`}
                 </span>
                 <span
@@ -1218,21 +1294,21 @@ export const AnalyticsDashboardView = ({
                   }`}
                 >
                   {activeDisposition === 'correct'
-                    ? 'Correct (+284)'
+                    ? `Correct (+${disposition.correctMarks})`
                     : activeDisposition === 'negative'
-                    ? 'Mistakes (-12)'
+                    ? `Mistakes (-${disposition.negativePenalty})`
                     : activeDisposition === 'skipped'
-                    ? 'Skips (0)'
+                    ? `Skips (${disposition.skipped})`
                     : 'Net Hit Rate'}
                 </span>
                 <span className="text-[9px] font-mono text-charcoal-400 mt-0.5">
                   {activeDisposition === 'correct'
-                    ? '77.2% Accuracy'
+                    ? `${donutGeometry.correctPct}% of Attempts`
                     : activeDisposition === 'negative'
-                    ? '13.0% of Attempts'
+                    ? `${donutGeometry.negativePct}% of Attempts`
                     : activeDisposition === 'skipped'
-                    ? '9.8% Strategic'
-                    : '184 Total Qs'}
+                    ? `${donutGeometry.skippedPct}% Strategic`
+                    : `${disposition.total} Total Qs`}
                 </span>
               </div>
             </div>
@@ -1265,10 +1341,14 @@ export const AnalyticsDashboardView = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-charcoal-500 font-mono">142 Qs • +284.0 Gross Marks</div>
+                    <div className="text-[10px] text-charcoal-500 font-mono">
+                      {disposition.correct} Qs • +{disposition.correctMarks.toFixed(1)} Gross Marks
+                    </div>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-black text-emerald-700 dark:text-emerald-400">77.2%</span>
+                <span className="text-xs font-mono font-black text-emerald-700 dark:text-emerald-400">
+                  {donutGeometry.correctPct}%
+                </span>
               </div>
 
               <div
@@ -1297,10 +1377,14 @@ export const AnalyticsDashboardView = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-charcoal-500 font-mono">24 Qs • -12.0 Marks Lost</div>
+                    <div className="text-[10px] text-charcoal-500 font-mono">
+                      {disposition.negative} Qs • -{disposition.negativePenalty.toFixed(1)} Marks Lost
+                    </div>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-black text-rose-700 dark:text-rose-400">13.0%</span>
+                <span className="text-xs font-mono font-black text-rose-700 dark:text-rose-400">
+                  {donutGeometry.negativePct}%
+                </span>
               </div>
 
               <div
@@ -1329,10 +1413,14 @@ export const AnalyticsDashboardView = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-charcoal-500 font-mono">18 Qs • 0.0 Deduction</div>
+                    <div className="text-[10px] text-charcoal-500 font-mono">
+                      {disposition.skipped} Qs • 0.0 Deduction
+                    </div>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-black text-charcoal-600 dark:text-charcoal-300">9.8%</span>
+                <span className="text-xs font-mono font-black text-charcoal-600 dark:text-charcoal-300">
+                  {donutGeometry.skippedPct}%
+                </span>
               </div>
             </div>
           </div>
@@ -1359,21 +1447,29 @@ export const AnalyticsDashboardView = ({
                 : '💡'}
             </span>
             <div className="leading-snug space-y-0.5">
-              {activeDisposition === 'negative' ? (
+              {disposition.total === 0 ? (
                 <span>
-                  <strong>Negative Penalty Audit:</strong> You gave away <strong>12.0 raw marks</strong> to 24 negative guesses (-0.5 each). In competitive tier cutoffs, skipping these 50/50 guesses preserves marks and immediately leaps you ahead by <strong>~180 merit rank positions</strong>.
+                  <strong>Disposition Audit:</strong> Complete mock test attempts to generate negative marking audits and precision telemetry.
+                </span>
+              ) : activeDisposition === 'negative' ? (
+                <span>
+                  <strong>Negative Penalty Audit:</strong> {disposition.negative > 0 ? (
+                    <>You lost <strong>{disposition.negativePenalty.toFixed(1)} raw marks</strong> to {disposition.negative} incorrect answers (-0.5 each). In competitive cutoffs, strategic skipping of uncertain questions preserves score and protects rank.</>
+                  ) : (
+                    <>Zero negative marking deductions recorded across selected tests. Excellent penalty control!</>
+                  )}
                 </span>
               ) : activeDisposition === 'correct' ? (
                 <span>
-                  <strong>Scoring Precision Engine:</strong> 142 correct questions contributed <strong>+284.0 gross marks</strong> at a 77.2% accuracy rate, providing your strong foundation in the <strong>91.8th national percentile</strong>.
+                  <strong>Scoring Precision Engine:</strong> {disposition.correct} correct questions contributed <strong>+{disposition.correctMarks.toFixed(1)} gross marks</strong> at a {disposition.accuracy}% accuracy rate.
                 </span>
               ) : activeDisposition === 'skipped' ? (
                 <span>
-                  <strong>Strategic Pruning Discipline:</strong> Skipping 18 high-risk questions saved your scorecard from potential negative mark deductions. Tactical skipping is a recognized competitive advantage.
+                  <strong>Strategic Pruning Discipline:</strong> Skipping {disposition.skipped} high-risk questions saved your scorecard from potential penalty deductions.
                 </span>
               ) : (
                 <span>
-                  <strong>Negative Marking Recovery Simulator:</strong> If you convert wild 50/50 guesses into strategic skips, your net score jumps by <strong>+12.0 raw marks</strong>, immediately raising national rank by <strong>~180 places</strong>.
+                  <strong>Negative Marking Recovery Impact:</strong> Converting {disposition.negative} negative answers into strategic skips would recover up to <strong>+{disposition.negativePenalty.toFixed(1)} raw marks</strong> for your aggregate score.
                 </span>
               )}
             </div>
@@ -1800,15 +1896,22 @@ export const AnalyticsDashboardView = ({
                   <span>Easy Questions</span>
                 </span>
                 <span className="font-mono text-emerald-800 dark:text-emerald-400 font-black">
-                  42 / 50 (91.5%)
+                  {diffStats.easy.solved} / {diffStats.easy.total} ({diffStats.easy.accuracy.toFixed(1)}%)
                 </span>
               </div>
               <div className="w-full h-2 rounded-full bg-emerald-950/20 overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '91.5%' }} />
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                  style={{ width: `${Math.min(100, diffStats.easy.accuracy)}%` }}
+                />
               </div>
               <div className="text-[10px] text-emerald-800 dark:text-emerald-400 font-semibold flex items-center justify-between">
-                <span>Beats <strong>94.2%</strong> of candidates</span>
-                <span>🔥 Mastered</span>
+                <span>
+                  {diffStats.easy.total > 0
+                    ? <>Beats <strong>{diffStats.easy.beats_percentage.toFixed(1)}%</strong> of candidates</>
+                    : 'Attempt tests to calibrate'}
+                </span>
+                <span>{diffStats.easy.accuracy >= 80 ? '🔥 Mastered' : diffStats.easy.total > 0 ? '⚡ Good Pace' : 'Pending'}</span>
               </div>
             </div>
 
@@ -1820,15 +1923,22 @@ export const AnalyticsDashboardView = ({
                   <span>Medium Questions</span>
                 </span>
                 <span className="font-mono text-amber-900 dark:text-amber-400 font-black">
-                  31 / 40 (82.0%)
+                  {diffStats.medium.solved} / {diffStats.medium.total} ({diffStats.medium.accuracy.toFixed(1)}%)
                 </span>
               </div>
               <div className="w-full h-2 rounded-full bg-amber-950/20 overflow-hidden">
-                <div className="h-full bg-amber-500 rounded-full" style={{ width: '82%' }} />
+                <div
+                  className="h-full bg-amber-500 rounded-full transition-all duration-700"
+                  style={{ width: `${Math.min(100, diffStats.medium.accuracy)}%` }}
+                />
               </div>
               <div className="text-[10px] text-amber-900 dark:text-amber-400 font-semibold flex items-center justify-between">
-                <span>Beats <strong>88.6%</strong> of candidates</span>
-                <span>⚡ High Yield</span>
+                <span>
+                  {diffStats.medium.total > 0
+                    ? <>Beats <strong>{diffStats.medium.beats_percentage.toFixed(1)}%</strong> of candidates</>
+                    : 'Attempt tests to calibrate'}
+                </span>
+                <span>{diffStats.medium.accuracy >= 75 ? '⚡ High Yield' : diffStats.medium.total > 0 ? '🎯 Focus Area' : 'Pending'}</span>
               </div>
             </div>
 
@@ -1840,15 +1950,22 @@ export const AnalyticsDashboardView = ({
                   <span>Hard Complex Drills</span>
                 </span>
                 <span className="font-mono text-rose-900 dark:text-rose-400 font-black">
-                  12 / 20 (65.0%)
+                  {diffStats.hard.solved} / {diffStats.hard.total} ({diffStats.hard.accuracy.toFixed(1)}%)
                 </span>
               </div>
               <div className="w-full h-2 rounded-full bg-rose-950/20 overflow-hidden">
-                <div className="h-full bg-rose-500 rounded-full" style={{ width: '65%' }} />
+                <div
+                  className="h-full bg-rose-500 rounded-full transition-all duration-700"
+                  style={{ width: `${Math.min(100, diffStats.hard.accuracy)}%` }}
+                />
               </div>
               <div className="text-[10px] text-rose-900 dark:text-rose-400 font-semibold flex items-center justify-between">
-                <span>Beats <strong>76.4%</strong> of candidates</span>
-                <span>🎯 Priority Focus</span>
+                <span>
+                  {diffStats.hard.total > 0
+                    ? <>Beats <strong>{diffStats.hard.beats_percentage.toFixed(1)}%</strong> of candidates</>
+                    : 'Attempt tests to calibrate'}
+                </span>
+                <span>{diffStats.hard.accuracy >= 60 ? '⚡ Solid Control' : diffStats.hard.total > 0 ? '🎯 Priority Focus' : 'Pending'}</span>
               </div>
             </div>
           </div>
@@ -1879,7 +1996,11 @@ export const AnalyticsDashboardView = ({
                 <span className="text-[10px] font-bold text-emerald-700">Fast & Accurate</span>
               </div>
               <p className="text-[11px] text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                <strong>General Intelligence & Reasoning:</strong> 46s/Q with 92.5% accuracy. Your strongest competitive lever.
+                {quadrantMapping.bullseye ? (
+                  <><strong>{quadrantMapping.bullseye.name}:</strong> {quadrantMapping.bullseye.accuracy}% accuracy with swift pace. Your strongest competitive lever.</>
+                ) : (
+                  <>High accuracy with optimal speed. Target placing all core scoring sections into this quadrant.</>
+                )}
               </p>
             </div>
 
@@ -1890,7 +2011,11 @@ export const AnalyticsDashboardView = ({
                 <span className="text-[10px] font-bold text-institutional-700">Deliberate & Accurate</span>
               </div>
               <p className="text-[11px] text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                <strong>Quantitative Aptitude:</strong> 68s/Q with 88.0% accuracy. High accuracy but prune dwell time by ~8s.
+                {quadrantMapping.methodical ? (
+                  <><strong>{quadrantMapping.methodical.name}:</strong> {quadrantMapping.methodical.accuracy}% accuracy. Strong foundation; optimize dwell time with speed drills.</>
+                ) : (
+                  <>High accuracy with deliberate dwell time. Solid conceptual grasp; trim solving time per question.</>
+                )}
               </p>
             </div>
 
@@ -1901,7 +2026,11 @@ export const AnalyticsDashboardView = ({
                 <span className="text-[10px] font-bold text-amber-700">Fast but Careless</span>
               </div>
               <p className="text-[11px] text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                <strong>English Vocab:</strong> 35s/Q with 72% accuracy. Rushing through reading comprehension incurs negative marks.
+                {quadrantMapping.risk ? (
+                  <><strong>{quadrantMapping.risk.name}:</strong> {quadrantMapping.risk.accuracy}% accuracy. Rushing through prompts causes negative marks; slow down slightly.</>
+                ) : (
+                  <>Rushed attempts incurring negative deductions. Ensure thorough prompt reading before committing.</>
+                )}
               </p>
             </div>
 
@@ -1912,7 +2041,11 @@ export const AnalyticsDashboardView = ({
                 <span className="text-[10px] font-bold text-rose-700">Slow & Inaccurate</span>
               </div>
               <p className="text-[11px] text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                <strong>Advanced Geometry:</strong> 85s/Q with 62% accuracy. Skip early; solve in Round 2.
+                {quadrantMapping.bottleneck ? (
+                  <><strong>{quadrantMapping.bottleneck.name}:</strong> {quadrantMapping.bottleneck.accuracy}% accuracy. High dwell time with error risk. Skip early and solve in Round 2.</>
+                ) : (
+                  <>High friction topics with low accuracy. Develop skipping discipline to preserve exam momentum.</>
+                )}
               </p>
             </div>
           </div>
@@ -2007,7 +2140,7 @@ export const AnalyticsDashboardView = ({
                           {att.test_title}
                         </div>
                         <div className="text-[10px] text-charcoal-400 font-mono">
-                          All-India Rank: #{att.rank || 24}
+                          All-India Rank: {att.rank ? `#${att.rank}` : (att.percentile ? `Top ${(100 - att.percentile).toFixed(1)}%` : 'Completed')}
                         </div>
                       </td>
                       <td className="py-3.5 px-3 text-charcoal-500 font-mono text-[11px] whitespace-nowrap">
@@ -2018,7 +2151,7 @@ export const AnalyticsDashboardView = ({
                         })}
                       </td>
                       <td className="py-3.5 px-3 font-mono font-bold text-charcoal-900 dark:text-white whitespace-nowrap">
-                        {att.total_score?.toFixed(1)} / {att.max_possible_score || 50}
+                        {att.total_score !== undefined ? att.total_score.toFixed(1) : '0.0'} / {att.max_possible_score || (att.total_questions ? att.total_questions * 2 : 100)}
                       </td>
                       <td className="py-3.5 px-3 font-mono font-bold whitespace-nowrap">
                         <span

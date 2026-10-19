@@ -457,37 +457,8 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
   const streakDays = streakData?.current_streak ?? user?.profile?.current_streak ?? 0;
   const coinsBalance = user?.profile?.coins_balance ?? streakData?.coins_balance ?? 0;
 
-  // 30-Day Timeline Generator for Habit Roadmap
-  const timelineList = (streakData?.timeline && streakData.timeline.length === 30)
-    ? streakData.timeline
-    : Array.from({ length: 30 }, (_, idx) => {
-        const d = idx + 1;
-        const isDone = d <= streakDays;
-        const isToday = d === (streakDays + 1) && !isDailyCompleted;
-        const isMilestone = [7, 15, 30].includes(d);
-        const milestoneRewards = { 7: 20, 15: 40, 30: 100 };
-        const milestoneTitles = {
-          7: 'Week 1 Habit Champion (+20 Coins)',
-          15: 'Fortnight Mastery (+40 Coins)',
-          30: 'Monthly Exam Grand Master (+100 Coins)',
-        };
-        const milestoneBadges = {
-          7: 'BRONZE',
-          15: 'SILVER',
-          30: 'GOLD',
-        };
-        return {
-          day_number: d,
-          label: `Day ${d}`,
-          completed: isDone,
-          is_current: isToday,
-          coins_reward: isMilestone ? milestoneRewards[d] : 5,
-          is_milestone: isMilestone,
-          milestone_title: isMilestone ? milestoneTitles[d] : null,
-          milestone_badge: isMilestone ? milestoneBadges[d] : null,
-        };
-      });
-
+  // 30-Day Timeline for Habit Roadmap (Loaded dynamically from Streak API)
+  const timelineList = Array.isArray(streakData?.timeline) ? streakData.timeline : [];
   const nextMilestone = timelineList.find((s) => s.is_milestone && !s.completed);
   const currentWeekDays = timelineList.slice(0, 7);
 
@@ -952,7 +923,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                             <span>🪙 Reward</span>
                           </div>
                           <div className="text-lg font-black text-institutional-600 dark:text-institutional-400 font-mono mt-0.5">
-                            +{dailyReward?.coins_earned || 20} Coins
+                            +{dailyReward?.coins_earned ?? streakData?.daily_reward_coins ?? 5} Coins
                           </div>
                           <div className="text-[10px] text-charcoal-500 font-semibold mt-0.5">
                             Added to Wallet
@@ -1089,59 +1060,65 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                 </div>
 
                 {/* 7-Day Mini Track */}
-                <div className="grid grid-cols-7 gap-1.5 text-center pt-3.5">
-                  {currentWeekDays.map((step) => {
-                    const todayDayNum = isDailyCompleted ? (streakDays <= 7 ? streakDays : 7) : (streakDays + 1);
-                    const isToday = step.day_number === todayDayNum || step.is_current;
-                    const isDone = step.completed || step.day_number <= streakDays;
-                    const isTodaySuccess = isToday && (isDone || isDailyCompleted);
-                    const isJackpot = step.is_milestone;
+                {currentWeekDays.length > 0 ? (
+                  <div className="grid grid-cols-7 gap-1.5 text-center pt-3.5">
+                    {currentWeekDays.map((step) => {
+                      const todayDayNum = isDailyCompleted ? (streakDays <= 7 ? streakDays : 7) : (streakDays + 1);
+                      const isToday = step.day_number === todayDayNum || step.is_current;
+                      const isDone = step.completed || step.day_number <= streakDays;
+                      const isTodaySuccess = isToday && (isDone || isDailyCompleted);
+                      const isJackpot = step.is_milestone;
 
-                    return (
-                      <div
-                        key={step.day_number}
-                        className={`group relative aspect-square p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-md ${
-                          isTodaySuccess
-                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 dark:border-teal-400 shadow-md ring-2 ring-emerald-400/50 scale-[1.03] hover:scale-[1.08] hover:shadow-emerald-500/30'
-                            : isDone
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/15'
-                            : isToday
-                            ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 shadow-xs animate-pulse hover:animate-none hover:border-amber-400'
-                            : isJackpot
-                            ? 'bg-amber-500/10 border-amber-300 text-charcoal-800 dark:text-charcoal-200 hover:border-amber-400 hover:bg-amber-500/20'
-                            : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400 hover:border-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800/80'
-                        }`}
-                      >
-                        {/* Topup Floating Pill on Hover */}
-                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-150 z-30 whitespace-nowrap">
-                          <div className="px-2 py-0.5 rounded-md bg-charcoal-900/95 dark:bg-charcoal-100/95 text-white dark:text-charcoal-950 text-[10px] font-mono font-black shadow-xl border border-charcoal-800 dark:border-charcoal-200 backdrop-blur-xs flex items-center justify-center">
-                            +{step.coins_reward}
+                      return (
+                        <div
+                          key={step.day_number}
+                          className={`group relative aspect-square p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-md ${
+                            isTodaySuccess
+                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 dark:border-teal-400 shadow-md ring-2 ring-emerald-400/50 scale-[1.03] hover:scale-[1.08] hover:shadow-emerald-500/30'
+                              : isDone
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/15'
+                              : isToday
+                              ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 shadow-xs animate-pulse hover:animate-none hover:border-amber-400'
+                              : isJackpot
+                              ? 'bg-amber-500/10 border-amber-300 text-charcoal-800 dark:text-charcoal-200 hover:border-amber-400 hover:bg-amber-500/20'
+                              : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400 hover:border-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800/80'
+                          }`}
+                        >
+                          {/* Topup Floating Pill on Hover */}
+                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-150 z-30 whitespace-nowrap">
+                            <div className="px-2 py-0.5 rounded-md bg-charcoal-900/95 dark:bg-charcoal-100/95 text-white dark:text-charcoal-950 text-[10px] font-mono font-black shadow-xl border border-charcoal-800 dark:border-charcoal-200 backdrop-blur-xs flex items-center justify-center">
+                              +{step.coins_reward}
+                            </div>
+                            <div className="w-1.5 h-1.5 bg-charcoal-900/95 dark:bg-charcoal-100/95 rotate-45 mx-auto -mt-1 border-r border-b border-charcoal-800 dark:border-charcoal-200" />
                           </div>
-                          <div className="w-1.5 h-1.5 bg-charcoal-900/95 dark:bg-charcoal-100/95 rotate-45 mx-auto -mt-1 border-r border-b border-charcoal-800 dark:border-charcoal-200" />
-                        </div>
 
-                        {/* Resting State: Number 1, 2, 3... + Status Icon */}
-                        <div className="flex flex-col items-center justify-center transition-all duration-200 group-hover:opacity-0 group-hover:scale-75">
-                          <span className={`text-[11px] sm:text-xs font-black leading-none ${isTodaySuccess ? 'text-white' : ''}`}>
-                            {step.day_number}
-                          </span>
-                          <div className={`text-xs sm:text-sm font-black leading-none mt-1 ${isTodaySuccess ? 'text-white' : ''}`}>
-                            {isDone ? '✓' : isToday ? '🔥' : isJackpot ? '🎁' : '•'}
+                          {/* Resting State: Number 1, 2, 3... + Status Icon */}
+                          <div className="flex flex-col items-center justify-center transition-all duration-200 group-hover:opacity-0 group-hover:scale-75">
+                            <span className={`text-[11px] sm:text-xs font-black leading-none ${isTodaySuccess ? 'text-white' : ''}`}>
+                              {step.day_number}
+                            </span>
+                            <div className={`text-xs sm:text-sm font-black leading-none mt-1 ${isTodaySuccess ? 'text-white' : ''}`}>
+                              {isDone ? '✓' : isToday ? '🔥' : isJackpot ? '🎁' : '•'}
+                            </div>
+                          </div>
+
+                          {/* Hover State: ONLY +5 or +20 */}
+                          <div className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 scale-90 group-hover:scale-100 ${
+                            isTodaySuccess ? 'text-white' : 'text-amber-600 dark:text-amber-400'
+                          }`}>
+                            <span className="text-xs sm:text-sm font-black font-mono leading-none tracking-tight">
+                              +{step.coins_reward}
+                            </span>
                           </div>
                         </div>
-
-                        {/* Hover State: ONLY +5 or +20 (Clean, bold, centered, zero clutter) */}
-                        <div className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 scale-90 group-hover:scale-100 ${
-                          isTodaySuccess ? 'text-white' : 'text-amber-600 dark:text-amber-400'
-                        }`}>
-                          <span className="text-xs sm:text-sm font-black font-mono leading-none tracking-tight">
-                            +{step.coins_reward}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-4 text-center text-xs text-charcoal-400">
+                    Syncing streak habit timeline...
+                  </div>
+                )}
 
                 {nextMilestone && (
                   <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-300 flex items-center gap-2">
@@ -1152,34 +1129,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
 
                 <div className="text-[10px] text-charcoal-500 dark:text-charcoal-400 flex items-center justify-between border-t border-charcoal-100 dark:border-charcoal-800 pt-2 font-medium">
                   <span>⚡ 7d: +20🪙 • 15d: +40🪙 • 30d: +100🪙</span>
-                  <span className="text-rose-600 dark:text-rose-400 font-bold">Loose a day = Reset to 0</span>
+                  <span className="text-rose-600 dark:text-rose-400 font-bold">Lose a day = Reset to 0</span>
                 </div>
               </div>
 
-              {/* Aspirant Diagnostic Callout */}
-              <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 shadow-xs space-y-3">
-                <div className="flex items-center gap-2 text-xs font-black uppercase text-charcoal-500 tracking-wider">
-                  <span>💡 Diagnostic Recommendation</span>
-                </div>
-                <p className="text-xs text-charcoal-700 dark:text-charcoal-300 leading-relaxed font-medium">
-                  Limiting blind guesses by <strong>10 questions</strong> in your next mock will immediately boost your predicted All-India Rank by over <strong>150 places</strong> under PrepMagnet negative marking.
-                </p>
-                <div className="pt-2 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
-                  <button
-                    onClick={() => setActiveTab('analytics')}
-                    className="text-xs font-bold text-institutional-600 dark:text-institutional-400 hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <span>Inspect Weak Sections</span>
-                    <ArrowRightIcon size={12} />
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('mocks')}
-                    className="px-3 py-1.5 text-xs font-bold rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white cursor-pointer shadow-xs"
-                  >
-                    Take a Speed Drill
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -1830,7 +1783,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                     30-Day Study Discipline Roadmap
                   </h3>
                   <p className="text-xs text-charcoal-500">
-                    Earn +20 coins daily and unlock progressive milestone jackpots (+100 to +500 🪙).
+                    Earn +{streakData?.daily_reward_coins ?? 5} coins daily and unlock milestone bonuses.
                   </p>
                 </div>
               </div>
@@ -1845,57 +1798,63 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
 
             {/* 30-Day Grid */}
             <div className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2.5">
-                {timelineList.map((step) => {
-                  const isDone = step.completed;
-                  const isToday = step.is_current;
-                  const isJackpot = step.is_milestone;
+              {timelineList.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2.5">
+                  {timelineList.map((step) => {
+                    const isDone = step.completed;
+                    const isToday = step.is_current;
+                    const isJackpot = step.is_milestone;
 
-                  return (
-                    <div
-                      key={step.day_number}
-                      className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all ${
-                        isDone
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                          : isToday
-                          ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 scale-105 shadow-sm'
-                          : isJackpot
-                          ? 'bg-gradient-to-b from-amber-500/10 to-institutional-500/10 border-amber-400/40 text-charcoal-800 dark:text-charcoal-200'
-                          : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400'
-                      }`}
-                    >
-                      <span className="text-[10px] font-bold uppercase">{step.label}</span>
-                      <div className="my-2">
-                        {isDone ? (
-                          <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">
-                            ✓
-                          </div>
-                        ) : isToday ? (
-                          <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs animate-pulse">
-                            🔥
-                          </div>
-                        ) : isJackpot ? (
-                          <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs">
-                            🎁
-                          </div>
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300 flex items-center justify-center font-mono text-[11px] font-bold">
-                            {step.day_number}
-                          </div>
+                    return (
+                      <div
+                        key={step.day_number}
+                        className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all ${
+                          isDone
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                            : isToday
+                            ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 scale-105 shadow-sm'
+                            : isJackpot
+                            ? 'bg-gradient-to-b from-amber-500/10 to-institutional-500/10 border-amber-400/40 text-charcoal-800 dark:text-charcoal-200'
+                            : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold uppercase">{step.label}</span>
+                        <div className="my-2">
+                          {isDone ? (
+                            <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">
+                              ✓
+                            </div>
+                          ) : isToday ? (
+                            <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs animate-pulse">
+                              🔥
+                            </div>
+                          ) : isJackpot ? (
+                            <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs">
+                              🎁
+                            </div>
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300 flex items-center justify-center font-mono text-[11px] font-bold">
+                              {step.day_number}
+                            </div>
+                          )}
+                        </div>
+                        {step.milestone_title && (
+                          <span className="text-[9px] font-extrabold truncate max-w-full text-amber-700 dark:text-amber-300">
+                            {step.milestone_badge}
+                          </span>
                         )}
+                        <div className="text-[10px] font-mono font-bold mt-1">
+                          +{step.coins_reward} 🪙
+                        </div>
                       </div>
-                      {step.milestone_title && (
-                        <span className="text-[9px] font-extrabold truncate max-w-full text-amber-700 dark:text-amber-300">
-                          {step.milestone_badge}
-                        </span>
-                      )}
-                      <div className="text-[10px] font-mono font-bold mt-1">
-                        +{step.coins_reward} 🪙
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-xs text-charcoal-400">
+                  Syncing habit roadmap timeline...
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}

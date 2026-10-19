@@ -283,14 +283,14 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-charcoal-500">Marks Secured</span>
               <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
                 <span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
-                  {scoreData?.total_score !== undefined ? scoreData.total_score.toFixed(1) : '13.5'}
+                  {scoreData?.total_score !== undefined ? scoreData.total_score.toFixed(1) : '0.0'}
                 </span>
                 <span className="text-xs sm:text-sm font-mono text-charcoal-400">
-                  / {scoreData?.max_possible_score !== undefined ? scoreData.max_possible_score.toFixed(1) : '16.0'}
+                  / {scoreData?.max_possible_score !== undefined ? scoreData.max_possible_score.toFixed(1) : (scoreData?.total_questions ? (scoreData.total_questions * 2).toFixed(1) : '100.0')}
                 </span>
               </div>
               <div className="text-[11px] text-charcoal-500 font-medium">
-                Net: <strong>{scoreData?.percentage?.toFixed(1) || 84.4}%</strong>
+                Net: <strong>{scoreData?.percentage !== undefined ? scoreData.percentage.toFixed(1) : (scoreData?.accuracy_percentage !== undefined ? scoreData.accuracy_percentage.toFixed(1) : '0.0')}%</strong>
               </div>
             </div>
 
@@ -298,10 +298,14 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
             <div className="space-y-1">
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-charcoal-500">Estimated Rank</span>
               <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
-                #{insights?.rank || '18'}
+                {insights?.rank ? `#${insights.rank}` : (scoreData?.rank ? `#${scoreData.rank}` : '—')}
               </div>
               <div className="text-[11px] text-charcoal-500 font-medium">
-                Out of <strong>{insights?.total_participants || '412'}</strong> examinees
+                {insights?.total_participants ? (
+                  <>Out of <strong>{insights.total_participants}</strong> examinees</>
+                ) : (
+                  <>All-India Evaluation</>
+                )}
               </div>
             </div>
 
@@ -309,10 +313,14 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
             <div className="space-y-1">
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-charcoal-500">Percentile</span>
               <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-institutional-700 dark:text-institutional-300">
-                {insights?.percentile ? insights.percentile.toFixed(1) : '94.2'}%
+                {insights?.percentile !== undefined ? `${insights.percentile.toFixed(1)}%` : (scoreData?.accuracy_percentage !== undefined ? `${scoreData.accuracy_percentage.toFixed(1)}%` : '—')}
               </div>
               <div className="text-[11px] text-charcoal-500 font-medium">
-                Top <strong>{(100 - (insights?.percentile || 94.2)).toFixed(1)}%</strong>
+                {insights?.percentile !== undefined ? (
+                  <>Top <strong>{(100 - insights.percentile).toFixed(1)}%</strong></>
+                ) : (
+                  <>Calibrated Against Cutoffs</>
+                )}
               </div>
             </div>
 
@@ -320,10 +328,10 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
             <div className="space-y-1">
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-charcoal-500">Time Taken</span>
               <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-50">
-                {formatSeconds(scoreData?.total_time_taken_seconds || 540)}
+                {formatSeconds(scoreData?.total_time_taken_seconds || 0)}
               </div>
               <div className="text-[11px] text-charcoal-500 font-medium">
-                Avg: <strong>{insights?.avg_time_per_question ? Math.round(insights.avg_time_per_question) : 68}s</strong> / Q
+                Avg: <strong>{insights?.avg_time_per_question ? `${Math.round(insights.avg_time_per_question)}s` : (scoreData?.total_questions && scoreData?.total_time_taken_seconds ? `${Math.round(scoreData.total_time_taken_seconds / Math.max(1, scoreData.total_questions))}s` : '—')}</strong> / Q
               </div>
             </div>
           </div>
@@ -644,7 +652,7 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
                   <ClockIcon size={13} className="text-amber-500" />
                   <span>Time Spent:</span>
                   <span className="text-charcoal-900 dark:text-white">
-                    {currentQuestion.time_taken_seconds || 65}s
+                    {currentQuestion.time_taken_seconds !== undefined ? `${currentQuestion.time_taken_seconds}s` : '—'}
                   </span>
                 </div>
 
