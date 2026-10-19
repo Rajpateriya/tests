@@ -344,9 +344,10 @@ export const api = {
 
   // Student Dashboard Stats
   users: {
-    getDashboard: async (userId) => {
+    getDashboard: async (userId, courseId = null) => {
       try {
-        return await request(`/users/${userId}/dashboard`);
+        const qs = courseId ? `?course_id=${encodeURIComponent(courseId)}` : '';
+        return await request(`/users/${userId}/dashboard${qs}`);
       } catch (err) {
         return {
           user_id: userId,

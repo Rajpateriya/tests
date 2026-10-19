@@ -27,71 +27,8 @@ class PassService:
 
     # ── Admin Operations ─────────────────────────────────────────────────────
 
-    async def _ensure_default_passes(self):
-        count = await self.db.passes.count_documents({})
-        if count == 0:
-            now = datetime.now(timezone.utc)
-            default_passes = [
-                {
-                    "_id": "pass_monthly",
-                    "title": "Monthly Pass",
-                    "tagline": "30-Day Exam Sprint: Instant access to SSC CGL & RRB NTPC courses, CBT mocks, and percentile tracking.",
-                    "badge": "MOST POPULAR",
-                    "duration_days": 30,
-                    "base_price": 149.0,
-                    "original_price": 249.0,
-                    "max_coins_discount": 500,
-                    "covered_course_ids": ["course-ssc-cgl-2026", "course-rrb-ntpc-2026"],
-                    "features": [
-                        "30 Days Full Platform Access",
-                        "2 Prime Courses Included (SSC CGL & RRB NTPC)",
-                        "Full Tier-I & Tier-II Simulation Mocks",
-                        "PrepMagnet CBT Test Interface & Live Clock",
-                        "All-India Percentile & Predicted AIR Benchmark",
-                        "Speed vs Accuracy Diagnostics & Solution Derivations",
-                    ],
-                    "is_active": True,
-                    "created_at": now,
-                    "updated_at": now,
-                },
-                {
-                    "_id": "pass_annual",
-                    "title": "Annual Pass",
-                    "tagline": "365-Day Unlimited All-Access: Unlocks ALL 4 Prime Courses, Tier-I/II Mocks, Typing Master & AI Drills.",
-                    "badge": "SAVE 40%",
-                    "duration_days": 365,
-                    "base_price": 499.0,
-                    "original_price": 899.0,
-                    "max_coins_discount": 1000,
-                    "covered_course_ids": [
-                        "course-ssc-cgl-2026",
-                        "course-rrb-ntpc-2026",
-                        "course-ssc-chsl-2026",
-                        "course-banking-2026",
-                    ],
-                    "features": [
-                        "365 Days All-Access Membership",
-                        "ALL 4 Prime Courses Included (SSC CGL, NTPC, CHSL, Bank PO)",
-                        "Unlimited Mock Tests & Topic-wise Sectional Drills",
-                        "Typing Master Skill Engine (DEST & CHSL 35 WPM)",
-                        "Deep Diagnostic Error Analytics & AI Weak-Area Drills",
-                        "Priority Student Support & Answer Key Dispute Window",
-                    ],
-                    "is_active": True,
-                    "created_at": now,
-                    "updated_at": now,
-                },
-            ]
-            for p in default_passes:
-                pid = p["_id"]
-                doc = {k: v for k, v in p.items() if k != "_id"}
-                await self.db.passes.update_one({"_id": pid}, {"$set": doc, "$setOnInsert": {"_id": pid}}, upsert=True)
-
     async def list_all_passes_admin(self) -> List[PassResponse]:
         passes = await self.pass_repo.get_all_passes()
-        if not passes:
-            await self._ensure_default_passes()
-            passes = await self.pass_repo.get_all_passes()
         return [await self._enrich_pass(p) for p in passes]
 
     async def create_pass(self, req: PassCreateRequest) -> PassResponse:
@@ -148,9 +85,6 @@ class PassService:
 
     async def list_active_passes(self) -> List[PassResponse]:
         passes = await self.pass_repo.get_active_passes()
-        if not passes:
-            await self._ensure_default_passes()
-            passes = await self.pass_repo.get_active_passes()
         return [await self._enrich_pass(p) for p in passes]
 
     async def get_pass_by_id(self, pass_id: str) -> PassResponse:

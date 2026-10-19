@@ -218,9 +218,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
     setPassesLoading(true);
     try {
       const data = await api.subscriptions.getPasses();
-      if (data && data.length > 0) {
-        setPasses(data);
-      }
+      setPasses(Array.isArray(data) ? data : []);
     } catch (err) {
       console.warn('Failed to load dynamic passes in discovery:', err);
     } finally {

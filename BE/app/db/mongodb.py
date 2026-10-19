@@ -21,13 +21,12 @@ class MongoDBManager:
 
         try:
             logger.info(f"Connecting to MongoDB at {mongo_uri}...")
-            # Set a 2 second serverSelectionTimeoutMS so if mongo is not running locally,
-            # it quickly falls back to in-memory mock client rather than hanging the app
+            # Set a 5 second serverSelectionTimeoutMS for reliable cloud connection (Atlas)
             self.client = AsyncIOMotorClient(
                 mongo_uri,
                 minPoolSize=settings.MONGODB_MIN_POOL_SIZE,
                 maxPoolSize=settings.MONGODB_MAX_POOL_SIZE,
-                serverSelectionTimeoutMS=2000,
+                serverSelectionTimeoutMS=5000,
             )
             # Ping to verify active connection
             await self.client.admin.command("ping")

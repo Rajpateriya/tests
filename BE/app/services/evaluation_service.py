@@ -310,9 +310,18 @@ class EvaluationService:
             questions_breakdown=questions_breakdown,
         )
 
-    async def get_user_dashboard(self, user_id: str) -> UserDashboardStatsOut:
-        """Aggregate lifetime metrics for student dashboard."""
+    async def get_user_dashboard(self, user_id: str, course_id: Optional[str] = None) -> UserDashboardStatsOut:
+        """Aggregate lifetime metrics for student dashboard.
+
+        When `course_id` is provided, only attempts that belong to that course are
+        included in the analytics — this powers the per-course view in the user profile.
+        """
         attempts = await self.attempt_repo.get_user_attempts(user_id, limit=50)
+
+        # Filter by course when a course_id is requested
+        if course_id:
+            attempts = [a for a in attempts if a.get("course_id") == course_id]
+
         completed = [a for a in attempts if a.get("status") == AttemptStatus.COMPLETED.value]
 
         # Fetch user's profile for real coins and streak

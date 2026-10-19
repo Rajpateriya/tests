@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.api.v1.deps import get_current_user
 from app.core.exceptions import ForbiddenException
@@ -16,6 +17,7 @@ router = APIRouter(prefix="/users", tags=["Users & Dashboard"], dependencies=[De
 @router.get("/{user_id}/dashboard", response_model=APIResponse[UserDashboardStatsOut])
 async def get_user_dashboard(
     user_id: str,
+    course_id: Optional[str] = Query(None, description="Filter analytics to attempts belonging to a specific course"),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
@@ -25,7 +27,7 @@ async def get_user_dashboard(
         raise ForbiddenException("You can only access your own dashboard")
 
     eval_service = EvaluationService(db)
-    dashboard_data = await eval_service.get_user_dashboard(user_id)
+    dashboard_data = await eval_service.get_user_dashboard(user_id, course_id=course_id)
     return APIResponse(
         success=True,
         message="Dashboard data retrieved",

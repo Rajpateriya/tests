@@ -36,7 +36,7 @@ async def get_active_passes(
     passes = await service.list_active_passes()
     return APIResponse(
         success=True,
-        message="Active exam passes retrieved",
+        message="Active exam passes retrieved" if passes else "No passes available",
         data=passes,
     )
 

@@ -257,6 +257,12 @@ class QuizGenerationService:
         questions from the model's own knowledge instead of skipping it. Those
         questions are saved straight to the bank, marked source="ai_knowledge" and
         grounded=False — nothing can verify them against a source text."""
+        if not llm_client.is_configured:
+            raise BadRequestException(
+                "GOOGLE_API_KEY is not configured in backend .env. "
+                "Please configure a valid Google Gemini API key before generating questions."
+            )
+
         mix = difficulty or dict(DEFAULT_MIX)
         taxonomy = await self.taxonomy_service.get_doc(subject)
         if not taxonomy or not taxonomy.get("tree"):
@@ -424,6 +430,7 @@ class QuizGenerationService:
                 response: GeneratedQuizResponse = await llm_client.generate(prompt, GeneratedQuizResponse)
             except Exception as e:
                 logger.error(f"Generation failed for {subject}/{sub_subject}/{topic}/{subtopic}: {e}")
+                result["last_error"] = str(e)
                 break
 
             result["generated"] += len(response.questions)
@@ -507,11 +514,17 @@ class QuizGenerationService:
         result["shortfall"] = dict(gap)
         missing = sum(gap.values())
         if missing:
-            logger.warning(
-                f"{subject}/{sub_subject}/{topic}/{subtopic} [{target_exam}]: {missing} still missing "
-                f"after {result['calls']} call(s) {gap} — source material may be exhausted; "
-                f"ingest more theory for this subtopic."
-            )
+            if result.get("last_error"):
+                logger.warning(
+                    f"{subject}/{sub_subject}/{topic}/{subtopic} [{target_exam}]: {missing} still missing "
+                    f"due to generation error: {result['last_error']}"
+                )
+            else:
+                logger.warning(
+                    f"{subject}/{sub_subject}/{topic}/{subtopic} [{target_exam}]: {missing} still missing "
+                    f"after {result['calls']} call(s) {gap} — source material may be exhausted; "
+                    f"ingest more theory for this subtopic."
+                )
         print(
             f"FILL {subtopic} [{target_exam}]: target={target} had={existing_counts} "
             f"accepted={result['accepted']} dupes={result['duplicates_rejected']} "

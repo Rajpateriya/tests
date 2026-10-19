@@ -486,18 +486,6 @@ export const AnalyticsDashboardView = ({
     };
   }, [dashboard]);
 
-  // Dynamic Speed vs Precision Quadrant Matrix from real syllabus performance
-  const quadrantMapping = useMemo(() => {
-    const attempted = sectionalMastery.filter((s) => s.accuracy > 0);
-    const avgSpeed = courseKPIs.avgSpeed > 0 ? courseKPIs.avgSpeed : 60;
-
-    const bullseye = attempted.find((s) => s.accuracy >= 75 && s.speedSec <= avgSpeed);
-    const methodical = attempted.find((s) => s.accuracy >= 75 && s.speedSec > avgSpeed);
-    const risk = attempted.find((s) => s.accuracy < 75 && s.speedSec <= avgSpeed);
-    const bottleneck = attempted.find((s) => s.accuracy < 75 && s.speedSec > avgSpeed);
-
-    return { bullseye, methodical, risk, bottleneck };
-  }, [sectionalMastery, courseKPIs.avgSpeed]);
 
   return (
     <div className="space-y-6">
@@ -1872,185 +1860,103 @@ export const AnalyticsDashboardView = ({
 
 
       {/* =========================================================================
-          4. DIFFICULTY MATRIX (LEETCODE STYLE) & SPEED QUADRANT
+          4. DIFFICULTY MATRIX (LEETCODE STYLE)
           ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Question Difficulty Matrix */}
-        <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-          <div>
-            <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
-              <ZapIcon size={18} className="text-amber-500" />
-              <span>Difficulty Tier Mastery</span>
-            </h3>
-            <p className="text-xs text-charcoal-500">
-              Questions solved across complexity tiers calibrated to exam weightage.
-            </p>
-          </div>
-
-          <div className="space-y-4 pt-1">
-            {/* Easy */}
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Easy Questions</span>
-                </span>
-                <span className="font-mono text-emerald-800 dark:text-emerald-400 font-black">
-                  {diffStats.easy.solved} / {diffStats.easy.total} ({diffStats.easy.accuracy.toFixed(1)}%)
-                </span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-emerald-950/20 overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-                  style={{ width: `${Math.min(100, diffStats.easy.accuracy)}%` }}
-                />
-              </div>
-              <div className="text-[10px] text-emerald-800 dark:text-emerald-400 font-semibold flex items-center justify-between">
-                <span>
-                  {diffStats.easy.total > 0
-                    ? <>Beats <strong>{diffStats.easy.beats_percentage.toFixed(1)}%</strong> of candidates</>
-                    : 'Attempt tests to calibrate'}
-                </span>
-                <span>{diffStats.easy.accuracy >= 80 ? '🔥 Mastered' : diffStats.easy.total > 0 ? '⚡ Good Pace' : 'Pending'}</span>
-              </div>
-            </div>
-
-            {/* Medium */}
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-amber-950 dark:text-amber-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span>Medium Questions</span>
-                </span>
-                <span className="font-mono text-amber-900 dark:text-amber-400 font-black">
-                  {diffStats.medium.solved} / {diffStats.medium.total} ({diffStats.medium.accuracy.toFixed(1)}%)
-                </span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-amber-950/20 overflow-hidden">
-                <div
-                  className="h-full bg-amber-500 rounded-full transition-all duration-700"
-                  style={{ width: `${Math.min(100, diffStats.medium.accuracy)}%` }}
-                />
-              </div>
-              <div className="text-[10px] text-amber-900 dark:text-amber-400 font-semibold flex items-center justify-between">
-                <span>
-                  {diffStats.medium.total > 0
-                    ? <>Beats <strong>{diffStats.medium.beats_percentage.toFixed(1)}%</strong> of candidates</>
-                    : 'Attempt tests to calibrate'}
-                </span>
-                <span>{diffStats.medium.accuracy >= 75 ? '⚡ High Yield' : diffStats.medium.total > 0 ? '🎯 Focus Area' : 'Pending'}</span>
-              </div>
-            </div>
-
-            {/* Hard */}
-            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-rose-950 dark:text-rose-300 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  <span>Hard Complex Drills</span>
-                </span>
-                <span className="font-mono text-rose-900 dark:text-rose-400 font-black">
-                  {diffStats.hard.solved} / {diffStats.hard.total} ({diffStats.hard.accuracy.toFixed(1)}%)
-                </span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-rose-950/20 overflow-hidden">
-                <div
-                  className="h-full bg-rose-500 rounded-full transition-all duration-700"
-                  style={{ width: `${Math.min(100, diffStats.hard.accuracy)}%` }}
-                />
-              </div>
-              <div className="text-[10px] text-rose-900 dark:text-rose-400 font-semibold flex items-center justify-between">
-                <span>
-                  {diffStats.hard.total > 0
-                    ? <>Beats <strong>{diffStats.hard.beats_percentage.toFixed(1)}%</strong> of candidates</>
-                    : 'Attempt tests to calibrate'}
-                </span>
-                <span>{diffStats.hard.accuracy >= 60 ? '⚡ Solid Control' : diffStats.hard.total > 0 ? '🎯 Priority Focus' : 'Pending'}</span>
-              </div>
-            </div>
-          </div>
+      <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div>
+          <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
+            <ZapIcon size={18} className="text-amber-500" />
+            <span>Difficulty Tier Mastery</span>
+          </h3>
+          <p className="text-xs text-charcoal-500">
+            Questions solved across complexity tiers calibrated to exam weightage.
+          </p>
         </div>
 
-        {/* Right 2 Cols: Speed vs Precision Scatter Matrix */}
-        <div className="lg:col-span-2 bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
-                <TargetIcon size={18} className="text-institutional-600" />
-                <span>Speed vs. Precision Quadrant Matrix</span>
-              </h3>
-              <p className="text-xs text-charcoal-500">
-                Quadrant mapping of mock tests to detect rush errors and pacing bottlenecks.
-              </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          {/* Easy */}
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>Easy Questions</span>
+              </span>
+              <span className="font-mono text-emerald-800 dark:text-emerald-400 font-black">
+                {diffStats.easy.solved} / {diffStats.easy.total} ({diffStats.easy.accuracy.toFixed(1)}%)
+              </span>
             </div>
-            <span className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-300 dark:border-emerald-800">
-              Optimal: Top-Right (Bullseye)
-            </span>
+            <div className="w-full h-2 rounded-full bg-emerald-950/20 overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                style={{ width: `${Math.min(100, diffStats.easy.accuracy)}%` }}
+              />
+            </div>
+            <div className="text-[10px] text-emerald-800 dark:text-emerald-400 font-semibold flex items-center justify-between">
+              <span>
+                {diffStats.easy.total > 0
+                  ? <>Beats <strong>{diffStats.easy.beats_percentage.toFixed(1)}%</strong> of candidates</>
+                  : 'Attempt tests to calibrate'}
+              </span>
+              <span>{diffStats.easy.accuracy >= 80 ? '🔥 Mastered' : diffStats.easy.total > 0 ? '⚡ Good Pace' : 'Pending'}</span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            {/* Quadrant 1: Fast & Accurate */}
-            <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-emerald-950 dark:text-emerald-200">🎯 Bullseye Zone</span>
-                <span className="text-[10px] font-bold text-emerald-700">Fast & Accurate</span>
-              </div>
-              <p className="text-[11px] text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                {quadrantMapping.bullseye ? (
-                  <><strong>{quadrantMapping.bullseye.name}:</strong> {quadrantMapping.bullseye.accuracy}% accuracy with swift pace. Your strongest competitive lever.</>
-                ) : (
-                  <>High accuracy with optimal speed. Target placing all core scoring sections into this quadrant.</>
-                )}
-              </p>
+          {/* Medium */}
+          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-amber-950 dark:text-amber-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>Medium Questions</span>
+              </span>
+              <span className="font-mono text-amber-900 dark:text-amber-400 font-black">
+                {diffStats.medium.solved} / {diffStats.medium.total} ({diffStats.medium.accuracy.toFixed(1)}%)
+              </span>
             </div>
-
-            {/* Quadrant 2: Deliberate & Accurate */}
-            <div className="p-4 rounded-2xl bg-institutional-50 dark:bg-institutional-950/30 border border-institutional-300 dark:border-institutional-800 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-institutional-950 dark:text-institutional-200">⚖️ Methodical Zone</span>
-                <span className="text-[10px] font-bold text-institutional-700">Deliberate & Accurate</span>
-              </div>
-              <p className="text-[11px] text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                {quadrantMapping.methodical ? (
-                  <><strong>{quadrantMapping.methodical.name}:</strong> {quadrantMapping.methodical.accuracy}% accuracy. Strong foundation; optimize dwell time with speed drills.</>
-                ) : (
-                  <>High accuracy with deliberate dwell time. Solid conceptual grasp; trim solving time per question.</>
-                )}
-              </p>
+            <div className="w-full h-2 rounded-full bg-amber-950/20 overflow-hidden">
+              <div
+                className="h-full bg-amber-500 rounded-full transition-all duration-700"
+                style={{ width: `${Math.min(100, diffStats.medium.accuracy)}%` }}
+              />
             </div>
-
-            {/* Quadrant 3: Rushed & Careless */}
-            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-amber-950 dark:text-amber-200">⚠️ Risk Zone</span>
-                <span className="text-[10px] font-bold text-amber-700">Fast but Careless</span>
-              </div>
-              <p className="text-[11px] text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                {quadrantMapping.risk ? (
-                  <><strong>{quadrantMapping.risk.name}:</strong> {quadrantMapping.risk.accuracy}% accuracy. Rushing through prompts causes negative marks; slow down slightly.</>
-                ) : (
-                  <>Rushed attempts incurring negative deductions. Ensure thorough prompt reading before committing.</>
-                )}
-              </p>
+            <div className="text-[10px] text-amber-900 dark:text-amber-400 font-semibold flex items-center justify-between">
+              <span>
+                {diffStats.medium.total > 0
+                  ? <>Beats <strong>{diffStats.medium.beats_percentage.toFixed(1)}%</strong> of candidates</>
+                  : 'Attempt tests to calibrate'}
+              </span>
+              <span>{diffStats.medium.accuracy >= 75 ? '⚡ High Yield' : diffStats.medium.total > 0 ? '🎯 Focus Area' : 'Pending'}</span>
             </div>
+          </div>
 
-            {/* Quadrant 4: Bottleneck */}
-            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-rose-950 dark:text-rose-200">🛑 Bottleneck Zone</span>
-                <span className="text-[10px] font-bold text-rose-700">Slow & Inaccurate</span>
-              </div>
-              <p className="text-[11px] text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                {quadrantMapping.bottleneck ? (
-                  <><strong>{quadrantMapping.bottleneck.name}:</strong> {quadrantMapping.bottleneck.accuracy}% accuracy. High dwell time with error risk. Skip early and solve in Round 2.</>
-                ) : (
-                  <>High friction topics with low accuracy. Develop skipping discipline to preserve exam momentum.</>
-                )}
-              </p>
+          {/* Hard */}
+          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-rose-950 dark:text-rose-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span>Hard Complex Drills</span>
+              </span>
+              <span className="font-mono text-rose-900 dark:text-rose-400 font-black">
+                {diffStats.hard.solved} / {diffStats.hard.total} ({diffStats.hard.accuracy.toFixed(1)}%)
+              </span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-rose-950/20 overflow-hidden">
+              <div
+                className="h-full bg-rose-500 rounded-full transition-all duration-700"
+                style={{ width: `${Math.min(100, diffStats.hard.accuracy)}%` }}
+              />
+            </div>
+            <div className="text-[10px] text-rose-900 dark:text-rose-400 font-semibold flex items-center justify-between">
+              <span>
+                {diffStats.hard.total > 0
+                  ? <>Beats <strong>{diffStats.hard.beats_percentage.toFixed(1)}%</strong> of candidates</>
+                  : 'Attempt tests to calibrate'}
+              </span>
+              <span>{diffStats.hard.accuracy >= 60 ? '⚡ Solid Control' : diffStats.hard.total > 0 ? '🎯 Priority Focus' : 'Pending'}</span>
             </div>
           </div>
         </div>
       </div>
+
 
       {/* =========================================================================
           5. RECENT MOCK TEST SCORECARDS TABLE & DRILL-DOWN

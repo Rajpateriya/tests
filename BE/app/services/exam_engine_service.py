@@ -104,11 +104,19 @@ class ExamEngineService:
                 PaletteStatus.NOT_ANSWERED.value if idx == 0 else PaletteStatus.NOT_VISITED.value
             )
 
+        # Resolve the course this test belongs to (if any), so analytics can filter by course
+        course_doc = await self.db.courses.find_one(
+            {"quizzes.id": test_id, "is_active": {"$ne": False}},
+            {"_id": 1},
+        )
+        course_id = course_doc["_id"] if course_doc else None
+
         attempt_id = str(uuid.uuid4())
         attempt_doc = {
             "_id": attempt_id,
             "user_id": user_id,
             "test_id": test_id,
+            "course_id": course_id,  # None for standalone (non-course) tests
             "test_title": test.get("title", ""),
             "test_type": test.get("test_type", "FULL"),
             "duration_minutes": duration_minutes,
@@ -133,6 +141,7 @@ class ExamEngineService:
             "attempt_id": attempt_id,
             "user_id": user_id,
             "test_id": test_id,
+            "course_id": course_id,
             "expiry_timestamp": expiry_time.timestamp(),
             "current_question_index": 0,
             "palette_states": palette_states,
