@@ -33,7 +33,6 @@ import {
   XIcon,
 } from '../components/Icons';
 import { AnalyticsDashboardView } from '../components/AnalyticsDashboardView';
-import { TypingAlphabetsAnimation } from '../components/TypingAlphabetsAnimation';
 
 /**
  * Competitive Mock Test Platform — Executive Student Dashboard & Learning Hub
@@ -201,6 +200,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
         .getDashboard(user.id)
         .then(setDashboard)
         .catch((err) => console.warn('Failed to load analytics:', err));
+      fetchEnrolledCourses();
     }
     if (activeTab === 'courses' && !coursesLoaded.current) {
       coursesLoaded.current = true;
@@ -1259,8 +1259,13 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
       {activeTab === 'analytics' && (
         <AnalyticsDashboardView
           dashboard={dashboard}
+          enrolledCourses={enrolledCourses}
           onSelectAttempt={onSelectAttempt}
           onStartPractice={() => setActiveTab('mocks')}
+          onOpenCourse={(courseId) => {
+            if (courseId) openCourse(courseId);
+            else setActiveTab('courses');
+          }}
         />
       )}
 
@@ -1444,8 +1449,6 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
           ========================================================================= */}
       {activeTab === 'typing' && (
         <div className="relative overflow-hidden bg-gradient-to-r from-institutional-950 via-charcoal-900 to-institutional-900 border border-charcoal-800 rounded-3xl p-6 sm:p-8 text-white shadow-md space-y-6">
-          {/* Moving Mechanical Keycaps & Speed Telemetry Ambient Background */}
-          <TypingAlphabetsAnimation variant="card" opacity={0.55} />
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-2 max-w-xl">

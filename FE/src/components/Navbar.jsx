@@ -760,9 +760,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                   <h4 className="font-black text-sm text-charcoal-900 dark:text-white">
                     Ace Your Exam Preparation
                   </h4>
-                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 mt-0.5">
-                    Real TCS iON simulations, live percentiles & smart drills.
-                  </p>
+                  
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button

@@ -8,7 +8,6 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from '../components/Icons';
-import { TypingAlphabetsAnimation } from '../components/TypingAlphabetsAnimation';
 
 const fmtDate = (value) => new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
@@ -557,8 +556,6 @@ export const TypingMasterPage = () => {
         <div className="absolute top-[520px] -left-36 w-[520px] max-w-[140vw] h-[520px] bg-emerald-500/8 dark:bg-emerald-400/10 blur-[130px] rounded-full pointer-events-none animate-blob-delayed" />
         <div className="absolute top-[900px] -right-36 w-[560px] max-w-[140vw] h-[560px] bg-purple-500/8 dark:bg-purple-400/10 blur-[140px] rounded-full pointer-events-none animate-glow-pulse" />
 
-        {/* High-visibility mechanical keycaps & typing telemetry animation */}
-        <TypingAlphabetsAnimation variant="full" opacity={0.85} />
       </div>
 
       <main className="relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-10 space-y-5 sm:space-y-6 min-w-0">
@@ -740,8 +737,6 @@ export const TypingMasterPage = () => {
             {/* Test arena: target text + input */}
             <section className="relative w-full min-w-0 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden">
               <div className="h-1.5 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500" />
-              {/* Tactile mechanical keycaps and speed telemetry animation in test arena background */}
-              <TypingAlphabetsAnimation variant="card" opacity={0.48} />
               <div className="relative z-10 p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
                   <div className="space-y-1 min-w-0 flex-1">
@@ -920,8 +915,7 @@ export const TypingMasterPage = () => {
             {/* Scorecard */}
             {scorecard && (
               <section className="relative bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-card overflow-hidden animate-fade-in w-full min-w-0">
-                <div className="h-1.5 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500" />
-                <TypingAlphabetsAnimation variant="card" opacity={0.45} />
+
                 <div className="relative z-10 p-4 sm:p-6 space-y-5 min-w-0">
                   {/* Verdict & Score */}
                   <div

@@ -13,28 +13,32 @@ import {
   RefreshCwIcon,
   ShieldIcon,
   ZapIcon,
+  BookOpenIcon,
 } from './Icons';
 
 /**
  * AnalyticsDashboardView — Executive-Grade Aspirant Analytics Dashboard
  * Features:
- * - 4 Interactive Key Performance Indicators with trend benchmarks.
- * - Interactive Multi-Metric Trend Area/Line Chart (Score, Accuracy, Speed) with hover tooltips and cutoff guides.
+ * - Course-Level Performance Switcher: seamless switching between enrolled courses vs overall analytics.
+ * - Dynamic Subject Sectional Mastery Radar / Spider Chart adapting to course subjects.
+ * - Dynamic Sectional Mastery Bar Chart with Topper benchmark comparison and topic accuracy drilldown.
+ * - 4 Course-Level Key Performance Indicators with trend benchmarks.
+ * - Interactive Multi-Metric Trend Area/Line Chart (Score, Accuracy, Speed) with cutoff guides.
  * - Interactive Attempt Disposition Donut Chart with negative marking impact simulator.
- * - Sectional Mastery Radar / Spider Chart comparing Student vs Topper Benchmarks.
- * - Difficulty Tier Matrix (Easy, Medium, Hard) with peer percentile superiority.
- * - Speed vs. Precision Quadrant Matrix (Scatter Plot).
- * - Interactive Scorecards Table with search, status filters, and instant scorecard review.
+ * - Course-Filtered Scorecards Table with search and instant scorecard review.
  */
 export const AnalyticsDashboardView = ({
   dashboard,
+  enrolledCourses = [],
   onSelectAttempt,
   onStartPractice,
+  onOpenCourse,
 }) => {
   // Filters & metric toggles
+  const [selectedCourseId, setSelectedCourseId] = useState('ALL');
   const [timeRange, setTimeRange] = useState('30D'); // '7D' | '30D' | 'ALL'
   const [trendMetric, setTrendMetric] = useState('score'); // 'score' | 'accuracy' | 'speed'
-  const [selectedSection, setSelectedSection] = useState('ALL'); // 'ALL' | 'Quant' | 'Reasoning' | 'English' | 'GA'
+  const [selectedSection, setSelectedSection] = useState('ALL');
   const [hoveredDisposition, setHoveredDisposition] = useState(null); // 'correct' | 'negative' | 'skipped' | null
   const [pinnedDisposition, setPinnedDisposition] = useState(null);
   const activeDisposition = hoveredDisposition || pinnedDisposition || 'all';
@@ -42,13 +46,13 @@ export const AnalyticsDashboardView = ({
   const [scorecardFilter, setScorecardFilter] = useState('ALL'); // 'ALL' | 'QUALIFIED' | 'REVIEW'
   const [activeTooltip, setActiveTooltip] = useState(null); // { x, y, data }
   const [radarView, setRadarView] = useState('radar'); // 'radar' | 'bars'
-  const [hoveredRadarSection, setHoveredRadarSection] = useState(null); // 'Quant' | 'Reasoning' | 'English' | 'GA' | null
+  const [hoveredRadarSection, setHoveredRadarSection] = useState(null);
 
   // Hover point coordinates for floating tooltips locked to cursor position
   const donutContainerRef = useRef(null);
   const [donutTooltipPos, setDonutTooltipPos] = useState({ x: 100, y: 70 });
   const radarContainerRef = useRef(null);
-  const [radarTooltipPos, setRadarTooltipPos] = useState({ x: 130, y: 110 });
+  const [radarTooltipPos, setRadarTooltipPos] = useState({ x: 145, y: 110 });
 
   const handleDonutMouseMove = (e) => {
     if (donutContainerRef.current) {
@@ -70,19 +74,148 @@ export const AnalyticsDashboardView = ({
     }
   };
 
-  // Extract base dashboard stats or sensible academic defaults
-  // Extract base dashboard stats with clean zero defaults
-  const totalMocks = dashboard?.total_mocks_attempted ?? 0;
-  const avgScore = dashboard?.average_score ?? 0;
-  const avgAccuracy = dashboard?.average_accuracy ?? 0;
-  const bestScore = dashboard?.best_score ?? 0;
-  const percentile = dashboard?.overall_percentile ?? 0;
-  const globalRank = dashboard?.global_rank ?? 0;
+  // Build course scopes: 'ALL' + each enrolled course + any distinct exams in recent_attempts
+  const courseScopes = useMemo(() => {
+    const list = [
+      {
+        id: 'ALL',
+        title: 'All Enrolled Courses',
+        target_exam: 'Overall Platform Scope',
+        isAll: true,
+      },
+    ];
+    const seen = new Set();
 
-  // Attempt Disposition metrics computed dynamically
+    (enrolledCourses || []).forEach((c) => {
+      const id = c.id || c.course_id;
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        list.push({
+          id,
+          title: c.course_title || c.title || 'Course',
+          target_exam: c.target_exam || 'Govt Exam',
+          subjects: Array.isArray(c.subjects) ? c.subjects : [],
+          raw: c,
+          isAll: false,
+        });
+      }
+    });
+
+    // Also detect any exams from recent_attempts if not already present
+    const rawAttempts = dashboard?.recent_attempts || [];
+    rawAttempts.forEach((a) => {
+      if (a.target_exam && !seen.has(a.target_exam)) {
+        const alreadyMatched = list.some(
+          (item) => !item.isAll && item.target_exam?.toLowerCase() === a.target_exam.toLowerCase()
+        );
+        if (!alreadyMatched) {
+          seen.add(a.target_exam);
+          list.push({
+            id: `exam-${a.target_exam}`,
+            title: `${a.target_exam} Mock Series`,
+            target_exam: a.target_exam,
+            subjects: [],
+            isAll: false,
+          });
+        }
+      }
+    });
+
+    return list;
+  }, [enrolledCourses, dashboard]);
+
+  const activeCourse = useMemo(() => {
+    return courseScopes.find((c) => c.id === selectedCourseId) || courseScopes[0];
+  }, [courseScopes, selectedCourseId]);
+
+  const isCourseSpecific = Boolean(activeCourse && !activeCourse.isAll);
+
+  // Filter attempts matching current course & timeframe
+  const filteredAttempts = useMemo(() => {
+    let attempts = dashboard?.recent_attempts || [];
+
+    if (isCourseSpecific) {
+      const targetExam = (activeCourse.target_exam || '').toLowerCase().trim();
+      const courseTitle = (activeCourse.title || '').toLowerCase().trim();
+      const examKeywords = targetExam.split(/[\s-]+/).filter((w) => w.length > 2);
+
+      attempts = attempts.filter((att) => {
+        const title = (att.test_title || '').toLowerCase();
+        const exam = (att.target_exam || '').toLowerCase();
+        if (targetExam && (title.includes(targetExam) || exam.includes(targetExam))) return true;
+        if (courseTitle && title.includes(courseTitle)) return true;
+        if (examKeywords.some((k) => title.includes(k))) return true;
+        return false;
+      });
+    }
+
+    if (timeRange === '7D') {
+      const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      attempts = attempts.filter((a) => !a.start_time || new Date(a.start_time).getTime() >= cutoff);
+    } else if (timeRange === '30D') {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      attempts = attempts.filter((a) => !a.start_time || new Date(a.start_time).getTime() >= cutoff);
+    }
+
+    return attempts;
+  }, [dashboard, isCourseSpecific, activeCourse, timeRange]);
+
+  // Course-level KPIs
+  const courseKPIs = useMemo(() => {
+    if (!isCourseSpecific) {
+      return {
+        totalMocks: dashboard?.total_mocks_attempted ?? 0,
+        avgScore: dashboard?.average_score ?? 0,
+        avgAccuracy: dashboard?.average_accuracy ?? 0,
+        bestScore: dashboard?.best_score ?? 0,
+        percentile: dashboard?.overall_percentile ?? 0,
+        globalRank: dashboard?.global_rank ?? 0,
+        avgSpeed: Math.round(dashboard?.avg_speed_seconds || 58),
+      };
+    }
+
+    if (filteredAttempts.length === 0) {
+      return {
+        totalMocks: 0,
+        avgScore: 0,
+        avgAccuracy: 0,
+        bestScore: 0,
+        percentile: 0,
+        globalRank: 0,
+        avgSpeed: 0,
+      };
+    }
+
+    const scores = filteredAttempts.map((a) => a.total_score || 0);
+    const accs = filteredAttempts.map((a) => a.accuracy_percentage || 0);
+    const totalScore = scores.reduce((s, v) => s + v, 0);
+    const totalAcc = accs.reduce((s, v) => s + v, 0);
+    const avgScore = Number((totalScore / Math.max(1, scores.length)).toFixed(1));
+    const avgAccuracy = Number((totalAcc / Math.max(1, accs.length)).toFixed(1));
+    const bestScore = Math.max(...scores);
+    const percentile = Math.min(99.4, Math.max(12, Number((avgAccuracy * 1.08).toFixed(1))));
+
+    const totalSeconds = filteredAttempts.reduce((s, a) => s + (a.total_time_taken_seconds || 0), 0);
+    const totalQuestions = filteredAttempts.reduce(
+      (s, a) => s + (a.total_questions || a.correct_count + a.incorrect_count || 1),
+      0
+    );
+    const avgSpeed = Math.round(totalSeconds / Math.max(1, totalQuestions)) || 54;
+
+    return {
+      totalMocks: filteredAttempts.length,
+      avgScore,
+      avgAccuracy,
+      bestScore,
+      percentile,
+      globalRank: Math.max(1, Math.round(450 * (1 - percentile / 100))),
+      avgSpeed,
+    };
+  }, [isCourseSpecific, filteredAttempts, dashboard]);
+
+  // Attempt Disposition metrics computed dynamically from active attempts
   const disposition = useMemo(() => {
-    const attempts = dashboard?.recent_attempts || [];
-    if (attempts.length === 0) {
+    if (filteredAttempts.length === 0) {
       return {
         correct: 0,
         correctMarks: 0,
@@ -93,9 +226,15 @@ export const AnalyticsDashboardView = ({
         accuracy: 0.0,
       };
     }
-    const correct = attempts.reduce((acc, a) => acc + (a.correct_answers_count || 0), 0);
-    const negative = attempts.reduce((acc, a) => acc + (a.wrong_answers_count || 0), 0);
-    const skipped = attempts.reduce((acc, a) => acc + (a.unattempted_count || 0), 0);
+    const correct = filteredAttempts.reduce(
+      (acc, a) => acc + (a.correct_answers_count || a.correct_count || 0),
+      0
+    );
+    const negative = filteredAttempts.reduce(
+      (acc, a) => acc + (a.wrong_answers_count || a.incorrect_count || 0),
+      0
+    );
+    const skipped = filteredAttempts.reduce((acc, a) => acc + (a.unattempted_count || 0), 0);
     const total = correct + negative + skipped;
     const accuracy = total > 0 ? Number(((correct / (correct + negative || 1)) * 100).toFixed(1)) : 0;
     return {
@@ -107,42 +246,112 @@ export const AnalyticsDashboardView = ({
       total,
       accuracy,
     };
-  }, [dashboard]);
+  }, [filteredAttempts]);
 
-  // Sectional Mastery dataset computed from subject performance
+  // Sectional Mastery dataset computed dynamically for the selected course
   const sectionalMastery = useMemo(() => {
-    const perf = dashboard?.subject_performance || {};
-    const keys = Object.keys(perf);
-    if (keys.length === 0) {
-      return [];
-    }
+    const globalPerf = dashboard?.subject_performance || {};
+
     const colorMap = {
       'Quantitative Aptitude': '#f59e0b',
-      'Reasoning': '#10b981',
+      Mathematics: '#f59e0b',
+      Maths: '#f59e0b',
+      'Quantitative Ability': '#f59e0b',
+      Reasoning: '#10b981',
+      'Reasoning Ability': '#10b981',
       'General Intelligence & Reasoning': '#10b981',
       'General Intelligence': '#10b981',
-      'English': '#6366f1',
+      English: '#6366f1',
       'English Comprehension': '#6366f1',
+      'English Language': '#6366f1',
       'General Awareness': '#ec4899',
+      'General Studies': '#ec4899',
+      'Current Affairs': '#ec4899',
+      'Banking Awareness': '#0ea5e9',
+      'Computer Aptitude': '#8b5cf6',
+      'Computer Knowledge': '#8b5cf6',
+      'General Science': '#14b8a6',
     };
-    return keys.map((subj) => ({
-      id: subj,
-      name: subj,
-      accuracy: perf[subj] || 0,
-      topperAccuracy: Math.min(100, Math.round((perf[subj] || 0) + 8)),
-      speedSec: 45,
-      topperSpeedSec: 38,
-      questions: `${Math.round((perf[subj] || 0) * 0.8)} / 100`,
-      status: (perf[subj] || 0) >= 80 ? 'Mastered' : (perf[subj] || 0) >= 60 ? 'Solid Pace' : 'Focus Needed',
-      color: colorMap[subj] || '#3b82f6',
-      topics: [],
-    }));
-  }, [dashboard]);
 
-  // Multi-day timeline performance trend dataset from real attempts
+    let subjectNames = [];
+
+    if (isCourseSpecific && activeCourse?.subjects && activeCourse.subjects.length > 0) {
+      subjectNames = activeCourse.subjects.map((s) =>
+        typeof s === 'string' ? s : s.subject_name || s.name || 'Subject'
+      );
+    } else if (!isCourseSpecific && Object.keys(globalPerf).length > 0) {
+      subjectNames = Object.keys(globalPerf);
+    } else {
+      subjectNames = [
+        'Quantitative Aptitude',
+        'General Intelligence & Reasoning',
+        'English Comprehension',
+        'General Awareness',
+      ];
+    }
+
+    return subjectNames.map((subj) => {
+      let accuracy = globalPerf[subj];
+
+      if (accuracy === undefined) {
+        const lower = subj.toLowerCase();
+        for (const [k, v] of Object.entries(globalPerf)) {
+          if (k.toLowerCase().includes(lower) || lower.includes(k.toLowerCase())) {
+            accuracy = v;
+            break;
+          }
+        }
+      }
+
+      if (accuracy === undefined) {
+        accuracy = isCourseSpecific && filteredAttempts.length === 0 ? 0 : 75;
+      }
+
+      const topperAccuracy = accuracy > 0 ? Math.min(100, Math.round(accuracy + 9)) : 92;
+
+      let shortName = subj;
+      if (subj.includes('Reasoning')) shortName = 'Reasoning';
+      else if (subj.includes('Quantitative') || subj.includes('Math')) shortName = 'Quant';
+      else if (subj.includes('English')) shortName = 'English';
+      else if (subj.includes('Awareness') || subj.includes('Studies')) shortName = 'GA';
+      else if (subj.length > 14) shortName = subj.slice(0, 12) + '...';
+
+      const topics = [
+        { name: 'Core Foundations & Formulae', score: Math.min(100, Math.round(accuracy * 1.05)) },
+        { name: 'Applied Multi-Step Problem Solving', score: Math.round(accuracy * 0.95) },
+        { name: 'Speed Drills & Mental Math', score: Math.round(accuracy * 0.9) },
+      ];
+
+      return {
+        id: subj,
+        name: subj,
+        shortName,
+        accuracy: Math.round(accuracy),
+        topperAccuracy,
+        speedSec: 46,
+        topperSpeedSec: 36,
+        questions: accuracy > 0 ? `${Math.round(accuracy * 0.8)} / 80 Qs` : '0 Qs Attempted',
+        status:
+          accuracy >= 80
+            ? 'Mastered'
+            : accuracy >= 60
+            ? 'Solid Pace'
+            : accuracy > 0
+            ? 'Focus Needed'
+            : 'Not Attempted',
+        color: colorMap[subj] || '#3b82f6',
+        topics,
+      };
+    });
+  }, [isCourseSpecific, activeCourse, dashboard, filteredAttempts]);
+
+  // Dynamic SVG Radar Geometry calculated from sectionalMastery
+  const radarCenter = { x: 145, y: 110 };
+  const radarRadius = 65;
+
+  // Multi-day timeline performance trend dataset from course-filtered attempts
   const trendHistory = useMemo(() => {
-    const rawAttempts = dashboard?.recent_attempts || [];
-    return rawAttempts.map((att, idx) => ({
+    return filteredAttempts.map((att, idx) => ({
       index: idx + 1,
       title: att.test_title || `Mock #${idx + 1}`,
       date: att.start_time
@@ -153,7 +362,7 @@ export const AnalyticsDashboardView = ({
       accuracy: att.accuracy_percentage || 0,
       speed: Math.round((att.total_time_taken_seconds || 1800) / Math.max(1, att.total_questions || 25)),
     }));
-  }, [dashboard]);
+  }, [filteredAttempts]);
 
   // SVG Chart Dimensions & Scale Calculations (Optimized for Headroom & Zero Scroll)
   const chartWidth = 720;
@@ -165,12 +374,20 @@ export const AnalyticsDashboardView = ({
   const currentValues = trendHistory.map((d) =>
     trendMetric === 'score' ? d.score : trendMetric === 'accuracy' ? d.accuracy : d.speed
   );
-  const minVal = currentValues.length > 0
-    ? (trendMetric === 'speed' ? Math.min(...currentValues) - 5 : Math.min(...currentValues) - 10)
-    : 0;
-  const maxVal = currentValues.length > 0
-    ? (trendMetric === 'score' ? Math.max(...currentValues) + 10 : trendMetric === 'accuracy' ? 100 : Math.max(...currentValues) + 10)
-    : 100;
+  const minVal =
+    currentValues.length > 0
+      ? trendMetric === 'speed'
+        ? Math.min(...currentValues) - 5
+        : Math.min(...currentValues) - 10
+      : 0;
+  const maxVal =
+    currentValues.length > 0
+      ? trendMetric === 'score'
+        ? Math.max(...currentValues) + 10
+        : trendMetric === 'accuracy'
+        ? 100
+        : Math.max(...currentValues) + 10
+      : 100;
 
   const getX = (idx) => padding.left + (idx / Math.max(1, trendHistory.length - 1)) * graphWidth;
   const getY = (val) => {
@@ -179,30 +396,48 @@ export const AnalyticsDashboardView = ({
   };
 
   // Build SVG path
-  const linePoints = trendHistory.map((d, i) => `${getX(i)},${getY(trendMetric === 'score' ? d.score : trendMetric === 'accuracy' ? d.accuracy : d.speed)}`);
+  const linePoints = trendHistory.map(
+    (d, i) => `${getX(i)},${getY(trendMetric === 'score' ? d.score : trendMetric === 'accuracy' ? d.accuracy : d.speed)}`
+  );
   const linePathD = linePoints.length > 0 ? `M ${linePoints.join(' L ')}` : '';
-  const areaPathD = linePoints.length > 0
-    ? `M ${getX(0)},${padding.top + graphHeight} L ${linePoints.join(' L ')} L ${getX(trendHistory.length - 1)},${padding.top + graphHeight} Z`
-    : '';
+  const areaPathD =
+    linePoints.length > 0
+      ? `M ${getX(0)},${padding.top + graphHeight} L ${linePoints.join(' L ')} L ${getX(trendHistory.length - 1)},${padding.top + graphHeight} Z`
+      : '';
 
   // Benchmark target cutoff line for currently chosen metric
   const benchmarkY = getY(trendMetric === 'score' ? 140 : trendMetric === 'accuracy' ? 80 : 60);
 
   // Filtered scorecards list
-  const attemptsList = dashboard?.recent_attempts || [];
+  const attemptsList = filteredAttempts;
 
   const filteredScorecards = attemptsList.filter((att) => {
-    const matchesSearch = att.test_title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (att.test_title || '').toLowerCase().includes(searchQuery.toLowerCase());
     const isQual = (att.accuracy_percentage || 0) >= 70;
     if (scorecardFilter === 'QUALIFIED') return matchesSearch && isQual;
     if (scorecardFilter === 'REVIEW') return matchesSearch && !isQual;
     return matchesSearch;
   });
 
+  // Calculate highest sectional delta for radar benchmark
+  const highestDeltaSubj = useMemo(() => {
+    if (sectionalMastery.length === 0) return null;
+    let worst = sectionalMastery[0];
+    let maxGap = worst.topperAccuracy - worst.accuracy;
+    sectionalMastery.forEach((s) => {
+      const gap = s.topperAccuracy - s.accuracy;
+      if (gap > maxGap) {
+        maxGap = gap;
+        worst = s;
+      }
+    });
+    return { ...worst, gap: maxGap };
+  }, [sectionalMastery]);
+
   return (
     <div className="space-y-6">
       {/* =========================================================================
-          1. HEADER CONTROLS & ASPIRANT ANALYTICS SUMMARY BANNER
+          1. HEADER CONTROLS, COURSE SELECTOR & ASPIRANT ANALYTICS SUMMARY BANNER
           ========================================================================= */}
       <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
@@ -217,7 +452,7 @@ export const AnalyticsDashboardView = ({
               </h2>
             </div>
             <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1">
-              Real-time psychometric evaluation, percentile benchmarking, and sectional accuracy telemetry.
+              Real-time psychometric evaluation, percentile benchmarking, and course-level sectional accuracy telemetry.
             </p>
           </div>
 
@@ -245,17 +480,101 @@ export const AnalyticsDashboardView = ({
           </div>
         </div>
 
+        {/* =========================================================================
+            COURSE-LEVEL ANALYTICS SWITCHER (MULTI-COURSE SUPPORT)
+            ========================================================================= */}
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-charcoal-50/80 dark:bg-charcoal-800/40 border border-charcoal-200/90 dark:border-charcoal-750 flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-institutional-500/10 text-institutional-600 dark:text-institutional-400 flex items-center justify-center shrink-0">
+              <BookOpenIcon size={16} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-charcoal-900 dark:text-white">
+                  Course Analytics Scope
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
+                  {isCourseSpecific ? activeCourse.target_exam : `${courseScopes.length - 1} Courses Active`}
+                </span>
+              </div>
+              <p className="text-[11px] text-charcoal-500">
+                Filter Bar Graph, Radar Spider, and mock scorecards to specific enrolled courses.
+              </p>
+            </div>
+          </div>
+
+          {/* Course Selector Pills with Smooth Mobile Scroll */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none max-w-full">
+            {courseScopes.map((scope) => {
+              const isSelected = selectedCourseId === scope.id;
+              return (
+                <button
+                  key={scope.id}
+                  onClick={() => {
+                    setSelectedCourseId(scope.id);
+                    setSelectedSection('ALL');
+                    setHoveredRadarSection(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    isSelected
+                      ? 'bg-institutional-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200/80 dark:border-charcoal-700 hover:border-institutional-400'
+                  }`}
+                >
+                  <span>{scope.isAll ? '🌐 All Courses' : `📚 ${scope.title}`}</span>
+                  {!scope.isAll && scope.target_exam && (
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
+                        isSelected
+                          ? 'bg-white/20 text-white'
+                          : 'bg-charcoal-100 dark:bg-charcoal-700 text-charcoal-500'
+                      }`}
+                    >
+                      {scope.target_exam}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Motivating Alert when 0 attempts for selected course */}
+        {isCourseSpecific && filteredAttempts.length === 0 && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500 text-white shrink-0">
+                <TargetIcon size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-charcoal-900 dark:text-white">
+                  No mock test attempts recorded for {activeCourse.title}
+                </h4>
+                <p className="text-[11px] text-charcoal-600 dark:text-charcoal-300">
+                  Take a sectional quiz or full mock test to populate course-level telemetry and AIR ranking.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => (onOpenCourse ? onOpenCourse(activeCourse.id) : onStartPractice())}
+              className="px-3.5 py-1.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white text-xs font-bold whitespace-nowrap transition-all cursor-pointer self-start sm:self-auto"
+            >
+              Start Course Mock →
+            </button>
+          </div>
+        )}
+
         {/* 4 Interactive KPI Highlights */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Card 1: Accuracy */}
           <div className="p-4 rounded-2xl bg-charcoal-50/70 dark:bg-charcoal-800/40 border border-charcoal-200/80 dark:border-charcoal-750 space-y-1 relative overflow-hidden group hover:border-institutional-500/50 transition-colors">
             <div className="flex items-center justify-between text-xs font-bold text-charcoal-500">
-              <span>Overall Accuracy</span>
+              <span className="truncate">{isCourseSpecific ? `${activeCourse.target_exam} Accuracy` : 'Overall Accuracy'}</span>
               <span className="text-emerald-700 dark:text-emerald-400 font-mono text-[11px] font-black">+4.2% ↑</span>
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-black font-mono text-charcoal-900 dark:text-white">
-                {avgAccuracy.toFixed(1)}%
+                {courseKPIs.avgAccuracy.toFixed(1)}%
               </span>
             </div>
             <p className="text-[11px] text-charcoal-500">
@@ -264,7 +583,7 @@ export const AnalyticsDashboardView = ({
             <div className="w-full h-1.5 rounded-full bg-charcoal-200 dark:bg-charcoal-700 overflow-hidden mt-2">
               <div
                 className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(100, avgAccuracy)}%` }}
+                style={{ width: `${Math.min(100, courseKPIs.avgAccuracy)}%` }}
               />
             </div>
           </div>
@@ -272,21 +591,21 @@ export const AnalyticsDashboardView = ({
           {/* Card 2: National Percentile */}
           <div className="p-4 rounded-2xl bg-charcoal-50/70 dark:bg-charcoal-800/40 border border-charcoal-200/80 dark:border-charcoal-750 space-y-1 relative overflow-hidden group hover:border-institutional-500/50 transition-colors">
             <div className="flex items-center justify-between text-xs font-bold text-charcoal-500">
-              <span>National Percentile</span>
+              <span>{isCourseSpecific ? 'Course Percentile' : 'National Percentile'}</span>
               <TrophyIcon size={14} className="text-amber-500" />
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-black font-mono text-institutional-600 dark:text-institutional-400">
-                {percentile.toFixed(1)}%
+                {courseKPIs.percentile.toFixed(1)}%
               </span>
             </div>
             <p className="text-[11px] text-charcoal-500">
-              Top <strong>{(100 - percentile).toFixed(1)}%</strong> of active test takers
+              Top <strong>{(100 - courseKPIs.percentile).toFixed(1)}%</strong> of active candidates
             </p>
             <div className="w-full h-1.5 rounded-full bg-charcoal-200 dark:bg-charcoal-700 overflow-hidden mt-2">
               <div
                 className="h-full bg-institutional-500 rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(100, percentile)}%` }}
+                style={{ width: `${Math.min(100, courseKPIs.percentile)}%` }}
               />
             </div>
           </div>
@@ -299,17 +618,17 @@ export const AnalyticsDashboardView = ({
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-black font-mono text-charcoal-900 dark:text-white">
-                {avgScore.toFixed(1)}
+                {courseKPIs.avgScore.toFixed(1)}
               </span>
               <span className="text-xs font-mono text-charcoal-400">/ 200</span>
             </div>
             <p className="text-[11px] text-charcoal-500">
-              Personal Best: <strong>{bestScore.toFixed(1)}</strong> marks
+              Personal Best: <strong>{courseKPIs.bestScore.toFixed(1)}</strong> marks
             </p>
             <div className="w-full h-1.5 rounded-full bg-charcoal-200 dark:bg-charcoal-700 overflow-hidden mt-2">
               <div
                 className="h-full bg-amber-500 rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(100, (avgScore / 200) * 100)}%` }}
+                style={{ width: `${Math.min(100, (courseKPIs.avgScore / 200) * 100)}%` }}
               />
             </div>
           </div>
@@ -322,7 +641,7 @@ export const AnalyticsDashboardView = ({
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-black font-mono text-charcoal-900 dark:text-white">
-                58s
+                {courseKPIs.avgSpeed || 54}s
               </span>
               <span className="text-xs font-mono text-charcoal-400">/ Question</span>
             </div>
@@ -1063,19 +1382,23 @@ export const AnalyticsDashboardView = ({
 
         {/* Right: Sectional Accuracy & Subject Mastery (Radar / Spider Comparison) */}
         <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div>
               <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
                 <SparklesIcon size={18} className="text-amber-500" />
-                <span>Sectional Mastery vs. Topper Benchmark</span>
+                <span>
+                  Sectional Mastery {isCourseSpecific ? `(${activeCourse.target_exam})` : 'vs. Topper Benchmark'}
+                </span>
               </h3>
               <p className="text-xs text-charcoal-500">
-                Compare your current sectional accuracy with AIR-100 topper percentiles.
+                {isCourseSpecific
+                  ? `Course syllabus breakdown for ${activeCourse.title} vs AIR-100 benchmark.`
+                  : 'Compare your sectional accuracy with AIR-100 topper percentiles across all syllabus areas.'}
               </p>
             </div>
 
             {/* Toggle View */}
-            <div className="flex items-center bg-charcoal-100 dark:bg-charcoal-800 p-0.5 rounded-lg text-xs font-bold">
+            <div className="flex items-center bg-charcoal-100 dark:bg-charcoal-800 p-0.5 rounded-lg text-xs font-bold self-start sm:self-auto">
               <button
                 onClick={() => setRadarView('radar')}
                 className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
@@ -1100,14 +1423,14 @@ export const AnalyticsDashboardView = ({
           </div>
 
           {radarView === 'radar' ? (
-            /* Interactive SVG Radar Chart */
+            /* Interactive Dynamic SVG Radar Chart */
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-2">
               <div
                 ref={radarContainerRef}
                 onMouseMove={handleRadarMouseMove}
-                className="relative shrink-0 flex items-center justify-center"
+                className="relative shrink-0 flex items-center justify-center w-full sm:w-auto"
               >
-                {/* Minimal Clean Tooltip: Positioned exactly at the hovered point */}
+                {/* Minimal Clean Tooltip: Positioned at active hovered node */}
                 {hoveredRadarSection && (() => {
                   const sec = sectionalMastery.find((s) => s.id === hoveredRadarSection);
                   if (!sec) return null;
@@ -1126,7 +1449,7 @@ export const AnalyticsDashboardView = ({
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-charcoal-900/95 dark:bg-charcoal-100/95 text-white dark:text-charcoal-950 shadow-xl text-xs font-bold border border-charcoal-800 dark:border-charcoal-200 backdrop-blur-xs">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sec.color }} />
                         <span>{sec.name}</span>
-                        <span className="font-mono opacity-80">({sec.accuracy}%)</span>
+                        <span className="font-mono opacity-90">({sec.accuracy}% vs {sec.topperAccuracy}% topper)</span>
                       </div>
                       {!isNearTop && (
                         <div className="w-1.5 h-1.5 bg-charcoal-900/95 dark:bg-charcoal-100/95 rotate-45 mx-auto -mt-1 border-r border-b border-charcoal-800 dark:border-charcoal-200" />
@@ -1138,20 +1461,20 @@ export const AnalyticsDashboardView = ({
                   );
                 })()}
 
-                <svg width="290" height="210" viewBox="0 0 310 220" className="select-none">
+                <svg width="310" height="220" viewBox="0 0 310 220" className="select-none max-w-full">
                   {/* Concentric Polygons (25%, 50%, 75%, 100%) */}
                   {[0.25, 0.5, 0.75, 1.0].map((level) => {
-                    const r = 58 * level;
-                    const points = [
-                      `130,${110 - r}`, // Top (Quant)
-                      `${130 + r},110`, // Right (Reasoning)
-                      `130,${110 + r}`, // Bottom (English)
-                      `${130 - r},110`, // Left (GA)
-                    ].join(' ');
+                    const r = radarRadius * level;
+                    const pts = sectionalMastery
+                      .map((_, i) => {
+                        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sectionalMastery.length;
+                        return `${(radarCenter.x + r * Math.cos(angle)).toFixed(1)},${(radarCenter.y + r * Math.sin(angle)).toFixed(1)}`;
+                      })
+                      .join(' ');
                     return (
                       <polygon
                         key={level}
-                        points={points}
+                        points={pts}
                         fill="transparent"
                         stroke="currentColor"
                         className="text-charcoal-200 dark:text-charcoal-800"
@@ -1162,28 +1485,34 @@ export const AnalyticsDashboardView = ({
                   })}
 
                   {/* Axes Lines */}
-                  <line
-                    x1="130"
-                    y1="46"
-                    x2="130"
-                    y2="174"
-                    stroke={hoveredRadarSection === 'Quant' || hoveredRadarSection === 'English' ? '#0284c7' : 'currentColor'}
-                    className={hoveredRadarSection === 'Quant' || hoveredRadarSection === 'English' ? '' : 'text-charcoal-200 dark:text-charcoal-800'}
-                    strokeWidth={hoveredRadarSection === 'Quant' || hoveredRadarSection === 'English' ? '2' : '1'}
-                  />
-                  <line
-                    x1="66"
-                    y1="110"
-                    x2="194"
-                    y2="110"
-                    stroke={hoveredRadarSection === 'Reasoning' || hoveredRadarSection === 'GA' ? '#0284c7' : 'currentColor'}
-                    className={hoveredRadarSection === 'Reasoning' || hoveredRadarSection === 'GA' ? '' : 'text-charcoal-200 dark:text-charcoal-800'}
-                    strokeWidth={hoveredRadarSection === 'Reasoning' || hoveredRadarSection === 'GA' ? '2' : '1'}
-                  />
+                  {sectionalMastery.map((subj, i) => {
+                    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sectionalMastery.length;
+                    const x2 = radarCenter.x + radarRadius * Math.cos(angle);
+                    const y2 = radarCenter.y + radarRadius * Math.sin(angle);
+                    const isHovered = hoveredRadarSection === subj.id;
+                    return (
+                      <line
+                        key={subj.id}
+                        x1={radarCenter.x}
+                        y1={radarCenter.y}
+                        x2={x2.toFixed(1)}
+                        y2={y2.toFixed(1)}
+                        stroke={isHovered ? subj.color : 'currentColor'}
+                        className={isHovered ? '' : 'text-charcoal-200 dark:text-charcoal-800'}
+                        strokeWidth={isHovered ? '2' : '1'}
+                      />
+                    );
+                  })}
 
                   {/* Topper Benchmark Polygon (Amber Dotted) */}
                   <polygon
-                    points="130,55.5 185.7,110 130,161 82.4,110"
+                    points={sectionalMastery
+                      .map((subj, i) => {
+                        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sectionalMastery.length;
+                        const r = radarRadius * (Math.max(12, Math.min(100, subj.topperAccuracy)) / 100);
+                        return `${(radarCenter.x + r * Math.cos(angle)).toFixed(1)},${(radarCenter.y + r * Math.sin(angle)).toFixed(1)}`;
+                      })
+                      .join(' ')}
                     fill="#f59e0b"
                     fillOpacity="0.1"
                     stroke="#f59e0b"
@@ -1191,192 +1520,122 @@ export const AnalyticsDashboardView = ({
                     strokeDasharray="4 2"
                   />
 
-                  {/* Aspirant Polygon (Institutional Blue Solid with Gradient) */}
+                  {/* Candidate Mastery Polygon */}
                   <polygon
-                    points="130,58.9 183.7,110 130,155.2 88.8,110"
+                    points={sectionalMastery
+                      .map((subj, i) => {
+                        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sectionalMastery.length;
+                        const r = radarRadius * (Math.max(6, Math.min(100, subj.accuracy)) / 100);
+                        return `${(radarCenter.x + r * Math.cos(angle)).toFixed(1)},${(radarCenter.y + r * Math.sin(angle)).toFixed(1)}`;
+                      })
+                      .join(' ')}
                     fill="#0284c7"
                     fillOpacity="0.25"
                     stroke="#0284c7"
                     strokeWidth="2.5"
                   />
 
-                  {/* Topper Benchmark Highlight Vertices */}
-                  <circle cx="130" cy="55.5" r={hoveredRadarSection === 'Quant' ? '5.5' : '3'} fill="#f59e0b" stroke="white" strokeWidth="1.5" className="transition-all" />
-                  <circle cx="185.7" cy="110" r={hoveredRadarSection === 'Reasoning' ? '5.5' : '3'} fill="#f59e0b" stroke="white" strokeWidth="1.5" className="transition-all" />
-                  <circle cx="130" cy="161" r={hoveredRadarSection === 'English' ? '5.5' : '3'} fill="#f59e0b" stroke="white" strokeWidth="1.5" className="transition-all" />
-                  <circle cx="82.4" cy="110" r={hoveredRadarSection === 'GA' ? '5.5' : '3'} fill="#f59e0b" stroke="white" strokeWidth="1.5" className="transition-all" />
+                  {/* Topper Benchmark Vertices */}
+                  {sectionalMastery.map((subj, i) => {
+                    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sectionalMastery.length;
+                    const r = radarRadius * (Math.max(12, Math.min(100, subj.topperAccuracy)) / 100);
+                    const cx = radarCenter.x + r * Math.cos(angle);
+                    const cy = radarCenter.y + r * Math.sin(angle);
+                    const isHovered = hoveredRadarSection === subj.id;
+                    return (
+                      <circle
+                        key={`topper-${subj.id}`}
+                        cx={cx.toFixed(1)}
+                        cy={cy.toFixed(1)}
+                        r={isHovered ? '5' : '3'}
+                        fill="#f59e0b"
+                        stroke="white"
+                        strokeWidth="1.5"
+                        className="transition-all"
+                      />
+                    );
+                  })}
 
-                  {/* Animated Ping Ring on Active Hovered Node */}
-                  {hoveredRadarSection === 'Quant' && (
-                    <circle cx="130" cy="58.9" r="14" fill="#0284c7" opacity="0.4" className="animate-ping pointer-events-none" />
-                  )}
-                  {hoveredRadarSection === 'Reasoning' && (
-                    <circle cx="183.7" cy="110" r="14" fill="#0284c7" opacity="0.4" className="animate-ping pointer-events-none" />
-                  )}
-                  {hoveredRadarSection === 'English' && (
-                    <circle cx="130" cy="155.2" r="14" fill="#0284c7" opacity="0.4" className="animate-ping pointer-events-none" />
-                  )}
-                  {hoveredRadarSection === 'GA' && (
-                    <circle cx="88.8" cy="110" r="14" fill="#0284c7" opacity="0.4" className="animate-ping pointer-events-none" />
-                  )}
+                  {/* Aspirant Vertices with Ping & Invisible Hover Targets */}
+                  {sectionalMastery.map((subj, i) => {
+                    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sectionalMastery.length;
+                    const r = radarRadius * (Math.max(6, Math.min(100, subj.accuracy)) / 100);
+                    const cx = radarCenter.x + r * Math.cos(angle);
+                    const cy = radarCenter.y + r * Math.sin(angle);
+                    const isHovered = hoveredRadarSection === subj.id;
 
-                  {/* Interactive Aspirant Vertices with High-Contrast Ring */}
-                  <circle
-                    cx="130"
-                    cy="58.9"
-                    r={hoveredRadarSection === 'Quant' ? '7' : '4.5'}
-                    fill={hoveredRadarSection === 'Quant' ? '#f59e0b' : '#0284c7'}
-                    stroke="white"
-                    strokeWidth="2.5"
-                    className="transition-all cursor-pointer"
-                  />
-                  <circle
-                    cx="183.7"
-                    cy="110"
-                    r={hoveredRadarSection === 'Reasoning' ? '7' : '4.5'}
-                    fill={hoveredRadarSection === 'Reasoning' ? '#10b981' : '#0284c7'}
-                    stroke="white"
-                    strokeWidth="2.5"
-                    className="transition-all cursor-pointer"
-                  />
-                  <circle
-                    cx="130"
-                    cy="155.2"
-                    r={hoveredRadarSection === 'English' ? '7' : '4.5'}
-                    fill={hoveredRadarSection === 'English' ? '#6366f1' : '#0284c7'}
-                    stroke="white"
-                    strokeWidth="2.5"
-                    className="transition-all cursor-pointer"
-                  />
-                  <circle
-                    cx="88.8"
-                    cy="110"
-                    r={hoveredRadarSection === 'GA' ? '7' : '4.5'}
-                    fill={hoveredRadarSection === 'GA' ? '#ec4899' : '#0284c7'}
-                    stroke="white"
-                    strokeWidth="2.5"
-                    className="transition-all cursor-pointer"
-                  />
+                    return (
+                      <g key={`aspirant-${subj.id}`}>
+                        {isHovered && (
+                          <circle
+                            cx={cx.toFixed(1)}
+                            cy={cy.toFixed(1)}
+                            r="14"
+                            fill="#0284c7"
+                            opacity="0.35"
+                            className="animate-ping pointer-events-none"
+                          />
+                        )}
+                        <circle
+                          cx={cx.toFixed(1)}
+                          cy={cy.toFixed(1)}
+                          r={isHovered ? '6.5' : '4.5'}
+                          fill={isHovered ? subj.color : '#0284c7'}
+                          stroke="white"
+                          strokeWidth="2.5"
+                          className="transition-all cursor-pointer"
+                        />
+                        <circle
+                          cx={cx.toFixed(1)}
+                          cy={cy.toFixed(1)}
+                          r="18"
+                          fill="transparent"
+                          className="cursor-pointer"
+                          onMouseEnter={(e) => {
+                            handleRadarMouseMove(e);
+                            setHoveredRadarSection(subj.id);
+                          }}
+                          onMouseMove={handleRadarMouseMove}
+                          onMouseLeave={() => setHoveredRadarSection(null)}
+                        />
+                      </g>
+                    );
+                  })}
 
-                  {/* Generous Invisible Hit Targets for Effortless Hover */}
-                  <circle
-                    cx="130"
-                    cy="58.9"
-                    r="20"
-                    fill="transparent"
-                    className="cursor-pointer"
-                    onMouseEnter={(e) => {
-                      handleRadarMouseMove(e);
-                      setHoveredRadarSection('Quant');
-                    }}
-                    onMouseMove={handleRadarMouseMove}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                  />
-                  <circle
-                    cx="183.7"
-                    cy="110"
-                    r="20"
-                    fill="transparent"
-                    className="cursor-pointer"
-                    onMouseEnter={(e) => {
-                      handleRadarMouseMove(e);
-                      setHoveredRadarSection('Reasoning');
-                    }}
-                    onMouseMove={handleRadarMouseMove}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                  />
-                  <circle
-                    cx="130"
-                    cy="155.2"
-                    r="20"
-                    fill="transparent"
-                    className="cursor-pointer"
-                    onMouseEnter={(e) => {
-                      handleRadarMouseMove(e);
-                      setHoveredRadarSection('English');
-                    }}
-                    onMouseMove={handleRadarMouseMove}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                  />
-                  <circle
-                    cx="88.8"
-                    cy="110"
-                    r="20"
-                    fill="transparent"
-                    className="cursor-pointer"
-                    onMouseEnter={(e) => {
-                      handleRadarMouseMove(e);
-                      setHoveredRadarSection('GA');
-                    }}
-                    onMouseMove={handleRadarMouseMove}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                  />
+                  {/* Section Labels Around Outer Boundary */}
+                  {sectionalMastery.map((subj, i) => {
+                    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sectionalMastery.length;
+                    const r = radarRadius + 22;
+                    const lx = radarCenter.x + r * Math.cos(angle);
+                    const ly = radarCenter.y + r * Math.sin(angle);
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+                    const anchor = cos > 0.25 ? 'start' : cos < -0.25 ? 'end' : 'middle';
+                    const isHovered = hoveredRadarSection === subj.id;
 
-                  {/* Interactive Section Labels positioned cleanly inside viewBox */}
-                  <text
-                    x="130"
-                    y="24"
-                    textAnchor="middle"
-                    onMouseEnter={(e) => {
-                      handleRadarMouseMove(e);
-                      setHoveredRadarSection('Quant');
-                    }}
-                    onMouseMove={handleRadarMouseMove}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                    className={`text-[10px] cursor-pointer transition-colors ${
-                      hoveredRadarSection === 'Quant' ? 'fill-amber-600 dark:fill-amber-400 font-black' : 'fill-charcoal-800 dark:fill-charcoal-200 font-bold'
-                    }`}
-                  >
-                    Quant (88%)
-                  </text>
-                  <text
-                    x="195"
-                    y="114"
-                    textAnchor="start"
-                    onMouseEnter={(e) => {
-                      handleRadarMouseMove(e);
-                      setHoveredRadarSection('Reasoning');
-                    }}
-                    onMouseMove={handleRadarMouseMove}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                    className={`text-[10px] cursor-pointer transition-colors ${
-                      hoveredRadarSection === 'Reasoning' ? 'fill-emerald-600 dark:fill-emerald-400 font-black' : 'fill-charcoal-800 dark:fill-charcoal-200 font-bold'
-                    }`}
-                  >
-                    Reasoning (92.5%)
-                  </text>
-                  <text
-                    x="130"
-                    y="196"
-                    textAnchor="middle"
-                    onMouseEnter={(e) => {
-                      handleRadarMouseMove(e);
-                      setHoveredRadarSection('English');
-                    }}
-                    onMouseMove={handleRadarMouseMove}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                    className={`text-[10px] cursor-pointer transition-colors ${
-                      hoveredRadarSection === 'English' ? 'fill-indigo-600 dark:fill-indigo-400 font-black' : 'fill-charcoal-800 dark:fill-charcoal-200 font-bold'
-                    }`}
-                  >
-                    English (78%)
-                  </text>
-                  <text
-                    x="74"
-                    y="114"
-                    textAnchor="end"
-                    onMouseEnter={(e) => {
-                      handleRadarMouseMove(e);
-                      setHoveredRadarSection('GA');
-                    }}
-                    onMouseMove={handleRadarMouseMove}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                    className={`text-[10px] cursor-pointer transition-colors ${
-                      hoveredRadarSection === 'GA' ? 'fill-rose-600 dark:fill-rose-400 font-black' : 'fill-charcoal-800 dark:fill-charcoal-200 font-bold'
-                    }`}
-                  >
-                    GA (71%)
-                  </text>
+                    return (
+                      <text
+                        key={`label-${subj.id}`}
+                        x={lx.toFixed(1)}
+                        y={(ly + (sin < -0.5 ? -3 : sin > 0.5 ? 5 : 2)).toFixed(1)}
+                        textAnchor={anchor}
+                        onMouseEnter={(e) => {
+                          handleRadarMouseMove(e);
+                          setHoveredRadarSection(subj.id);
+                        }}
+                        onMouseMove={handleRadarMouseMove}
+                        onMouseLeave={() => setHoveredRadarSection(null)}
+                        className={`text-[9.5px] cursor-pointer transition-colors ${
+                          isHovered
+                            ? 'font-black'
+                            : 'font-bold fill-charcoal-700 dark:fill-charcoal-300'
+                        }`}
+                        style={{ fill: isHovered ? subj.color : undefined }}
+                      >
+                        {subj.shortName} ({subj.accuracy}%)
+                      </text>
+                    );
+                  })}
                 </svg>
               </div>
 
@@ -1384,31 +1643,38 @@ export const AnalyticsDashboardView = ({
               <div className="space-y-3 text-xs w-full sm:w-auto shrink-0 pl-1">
                 <div
                   onMouseEnter={() => {
-                    setHoveredRadarSection('Reasoning');
-                    setRadarTooltipPos({ x: 184, y: 110 });
+                    if (sectionalMastery[0]) {
+                      setHoveredRadarSection(sectionalMastery[0].id);
+                      setRadarTooltipPos({ x: 145, y: 110 });
+                    }
                   }}
                   onMouseLeave={() => setHoveredRadarSection(null)}
                   className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-charcoal-50 dark:hover:bg-charcoal-800/50 transition-colors cursor-pointer"
                 >
                   <span className="w-3 h-3 rounded-full bg-institutional-600 shrink-0" />
                   <div>
-                    <span className="font-bold text-charcoal-800 dark:text-charcoal-200">Your Accuracy</span>
-                    <div className="text-[10px] text-charcoal-500 font-mono">82.4% aggregate</div>
+                    <span className="font-bold text-charcoal-800 dark:text-charcoal-200">
+                      {isCourseSpecific ? `${activeCourse.target_exam} Score` : 'Your Accuracy'}
+                    </span>
+                    <div className="text-[10px] text-charcoal-500 font-mono">
+                      {courseKPIs.avgAccuracy.toFixed(1)}% course avg
+                    </div>
                   </div>
                 </div>
 
                 <div
-                  onMouseEnter={() => {
-                    setHoveredRadarSection('Quant');
-                    setRadarTooltipPos({ x: 130, y: 58 });
-                  }}
-                  onMouseLeave={() => setHoveredRadarSection(null)}
                   className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-charcoal-50 dark:hover:bg-charcoal-800/50 transition-colors cursor-pointer"
                 >
                   <span className="w-3 h-3 rounded-full bg-amber-500 shrink-0" />
                   <div>
-                    <span className="font-bold text-charcoal-800 dark:text-charcoal-200">AIR-100 Topper Avg</span>
-                    <div className="text-[10px] text-charcoal-500 font-mono">92.5% aggregate</div>
+                    <span className="font-bold text-charcoal-800 dark:text-charcoal-200">AIR-100 Benchmark</span>
+                    <div className="text-[10px] text-charcoal-500 font-mono">
+                      {Math.round(
+                        sectionalMastery.reduce((acc, s) => acc + s.topperAccuracy, 0) /
+                          Math.max(1, sectionalMastery.length)
+                      )}
+                      % target cutoff
+                    </div>
                   </div>
                 </div>
 
@@ -1416,46 +1682,75 @@ export const AnalyticsDashboardView = ({
                   <div className="text-[11px] font-semibold text-charcoal-700 dark:text-charcoal-300">
                     Highest Sectional Delta:
                   </div>
-                  <div
-                    onMouseEnter={() => {
-                      setHoveredRadarSection('GA');
-                      setRadarTooltipPos({ x: 88, y: 110 });
-                    }}
-                    onMouseLeave={() => setHoveredRadarSection(null)}
-                    className="text-[10px] text-rose-600 dark:text-rose-400 font-bold cursor-pointer hover:underline p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                  >
-                    ⚠️ GA & Current Affairs: -11% gap vs Toppers
-                  </div>
+                  {highestDeltaSubj && highestDeltaSubj.gap > 0 ? (
+                    <div
+                      onMouseEnter={() => {
+                        setHoveredRadarSection(highestDeltaSubj.id);
+                        setRadarTooltipPos({ x: 145, y: 110 });
+                      }}
+                      onMouseLeave={() => setHoveredRadarSection(null)}
+                      className="text-[10px] text-rose-600 dark:text-rose-400 font-bold cursor-pointer hover:underline p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                    >
+                      ⚠️ {highestDeltaSubj.name}: -{highestDeltaSubj.gap}% gap vs Toppers
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold p-1">
+                      ✓ Matching or exceeding Topper benchmarks across syllabus
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ) : (
             /* Bar Mastery Grid View */
-            <div className="space-y-4 pt-1">
+            <div className="space-y-3.5 pt-1">
               {sectionalMastery.map((subj) => (
                 <div
                   key={subj.id}
                   onClick={() => setSelectedSection(selectedSection === subj.id ? 'ALL' : subj.id)}
-                  className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
                     selectedSection === subj.id
                       ? 'bg-institutional-50/60 dark:bg-institutional-950/40 border-institutional-400'
                       : 'hover:bg-charcoal-50 dark:hover:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-                    <span className="text-charcoal-900 dark:text-white">{subj.name}</span>
-                    <div className="flex items-center gap-2 font-mono">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-bold gap-1 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: subj.color }} />
+                      <span className="text-charcoal-900 dark:text-white font-extrabold">{subj.name}</span>
+                      <span
+                        className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${
+                          subj.status === 'Mastered'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            : subj.status === 'Solid Pace'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                            : subj.status === 'Focus Needed'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            : 'bg-charcoal-100 text-charcoal-600 dark:bg-charcoal-800 dark:text-charcoal-400'
+                        }`}
+                      >
+                        {subj.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2.5 font-mono self-end sm:self-auto">
                       <span className="text-charcoal-400 text-[11px]">{subj.questions}</span>
-                      <span className="font-black text-institutional-600 dark:text-institutional-400">
+                      <span className="font-black text-institutional-600 dark:text-institutional-400 text-sm">
                         {subj.accuracy}%
                       </span>
                     </div>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-charcoal-100 dark:bg-charcoal-800 overflow-hidden">
+
+                  <div className="relative w-full h-2.5 rounded-full bg-charcoal-100 dark:bg-charcoal-800 overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${subj.accuracy}%`, backgroundColor: subj.color }}
                     />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-charcoal-500 mt-1 font-semibold">
+                    <span>Target: <strong>80%+</strong></span>
+                    <span>
+                      Topper Benchmark: <strong className="text-amber-600 dark:text-amber-400">{subj.topperAccuracy}%</strong>
+                    </span>
                   </div>
 
                   {/* Expanded Sub-Topics on click */}
@@ -1478,6 +1773,7 @@ export const AnalyticsDashboardView = ({
           )}
         </div>
       </div>
+
 
       {/* =========================================================================
           4. DIFFICULTY MATRIX (LEETCODE STYLE) & SPEED QUADRANT
@@ -1629,8 +1925,11 @@ export const AnalyticsDashboardView = ({
       <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
           <div>
-            <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white">
-              Recent Mock Test Scorecards
+            <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
+              <span>{isCourseSpecific ? `${activeCourse.title} Scorecards` : 'Recent Mock Test Scorecards'}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300">
+                {filteredScorecards.length} {filteredScorecards.length === 1 ? 'Mock' : 'Mocks'}
+              </span>
             </h3>
             <p className="text-xs text-charcoal-500">
               Exam marks, negative marking deductions, accuracy rates, and instant scorecard review.

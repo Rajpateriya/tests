@@ -32,10 +32,6 @@ import {
 
 import { PassDetailModal } from '../components/PassDetailModal';
 import { GlobalGlobeAnimation } from '../components/GlobalGlobeAnimation';
-import { CbtSandboxMatrixAnimation } from '../components/CbtSandboxMatrixAnimation';
-import { BlueprintSchematicAnimation } from '../components/BlueprintSchematicAnimation';
-import { RankPredictorAnimation } from '../components/RankPredictorAnimation';
-import { PassesVaultAnimation } from '../components/PassesVaultAnimation';
 
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
@@ -488,8 +484,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           <div className="absolute -top-24 -right-24 w-80 h-80 bg-cyan-500/10 dark:bg-cyan-400/15 blur-3xl rounded-full pointer-events-none animate-blob" />
           <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-emerald-500/10 dark:bg-emerald-400/15 blur-3xl rounded-full pointer-events-none animate-blob-delayed" />
 
-          {/* Interactive CBT Exam Simulation Engine Matrix Animation */}
-          <CbtSandboxMatrixAnimation opacity={0.65} />
+          {/* Clean minimal background */}
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800 relative z-10">
             <div>
@@ -691,8 +686,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           <div className="absolute top-1/4 -right-16 w-80 h-80 bg-institutional-500/10 dark:bg-institutional-400/15 blur-[100px] rounded-full pointer-events-none animate-drift-slow" />
           <div className="absolute -bottom-24 left-1/3 w-72 h-72 bg-indigo-500/8 dark:bg-indigo-400/12 blur-[90px] rounded-full pointer-events-none animate-blob-delayed" />
 
-          {/* Architectural Blueprint Schematic CAD CAD Vector Animation */}
-          <BlueprintSchematicAnimation opacity={0.65} />
+          {/* Clean minimal background */}
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-charcoal-150 dark:border-charcoal-800 relative z-10">
             <div>
@@ -796,8 +790,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         {/* Engaging visual tool that calculates candidate standing in real time      */}
         {/* ========================================================================= */}
         <section id="rank-predictor" className="relative bg-white/95 dark:bg-charcoal-900/95 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl sm:rounded-3xl p-4 sm:p-10 shadow-subtle space-y-4 sm:space-y-6 scroll-mt-24 overflow-hidden">
-          {/* Statistical Gaussian Normal Distribution & AIR Percentile Bell Curve Animation */}
-          <RankPredictorAnimation opacity={0.65} />
+          {/* Clean minimal background */}
 
           <div className="max-w-2xl mx-auto text-center space-y-2 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
@@ -1413,8 +1406,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           <div className="absolute -bottom-24 -right-20 w-[500px] h-[500px] bg-indigo-500/15 dark:bg-indigo-400/20 blur-[140px] rounded-full pointer-events-none animate-blob-delayed" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-emerald-500/8 dark:bg-emerald-400/12 blur-[100px] rounded-full pointer-events-none animate-float-slow" />
 
-          {/* Holographic VIP Access Pass & Golden Vault Shimmer Animation */}
-          <PassesVaultAnimation opacity={0.65} />
+          {/* Clean minimal background */}
 
           <div className="text-center max-w-2xl mx-auto space-y-2.5 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
