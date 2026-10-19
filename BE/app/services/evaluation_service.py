@@ -159,7 +159,36 @@ class EvaluationService:
             raise BadRequestException("You do not have access to this attempt")
         if attempt["status"] != AttemptStatus.COMPLETED.value:
             raise ExamStateException("Test has not been submitted yet")
-        return self._to_result_out(attempt)
+
+        cid = attempt.get("course_id")
+        c_title = None
+        t_exam = None
+        subj = None
+        if not cid:
+            cdoc = await self.db.courses.find_one({"quizzes.id": attempt["test_id"]})
+            if cdoc:
+                cid = cdoc["_id"]
+                c_title = cdoc.get("title")
+                attempt["course_id"] = cid
+        elif cid:
+            cdoc = await self.db.courses.find_one({"_id": cid}, {"title": 1, "target_exam": 1})
+            if cdoc:
+                c_title = cdoc.get("title")
+                t_exam = cdoc.get("target_exam")
+
+        test = await self.test_repo.get_by_id(attempt["test_id"])
+        if test:
+            if not t_exam:
+                t_exam = test.get("target_exam")
+            subj = test.get("subject")
+
+        return self._to_result_out(
+            attempt,
+            course_id=cid,
+            course_title=c_title,
+            target_exam=t_exam,
+            subject=subj,
+        )
 
     async def get_detailed_insights(self, attempt_id: str, user_id: str) -> DetailedInsightsOut:
         attempt = await self.attempt_repo.get_by_id(attempt_id)
@@ -318,8 +347,21 @@ class EvaluationService:
         """
         attempts = await self.attempt_repo.get_user_attempts(user_id, limit=50)
 
-        # Filter by course when a course_id is requested
+        # 1. Resolve missing course_id for any attempts if not already persisted
+        for a in attempts:
+            if not a.get("course_id"):
+                cdoc = await self.db.courses.find_one({"quizzes.id": a.get("test_id")}, {"_id": 1, "title": 1})
+                if cdoc:
+                    a["course_id"] = cdoc["_id"]
+                    a["course_title"] = cdoc.get("title")
+                    await self.attempt_repo.update(a["_id"], {"course_id": cdoc["_id"]})
+
+        # 2. Filter by course when a course_id is requested
+        course_title_resolved = None
         if course_id:
+            cdoc = await self.db.courses.find_one({"_id": course_id}, {"title": 1})
+            if cdoc:
+                course_title_resolved = cdoc.get("title")
             attempts = [a for a in attempts if a.get("course_id") == course_id]
 
         completed = [a for a in attempts if a.get("status") == AttemptStatus.COMPLETED.value]
@@ -379,6 +421,8 @@ class EvaluationService:
                 subject_performance={},
                 recent_attempts=[],
                 recommended_tests=recommended,
+                course_id=course_id,
+                course_title=course_title_resolved,
             )
 
         scores = [a.get("total_score", 0.0) for a in completed]
@@ -387,11 +431,18 @@ class EvaluationService:
         avg_accuracy = round(sum(accuracies) / len(accuracies), 2)
         best_score = max(scores)
 
-        total_solved = sum(int(a.get("correct_answers_count", 0)) for a in completed)
-        total_available = sum(int(a.get("total_questions", 0)) for a in completed)
+        total_solved = sum(int(a.get("correct_count", a.get("correct_answers_count", 0) or 0)) for a in completed)
+        total_available = sum(
+            int(
+                a.get("total_questions")
+                or len(a.get("detailed_answers", []))
+                or (int(a.get("correct_count", 0) or 0) + int(a.get("incorrect_count", 0) or 0) + int(a.get("unattempted_count", 0) or 0))
+            )
+            for a in completed
+        )
 
         total_time = sum(int(a.get("total_time_taken_seconds", 0)) for a in completed)
-        total_q = sum(int(a.get("correct_count", 0)) + int(a.get("incorrect_count", 0)) for a in completed)
+        total_q = sum(int(a.get("correct_count", 0) or 0) + int(a.get("incorrect_count", 0) or 0) for a in completed)
         avg_speed_seconds = round(total_time / total_q, 1) if total_q > 0 else 0.0
 
         higher_users = await self.db["attempts"].distinct(
@@ -401,25 +452,62 @@ class EvaluationService:
         global_rank = len(higher_users) + 1
         overall_pct = round(max(0.1, min(99.9, ((total_candidates - global_rank + 1) / total_candidates) * 100)), 1) if total_candidates > 0 else 0.0
 
+        # Collect question IDs from detailed_answers to query question difficulty from DB
+        all_qids = set()
+        for a in completed:
+            for ans in a.get("detailed_answers", []):
+                qid = ans.get("question_id")
+                if qid:
+                    all_qids.add(str(qid))
+
+        q_diff_map: Dict[str, str] = {}
+        if all_qids:
+            cursor = self.db["questions"].find(
+                {"_id": {"$in": list(all_qids)}},
+                {"_id": 1, "difficulty": 1}
+            )
+            async for qdoc in cursor:
+                q_diff_map[str(qdoc["_id"])] = (qdoc.get("difficulty") or "MEDIUM").upper()
+
         easy_s, easy_t = 0, 0
         med_s, med_t = 0, 0
         hard_s, hard_t = 0, 0
+
         for a in completed:
-            for q in a.get("questions_breakdown", []):
-                diff = (q.get("difficulty") or "MEDIUM").upper()
-                is_correct = bool(q.get("is_correct"))
-                if diff == "EASY":
-                    easy_t += 1
-                    if is_correct:
-                        easy_s += 1
-                elif diff == "HARD":
-                    hard_t += 1
-                    if is_correct:
-                        hard_s += 1
-                else:
-                    med_t += 1
-                    if is_correct:
-                        med_s += 1
+            detailed = a.get("detailed_answers", [])
+            if detailed:
+                for ans in detailed:
+                    qid = str(ans.get("question_id") or "")
+                    diff = q_diff_map.get(qid, "MEDIUM")
+                    is_correct = bool(ans.get("is_correct"))
+                    if diff == "EASY":
+                        easy_t += 1
+                        if is_correct:
+                            easy_s += 1
+                    elif diff == "HARD":
+                        hard_t += 1
+                        if is_correct:
+                            hard_s += 1
+                    else:
+                        med_t += 1
+                        if is_correct:
+                            med_s += 1
+            else:
+                for q in a.get("questions_breakdown", []):
+                    diff = (q.get("difficulty") or "MEDIUM").upper()
+                    is_correct = bool(q.get("is_correct"))
+                    if diff == "EASY":
+                        easy_t += 1
+                        if is_correct:
+                            easy_s += 1
+                    elif diff == "HARD":
+                        hard_t += 1
+                        if is_correct:
+                            hard_s += 1
+                    else:
+                        med_t += 1
+                        if is_correct:
+                            med_s += 1
 
         difficulty_stats = {
             "easy": {
@@ -442,15 +530,66 @@ class EvaluationService:
             },
         }
 
-        subj_totals = {}
+        # Batch-enrich completed attempts with course & exam details
+        recent_slice = completed[:20]
+        course_ids = [a.get("course_id") for a in completed if a.get("course_id")]
+        test_ids = [a.get("test_id") for a in completed if a.get("test_id")]
+
+        course_map: Dict[str, Any] = {}
+        if course_ids:
+            cursor = self.db.courses.find(
+                {"_id": {"$in": list(set(course_ids))}},
+                {"_id": 1, "title": 1, "target_exam": 1, "subjects": 1},
+            )
+            async for c in cursor:
+                course_map[c["_id"]] = c
+
+        test_map: Dict[str, Any] = {}
+        if test_ids:
+            cursor = self.db.tests.find(
+                {"_id": {"$in": list(set(test_ids))}},
+                {"_id": 1, "target_exam": 1, "subject": 1, "course_id": 1},
+            )
+            async for t in cursor:
+                test_map[t["_id"]] = t
+
+        subj_totals: Dict[str, list] = {}
         for a in completed:
-            for s in a.get("section_scores", []):
+            for s in a.get("section_scores", []) or []:
                 sec = s.get("section_name")
                 if sec and "accuracy_percentage" in s:
                     subj_totals.setdefault(sec, []).append(float(s["accuracy_percentage"]))
+
+        if not subj_totals:
+            for a in completed:
+                t_info = test_map.get(a.get("test_id"), {})
+                cid = a.get("course_id") or t_info.get("course_id")
+                c_info = course_map.get(cid, {})
+                c_subjs = c_info.get("subjects") or []
+                sec = a.get("subject") or t_info.get("subject") or (c_subjs[0] if c_subjs else None) or c_info.get("title")
+                if sec and "accuracy_percentage" in a:
+                    subj_totals.setdefault(sec, []).append(float(a.get("accuracy_percentage", 0.0)))
+
         subject_perf = {k: round(sum(v) / len(v), 1) for k, v in subj_totals.items()}
 
-        recent_results = [self._to_result_out(a) for a in completed[:5]]
+        recent_results = []
+        for a in recent_slice:
+            cid = a.get("course_id") or test_map.get(a.get("test_id"), {}).get("course_id")
+            c_info = course_map.get(cid, {})
+            t_info = test_map.get(a.get("test_id"), {})
+            c_title = a.get("course_title") or c_info.get("title")
+            t_exam = a.get("target_exam") or t_info.get("target_exam") or c_info.get("target_exam")
+            subj = a.get("subject") or t_info.get("subject")
+
+            recent_results.append(
+                self._to_result_out(
+                    a,
+                    course_id=cid,
+                    course_title=c_title,
+                    target_exam=t_exam,
+                    subject=subj,
+                )
+            )
 
         return UserDashboardStatsOut(
             user_id=user_id,
@@ -473,9 +612,18 @@ class EvaluationService:
             subject_performance=subject_perf,
             recent_attempts=recent_results,
             recommended_tests=recommended,
+            course_id=course_id,
+            course_title=course_title_resolved,
         )
 
-    def _to_result_out(self, doc: Dict[str, Any]) -> AttemptResultOut:
+    def _to_result_out(
+        self,
+        doc: Dict[str, Any],
+        course_id: Optional[str] = None,
+        course_title: Optional[str] = None,
+        target_exam: Optional[str] = None,
+        subject: Optional[str] = None,
+    ) -> AttemptResultOut:
         max_score = float(doc.get("max_possible_score", 100.0))
         total_score = float(doc.get("total_score", 0.0))
         pct = round((total_score / max_score) * 100, 2) if max_score > 0 else 0.0
@@ -485,6 +633,10 @@ class EvaluationService:
             user_id=doc["user_id"],
             test_id=doc["test_id"],
             test_title=doc.get("test_title", ""),
+            course_id=course_id or doc.get("course_id"),
+            course_title=course_title or doc.get("course_title"),
+            target_exam=target_exam or doc.get("target_exam"),
+            subject=subject or doc.get("subject"),
             status=AttemptStatus(doc["status"]),
             total_score=total_score,
             max_possible_score=max_score,

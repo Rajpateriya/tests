@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import {
   BarChart3Icon,
   TargetIcon,
@@ -34,8 +36,12 @@ export const AnalyticsDashboardView = ({
   onStartPractice,
   onOpenCourse,
 }) => {
+  const { user } = useAuth();
+
   // Filters & metric toggles
   const [selectedCourseId, setSelectedCourseId] = useState('ALL');
+  const [courseDashboard, setCourseDashboard] = useState(null);
+  const [loadingCourseScope, setLoadingCourseScope] = useState(false);
   const [timeRange, setTimeRange] = useState('30D'); // '7D' | '30D' | 'ALL'
   const [trendMetric, setTrendMetric] = useState('score'); // 'score' | 'accuracy' | 'speed'
   const [selectedSection, setSelectedSection] = useState('ALL');
@@ -74,6 +80,38 @@ export const AnalyticsDashboardView = ({
     }
   };
 
+  // When selectedCourseId changes, fetch course-scoped dashboard metrics from the API
+  useEffect(() => {
+    if (selectedCourseId === 'ALL') {
+      setCourseDashboard(null);
+      return;
+    }
+    if (!user?.id) return;
+
+    let isMounted = true;
+    setLoadingCourseScope(true);
+    api.users
+      .getDashboard(user.id, selectedCourseId)
+      .then((res) => {
+        if (isMounted && res) {
+          setCourseDashboard(res);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load course-scoped dashboard:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingCourseScope(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCourseId, user?.id]);
+
+  // Active dashboard data: course-scoped if a specific course is selected and loaded, else base dashboard
+  const activeDashboard = (selectedCourseId !== 'ALL' && courseDashboard) ? courseDashboard : dashboard;
+
   // Build course scopes: 'ALL' + each enrolled course + any distinct exams in recent_attempts
   const courseScopes = useMemo(() => {
     const list = [
@@ -101,23 +139,19 @@ export const AnalyticsDashboardView = ({
       }
     });
 
-    // Also detect any exams from recent_attempts if not already present
+    // Also detect any courses from recent_attempts if not already present in enrolledCourses (e.g. from pass access)
     const rawAttempts = dashboard?.recent_attempts || [];
     rawAttempts.forEach((a) => {
-      if (a.target_exam && !seen.has(a.target_exam)) {
-        const alreadyMatched = list.some(
-          (item) => !item.isAll && item.target_exam?.toLowerCase() === a.target_exam.toLowerCase()
-        );
-        if (!alreadyMatched) {
-          seen.add(a.target_exam);
-          list.push({
-            id: `exam-${a.target_exam}`,
-            title: `${a.target_exam} Mock Series`,
-            target_exam: a.target_exam,
-            subjects: [],
-            isAll: false,
-          });
-        }
+      if (a.course_id && !seen.has(a.course_id)) {
+        seen.add(a.course_id);
+        list.push({
+          id: a.course_id,
+          title: a.course_title || 'Course Series',
+          target_exam: a.target_exam || 'Govt Exam',
+          subjects: a.subject ? [a.subject] : [],
+          raw: { id: a.course_id, _id: a.course_id, title: a.course_title, target_exam: a.target_exam },
+          isAll: false,
+        });
       }
     });
 
@@ -132,18 +166,41 @@ export const AnalyticsDashboardView = ({
 
   // Filter attempts matching current course & timeframe
   const filteredAttempts = useMemo(() => {
-    let attempts = dashboard?.recent_attempts || [];
+    let attempts = (selectedCourseId !== 'ALL' && courseDashboard?.recent_attempts?.length)
+      ? courseDashboard.recent_attempts
+      : (dashboard?.recent_attempts || []);
 
     if (isCourseSpecific) {
+      const activeId = activeCourse.id;
       const targetExam = (activeCourse.target_exam || '').toLowerCase().trim();
       const courseTitle = (activeCourse.title || '').toLowerCase().trim();
       const examKeywords = targetExam.split(/[\s-]+/).filter((w) => w.length > 2);
+      const courseQuizzes = activeCourse.raw?.quizzes || [];
 
       attempts = attempts.filter((att) => {
+        // 1. Direct course ID match
+        if (att.course_id) {
+          if (
+            att.course_id === activeId ||
+            att.course_id === activeCourse.raw?.course_id ||
+            att.course_id === activeCourse.raw?._id ||
+            att.course_id === activeCourse.raw?.id
+          ) {
+            return true;
+          }
+        }
+
+        // 2. Course quizzes match
+        if (courseQuizzes.length > 0 && courseQuizzes.some((q) => (q.id || q._id) === att.test_id)) {
+          return true;
+        }
+
+        // 3. Fallbacks by target exam category or course title
         const title = (att.test_title || '').toLowerCase();
         const exam = (att.target_exam || '').toLowerCase();
+        const cTitle = (att.course_title || '').toLowerCase();
         if (targetExam && (title.includes(targetExam) || exam.includes(targetExam))) return true;
-        if (courseTitle && title.includes(courseTitle)) return true;
+        if (courseTitle && (title.includes(courseTitle) || cTitle.includes(courseTitle))) return true;
         if (examKeywords.some((k) => title.includes(k))) return true;
         return false;
       });
@@ -158,19 +215,31 @@ export const AnalyticsDashboardView = ({
     }
 
     return attempts;
-  }, [dashboard, isCourseSpecific, activeCourse, timeRange]);
+  }, [dashboard, courseDashboard, selectedCourseId, isCourseSpecific, activeCourse, timeRange]);
 
   // Course-level KPIs
   const courseKPIs = useMemo(() => {
     if (!isCourseSpecific) {
       return {
-        totalMocks: dashboard?.total_mocks_attempted ?? 0,
-        avgScore: dashboard?.average_score ?? 0,
-        avgAccuracy: dashboard?.average_accuracy ?? 0,
-        bestScore: dashboard?.best_score ?? 0,
-        percentile: dashboard?.overall_percentile ?? 0,
-        globalRank: dashboard?.global_rank ?? 0,
-        avgSpeed: dashboard?.avg_speed_seconds ? Math.round(dashboard.avg_speed_seconds) : 0,
+        totalMocks: activeDashboard?.total_mocks_attempted ?? 0,
+        avgScore: activeDashboard?.average_score ?? 0,
+        avgAccuracy: activeDashboard?.average_accuracy ?? 0,
+        bestScore: activeDashboard?.best_score ?? 0,
+        percentile: activeDashboard?.overall_percentile ?? 0,
+        globalRank: activeDashboard?.global_rank ?? 0,
+        avgSpeed: activeDashboard?.avg_speed_seconds ? Math.round(activeDashboard.avg_speed_seconds) : 0,
+      };
+    }
+
+    if (courseDashboard && courseDashboard.total_mocks_attempted > 0) {
+      return {
+        totalMocks: courseDashboard.total_mocks_attempted,
+        avgScore: courseDashboard.average_score,
+        avgAccuracy: courseDashboard.average_accuracy,
+        bestScore: courseDashboard.best_score,
+        percentile: courseDashboard.overall_percentile,
+        globalRank: courseDashboard.global_rank,
+        avgSpeed: courseDashboard.avg_speed_seconds ? Math.round(courseDashboard.avg_speed_seconds) : 0,
       };
     }
 
@@ -193,7 +262,7 @@ export const AnalyticsDashboardView = ({
     const avgScore = Number((totalScore / Math.max(1, scores.length)).toFixed(1));
     const avgAccuracy = Number((totalAcc / Math.max(1, accs.length)).toFixed(1));
     const bestScore = Math.max(...scores);
-    const percentile = dashboard?.overall_percentile ?? (avgAccuracy > 0 ? Number(avgAccuracy.toFixed(1)) : 0);
+    const percentile = activeDashboard?.overall_percentile ?? (avgAccuracy > 0 ? Number(avgAccuracy.toFixed(1)) : 0);
 
     const totalSeconds = filteredAttempts.reduce((s, a) => s + (a.total_time_taken_seconds || 0), 0);
     const totalQuestions = filteredAttempts.reduce(
@@ -208,10 +277,10 @@ export const AnalyticsDashboardView = ({
       avgAccuracy,
       bestScore,
       percentile,
-      globalRank: dashboard?.global_rank ?? 0,
+      globalRank: activeDashboard?.global_rank ?? 0,
       avgSpeed,
     };
-  }, [isCourseSpecific, filteredAttempts, dashboard]);
+  }, [isCourseSpecific, filteredAttempts, activeDashboard, courseDashboard]);
 
   // Attempt Disposition metrics computed dynamically from active attempts
   const disposition = useMemo(() => {
@@ -292,7 +361,7 @@ export const AnalyticsDashboardView = ({
 
   // Sectional Mastery dataset computed dynamically for the selected course
   const sectionalMastery = useMemo(() => {
-    const globalPerf = dashboard?.subject_performance || {};
+    const globalPerf = activeDashboard?.subject_performance || {};
 
     const colorMap = {
       'Quantitative Aptitude': '#f59e0b',
@@ -478,13 +547,63 @@ export const AnalyticsDashboardView = ({
 
   // Real difficulty metrics from backend or calculated fallback
   const diffStats = useMemo(() => {
-    const raw = dashboard?.difficulty_stats || {};
-    return {
-      easy: raw.easy || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 },
-      medium: raw.medium || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 },
-      hard: raw.hard || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 },
-    };
-  }, [dashboard]);
+    const raw = activeDashboard?.difficulty_stats || {};
+    const easy = raw.easy || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 };
+    const medium = raw.medium || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 };
+    const hard = raw.hard || { solved: 0, total: 0, accuracy: 0.0, beats_percentage: 0.0 };
+
+    if (easy.total > 0 || medium.total > 0 || hard.total > 0) {
+      return { easy, medium, hard };
+    }
+
+    // Client-side fallback if raw stats are pending or not yet resolved
+    let easyS = 0, easyT = 0;
+    let medS = 0, medT = 0;
+    let hardS = 0, hardT = 0;
+
+    filteredAttempts.forEach((a) => {
+      const breakdown = a.questions_breakdown || a.detailed_answers || [];
+      breakdown.forEach((q) => {
+        const diff = (q.difficulty || 'MEDIUM').toUpperCase();
+        const isCorrect = Boolean(q.is_correct);
+        if (diff === 'EASY') {
+          easyT += 1;
+          if (isCorrect) easyS += 1;
+        } else if (diff === 'HARD') {
+          hardT += 1;
+          if (isCorrect) hardS += 1;
+        } else {
+          medT += 1;
+          if (isCorrect) medS += 1;
+        }
+      });
+    });
+
+    if (easyT > 0 || medT > 0 || hardT > 0) {
+      return {
+        easy: {
+          solved: easyS,
+          total: easyT,
+          accuracy: easyT > 0 ? Number(((easyS / easyT) * 100).toFixed(1)) : 0.0,
+          beats_percentage: easyT > 0 ? Number(Math.min(99.0, (easyS / easyT) * 100).toFixed(1)) : 0.0,
+        },
+        medium: {
+          solved: medS,
+          total: medT,
+          accuracy: medT > 0 ? Number(((medS / medT) * 100).toFixed(1)) : 0.0,
+          beats_percentage: medT > 0 ? Number(Math.min(99.0, (medS / medT) * 100).toFixed(1)) : 0.0,
+        },
+        hard: {
+          solved: hardS,
+          total: hardT,
+          accuracy: hardT > 0 ? Number(((hardS / hardT) * 100).toFixed(1)) : 0.0,
+          beats_percentage: hardT > 0 ? Number(Math.min(99.0, (hardS / hardT) * 100).toFixed(1)) : 0.0,
+        },
+      };
+    }
+
+    return { easy, medium, hard };
+  }, [activeDashboard, filteredAttempts]);
 
 
   return (
@@ -547,7 +666,9 @@ export const AnalyticsDashboardView = ({
                   Course Analytics Scope
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
-                  {isCourseSpecific ? activeCourse.target_exam : `${courseScopes.length - 1} Courses Active`}
+                  {isCourseSpecific
+                    ? activeCourse.target_exam
+                    : `${courseScopes.length - 1} ${courseScopes.length - 1 === 1 ? 'Course' : 'Courses'} Active`}
                 </span>
               </div>
               <p className="text-[11px] text-charcoal-500">
@@ -1863,14 +1984,29 @@ export const AnalyticsDashboardView = ({
           4. DIFFICULTY MATRIX (LEETCODE STYLE)
           ========================================================================= */}
       <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-        <div>
-          <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
-            <ZapIcon size={18} className="text-amber-500" />
-            <span>Difficulty Tier Mastery</span>
-          </h3>
-          <p className="text-xs text-charcoal-500">
-            Questions solved across complexity tiers calibrated to exam weightage.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
+              <ZapIcon size={18} className="text-amber-500" />
+              <span>Difficulty Tier Mastery</span>
+              {isCourseSpecific && (
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
+                  {activeCourse.title}
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-charcoal-500">
+              {isCourseSpecific
+                ? `Questions solved across complexity tiers for ${activeCourse.title}, calibrated to exam weightage.`
+                : 'Questions solved across complexity tiers calibrated to exam weightage across enrolled courses.'}
+            </p>
+          </div>
+          {loadingCourseScope && (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-charcoal-500 bg-charcoal-100 dark:bg-charcoal-800 animate-pulse">
+              <RefreshCwIcon size={12} className="animate-spin text-institutional-500" />
+              <span>Calibrating tiers...</span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
@@ -1888,7 +2024,13 @@ export const AnalyticsDashboardView = ({
             <div className="w-full h-2 rounded-full bg-emerald-950/20 overflow-hidden">
               <div
                 className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(100, diffStats.easy.accuracy)}%` }}
+                style={{
+                  width: `${
+                    diffStats.easy.total > 0
+                      ? Math.max(diffStats.easy.solved > 0 ? 5 : 0, Math.min(100, diffStats.easy.accuracy))
+                      : 0
+                  }%`,
+                }}
               />
             </div>
             <div className="text-[10px] text-emerald-800 dark:text-emerald-400 font-semibold flex items-center justify-between">
@@ -1915,7 +2057,13 @@ export const AnalyticsDashboardView = ({
             <div className="w-full h-2 rounded-full bg-amber-950/20 overflow-hidden">
               <div
                 className="h-full bg-amber-500 rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(100, diffStats.medium.accuracy)}%` }}
+                style={{
+                  width: `${
+                    diffStats.medium.total > 0
+                      ? Math.max(diffStats.medium.solved > 0 ? 5 : 0, Math.min(100, diffStats.medium.accuracy))
+                      : 0
+                  }%`,
+                }}
               />
             </div>
             <div className="text-[10px] text-amber-900 dark:text-amber-400 font-semibold flex items-center justify-between">
@@ -1942,7 +2090,13 @@ export const AnalyticsDashboardView = ({
             <div className="w-full h-2 rounded-full bg-rose-950/20 overflow-hidden">
               <div
                 className="h-full bg-rose-500 rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(100, diffStats.hard.accuracy)}%` }}
+                style={{
+                  width: `${
+                    diffStats.hard.total > 0
+                      ? Math.max(diffStats.hard.solved > 0 ? 5 : 0, Math.min(100, diffStats.hard.accuracy))
+                      : 0
+                  }%`,
+                }}
               />
             </div>
             <div className="text-[10px] text-rose-900 dark:text-rose-400 font-semibold flex items-center justify-between">

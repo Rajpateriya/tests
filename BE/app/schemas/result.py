@@ -26,6 +26,10 @@ class AttemptResultOut(BaseModel):
     user_id: str
     test_id: str
     test_title: str
+    course_id: Optional[str] = None
+    course_title: Optional[str] = None
+    target_exam: Optional[str] = None
+    subject: Optional[str] = None
     status: AttemptStatus
     total_score: float
     max_possible_score: float
@@ -97,6 +101,8 @@ class UserDashboardStatsOut(BaseModel):
     difficulty_stats: Optional[Dict[str, Any]] = None  # easy/medium/hard breakdown
     recent_attempts: List[AttemptResultOut] = Field(default_factory=list)
     recommended_tests: List[Dict[str, Any]] = Field(default_factory=list)
+    course_id: Optional[str] = None
+    course_title: Optional[str] = None
     upcoming_tests: Optional[List[Dict[str, Any]]] = None
     activity_history: Optional[List[Dict[str, Any]]] = None
 
