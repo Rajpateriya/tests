@@ -806,5 +806,70 @@ export const api = {
       return await request('/typing/my-history');
     },
   },
-}; //added
 
+  // Standard Razorpay Payment Gateway Endpoints
+  payments: {
+    createOrder: async ({ amount, currency = 'INR', receipt = null, notes = null }) => {
+      const res = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          currency,
+          receipt,
+          notes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.message || 'Failed to create payment order');
+      }
+      return data;
+    },
+
+    verifyPayment: async ({ order_id, payment_id, signature }) => {
+      const res = await fetch('/api/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpay_order_id: order_id,
+          razorpay_payment_id: payment_id,
+          razorpay_signature: signature,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.message || 'Payment signature verification failed');
+      }
+      return data;
+    },
+  },
+
+  // Multi-Course Cart & Bulk Checkout
+  cart: {
+    get: async () => request('/cart'),
+
+    addItem: async (courseId) =>
+      request('/cart/items', {
+        method: 'POST',
+        body: JSON.stringify({ course_id: courseId }),
+      }),
+
+    removeItem: async (courseId) =>
+      request(`/cart/items/${encodeURIComponent(courseId)}`, { method: 'DELETE' }),
+
+    clear: async () => request('/cart', { method: 'DELETE' }),
+
+    checkout: async (applyCoins = true) =>
+      request('/cart/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ apply_coins: applyCoins }),
+      }),
+
+    verifyPayment: async ({ order_id, payment_id, signature, coins_used = 0, course_ids = [] }) =>
+      request('/cart/verify', {
+        method: 'POST',
+        body: JSON.stringify({ order_id, payment_id, signature, coins_used, course_ids }),
+      }),
+  },
+};

@@ -113,6 +113,10 @@ def create_application() -> FastAPI:
     # 5. Include API v1 routes
     app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 
+    # 6. Direct Razorpay Standard Web Checkout endpoints (/api/create-order & /api/verify-payment)
+    from app.api.v1.endpoints.payments import router as payments_router
+    app.include_router(payments_router, prefix="/api")
+
     @app.get("/", tags=["Root"])
     async def root():
         return {

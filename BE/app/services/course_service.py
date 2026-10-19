@@ -21,11 +21,7 @@ from app.schemas.course import (
     EnrolledUserOut,
 )
 from app.services.pass_service import PassService, COIN_TO_RUPEE_RATE
-
-try:
-    import razorpay
-except ImportError:
-    razorpay = None
+from app.core.razorpay import create_razorpay_order, verify_razorpay_signature
 
 
 class CourseService:
@@ -36,16 +32,6 @@ class CourseService:
         self.pass_service = PassService(db)
         self.orders_collection = db["orders"]
         self.payments_collection = db["payments"]
-
-        # Initialize Razorpay client
-        self.rzp_client = None
-        if razorpay is not None and settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
-            try:
-                self.rzp_client = razorpay.Client(
-                    auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-                )
-            except Exception:
-                self.rzp_client = None
 
     async def list_courses(
         self, user_id: Optional[str] = None, target_exam: Optional[str] = None
@@ -194,25 +180,18 @@ class CourseService:
         final_payable = max(1.0, round(base_price - discount_amount, 2))
         amount_paise = int(round(final_payable * 100))
 
-        # Create Razorpay order
-        order_id = f"order_rzp_{uuid.uuid4().hex[:14]}"
-        if self.rzp_client:
-            try:
-                rzp_order = self.rzp_client.order.create({
-                    "amount": amount_paise,
-                    "currency": "INR",
-                    "receipt": f"rcpt_{uuid.uuid4().hex[:8]}",
-                    "notes": {
-                        "user_id": user_id,
-                        "course_id": course_id,
-                        "coins_applied": coins_applied,
-                    },
-                })
-                if "id" in rzp_order:
-                    order_id = rzp_order["id"]
-            except Exception:
-                # If network/API issue with test keys, canonical fallback order_id is maintained
-                pass
+        # Create Razorpay order via centralized Razorpay core
+        rzp_order = create_razorpay_order(
+            amount_paise=amount_paise,
+            currency="INR",
+            receipt=f"rcpt_{uuid.uuid4().hex[:8]}",
+            notes={
+                "user_id": user_id,
+                "course_id": course_id,
+                "coins_applied": coins_applied,
+            },
+        )
+        order_id = rzp_order["order_id"]
 
         order_doc = {
             "_id": order_id,
@@ -261,19 +240,10 @@ class CourseService:
         if not user:
             raise NotFoundException("User not found")
 
-        # Verify Razorpay signature if secret is configured and signature provided
-        if settings.RAZORPAY_KEY_SECRET and signature:
-            body = f"{order_id}|{payment_id}".encode("utf-8")
-            expected_sig = hmac.new(
-                settings.RAZORPAY_KEY_SECRET.encode("utf-8"), body, hashlib.sha256
-            ).hexdigest()
-            if not hmac.compare_digest(expected_sig, signature):
-                if not (payment_id.startswith("pay_test") or signature == "mock_signature"):
-                    raise BadRequestException(
-                        "Payment signature verification failed. Possible tampered request."
-                    )
-        elif not signature and not payment_id.startswith("pay_test"):
-            raise BadRequestException("Payment signature is required for verification")
+        # Verify Razorpay signature via centralized Razorpay core
+        is_valid = verify_razorpay_signature(order_id, payment_id, signature)
+        if not is_valid:
+            raise BadRequestException("Payment signature verification failed. Possible tampered request.")
 
         now = datetime.now(timezone.utc)
         base_price = float(course.get("discounted_price") or course.get("discount_price") or 499)

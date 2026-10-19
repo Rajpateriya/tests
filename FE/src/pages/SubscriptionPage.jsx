@@ -13,6 +13,7 @@ import {
 } from '../components/Icons';
 import { RazorpayModal } from '../components/RazorpayModal';
 import { PassDetailModal } from '../components/PassDetailModal';
+import { RazorpayCheckoutButton } from '../components/RazorpayCheckoutButton';
 
 export const SubscriptionPage = ({ onGoToMocks }) => {
   const { subscription, user, upgradeSubscription, updateCoins } = useAuth();
@@ -25,6 +26,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
   const [createdOrder, setCreatedOrder] = useState(null);
   const [isRazorpayOpen, setIsRazorpayOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState(null);
   const [activeFaq, setActiveFaq] = useState(null);
 
   const coinsBalance = user?.profile?.coins_balance ?? 0;
@@ -80,6 +82,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
   const handleSelectPlan = async (plan) => {
     setSelectedPlan(plan);
     setOrderLoading(true);
+    setOrderError(null);
     try {
       // Backend-driven order creation with pass_id and coin calculation (100 coins = ₹10)
       const order = await api.subscriptions.createOrder(plan.id, applyCoins);
@@ -87,20 +90,10 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
       setIsRazorpayOpen(true);
     } catch (err) {
       console.error('Order creation failed:', err);
-      // Fallback order with 100 coins = 10 Rs formula
-      const maxCoins = plan.max_coins_discount || 500;
-      const coins = applyCoins ? Math.min(coinsBalance, maxCoins) : 0;
-      const discountRupees = Math.round(coins * 0.10);
-      setCreatedOrder({
-        order_id: `order_${Date.now().toString(36)}`,
-        amount_rupees: Math.max(1, plan.base_price - discountRupees),
-        currency: 'INR',
-        plan_id: plan.id,
-        coins_applied: coins,
-        discount_amount: discountRupees,
-        user_coins_available: coinsBalance,
-      });
-      setIsRazorpayOpen(true);
+      const msg = err.status === 401
+        ? 'Please sign in to purchase a pass and activate PRO benefits.'
+        : (err.message || 'Could not initiate Razorpay checkout order. Please check credentials or try again.');
+      setOrderError(msg);
     } finally {
       setOrderLoading(false);
     }
@@ -222,6 +215,46 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
               </div>
             </label>
           </div>
+
+          {/* Quick 1-Click Razorpay Standard Checkout Tester */}
+          <div className="max-w-md mx-auto p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-institutional-500/10 via-indigo-500/10 to-emerald-500/10 border border-institutional-200 dark:border-institutional-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+            <div>
+              <div className="text-xs font-extrabold text-charcoal-900 dark:text-white flex items-center gap-1.5">
+                <ShieldIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
+                <span>Razorpay Standard Checkout</span>
+              </div>
+              <div className="text-[11px] text-charcoal-600 dark:text-charcoal-300 mt-0.5">
+                Live test mode (Order creation + Razorpay modal + HMAC verification).
+              </div>
+            </div>
+            <RazorpayCheckoutButton
+              amount={100}
+              currency="INR"
+              title="PrepMagnet Aspirant Pass"
+              description="Standard Web Checkout (₹1.00 Test Order)"
+              buttonText="Test Pay ₹1.00"
+              prefill={{
+                name: user?.full_name || 'Aspirant Student',
+                email: user?.email || 'aspirant@prepmagnet.in',
+                contact: user?.phone || '9999999999',
+              }}
+              onSuccess={(res) => {
+                console.log('Razorpay payment verified:', res);
+              }}
+            />
+          </div>
+
+          {orderError && (
+            <div className="max-w-md mx-auto p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-600 dark:text-red-400 font-medium flex items-center justify-between gap-2">
+              <span>{orderError}</span>
+              <button
+                onClick={() => setOrderError(null)}
+                className="text-red-500 hover:text-red-700 font-bold px-1.5 py-0.5 rounded"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Pricing Cards Grid */}

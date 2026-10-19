@@ -3,9 +3,11 @@ from app.api.v1.endpoints import (
     admin,
     attempts,
     auth,
+    cart,
     courses,
     generation,
     notifications,
+    payments,
     questions,
     results,
     streak,
@@ -29,7 +31,10 @@ api_v1_router.include_router(generation.router)
 api_v1_router.include_router(subscriptions.router)
 api_v1_router.include_router(streak.router)
 api_v1_router.include_router(courses.router)
+api_v1_router.include_router(cart.router)
 api_v1_router.include_router(typing.router)
 api_v1_router.include_router(support.router)
 api_v1_router.include_router(notifications.router)
+api_v1_router.include_router(payments.router)
+api_v1_router.include_router(payments.router, prefix="/payments")
 

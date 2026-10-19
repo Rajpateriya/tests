@@ -16,6 +16,7 @@ export const ROUTES = {
   privacy: '/legal/privacy-policy',
   about: '/about-us',
   refund: '/legal/refund-policy',
+  cart: '/cart',
 };
 
 // /dashboard/<tab>; the first one is the default.

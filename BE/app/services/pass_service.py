@@ -1,14 +1,11 @@
-import hashlib
-import hmac
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
-
-import razorpay
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestException, NotFoundException
+from app.core.razorpay import create_razorpay_order, verify_razorpay_signature
 from app.repositories.course_repo import CourseRepository
 from app.repositories.pass_repo import PassRepository
 from app.repositories.user_repo import UserRepository
@@ -17,12 +14,6 @@ from app.schemas.pass_schema import PassCourseInfo, PassCreateRequest, PassRespo
 
 # Coin metric: 100 coins = 10 Rs  =>  1 coin = 0.10 Rs (10 paise)
 COIN_TO_RUPEE_RATE = 0.10
-
-
-def _get_razorpay_client() -> razorpay.Client:
-    return razorpay.Client(
-        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-    )
 
 
 class PassService:
@@ -286,24 +277,20 @@ class PassService:
         receipt = f"rcpt_pass_{uuid.uuid4().hex[:10]}"
 
         # Call Razorpay Orders API
-        client = _get_razorpay_client()
-        rzp_order = client.order.create(
-            {
-                "amount": final_amount_paise,
-                "currency": "INR",
-                "receipt": receipt,
-                "payment_capture": 1,
-                "notes": {
-                    "pass_id": discount_info["pass_id"],
-                    "user_id": user_id,
-                    "coins_applied": str(discount_info["coins_applied"]),
-                },
-            }
+        rzp_order = create_razorpay_order(
+            amount_paise=final_amount_paise,
+            currency="INR",
+            receipt=receipt,
+            notes={
+                "pass_id": discount_info["pass_id"],
+                "user_id": user_id,
+                "coins_applied": str(discount_info["coins_applied"]),
+            },
         )
 
         order_doc = {
-            "_id": rzp_order["id"],
-            "razorpay_order_id": rzp_order["id"],
+            "_id": rzp_order["order_id"],
+            "razorpay_order_id": rzp_order["order_id"],
             "user_id": user_id,
             "pass_id": discount_info["pass_id"],
             "base_price": discount_info["base_price"],
@@ -319,7 +306,7 @@ class PassService:
         await self.orders_collection.insert_one(order_doc)
 
         return {
-            "order_id": rzp_order["id"],
+            "order_id": rzp_order["order_id"],
             "amount_paise": final_amount_paise,
             "amount_rupees": discount_info["final_payable_amount"],
             "currency": "INR",
@@ -365,16 +352,10 @@ class PassService:
         if not user:
             raise NotFoundException("User not found")
 
-        # Signature verification
-        if settings.RAZORPAY_KEY_SECRET and signature:
-            key_secret = settings.RAZORPAY_KEY_SECRET.encode("utf-8")
-            msg = f"{order_id}|{payment_id}".encode("utf-8")
-            expected_sig = hmac.new(key_secret, msg, hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(expected_sig, signature):
-                if not (payment_id.startswith("pay_test") or signature == "mock_signature"):
-                    raise BadRequestException("Payment signature verification failed. Possible tampered request.")
-        elif not signature and not payment_id.startswith("pay_test"):
-            raise BadRequestException("Payment signature is required for verification")
+        # Signature verification via centralized Razorpay core
+        is_valid = verify_razorpay_signature(order_id, payment_id, signature)
+        if not is_valid:
+            raise BadRequestException("Payment signature verification failed. Possible tampered request.")
 
         # Expiry calculation
         now = datetime.now(timezone.utc)

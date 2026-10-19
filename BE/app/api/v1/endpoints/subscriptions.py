@@ -1,3 +1,5 @@
+import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
@@ -249,21 +251,28 @@ async def razorpay_webhook(
         rzp_payment_id = entity.get("id")
         rzp_order_id = entity.get("order_id")
         existing = await payments_col.find_one({"razorpay_payment_id": rzp_payment_id})
+        order_doc = await orders_col.find_one({"_id": rzp_order_id}) or {}
+        notes = entity.get("notes") or order_doc.get("notes", {})
+        user_id = notes.get("user_id") or order_doc.get("user_id")
+        plan_id = notes.get("plan_id") or notes.get("pass_id") or order_doc.get("plan_id") or order_doc.get("pass_id")
+        course_id = notes.get("course_id") or order_doc.get("course_id")
+
         if not existing:
             # Record payment as SUCCESS from webhook
             # (verify-payment endpoint is the primary path; this is a safety net)
             await payments_col.insert_one(
                 {
-                    "_id": str(__import__("uuid").uuid4()),
+                    "_id": str(uuid.uuid4()),
                     "razorpay_order_id": rzp_order_id,
                     "razorpay_payment_id": rzp_payment_id,
                     "amount_paid": entity.get("amount", 0) / 100,
                     "currency": entity.get("currency", "INR"),
                     "status": "SUCCESS",
                     "source": "webhook",
-                    "created_at": __import__("datetime").datetime.now(
-                        __import__("datetime").timezone.utc
-                    ),
+                    "user_id": user_id,
+                    "plan_id": plan_id,
+                    "course_id": course_id,
+                    "created_at": datetime.now(timezone.utc),
                 }
             )
 
@@ -271,6 +280,65 @@ async def razorpay_webhook(
             {"_id": rzp_order_id},
             {"$set": {"status": "PAID", "razorpay_payment_id": rzp_payment_id}},
         )
+
+        # Asynchronous fulfillment fallback if user closed browser before verify-payment returned
+        if user_id:
+            try:
+                if plan_id:
+                    pass_service = PassService(db)
+                    pass_doc = await pass_service.pass_repo.get_by_id(plan_id)
+                    if pass_doc:
+                        await pass_service.verify_and_activate_pass(
+                            user_id=user_id,
+                            order_id=rzp_order_id,
+                            payment_id=rzp_payment_id,
+                            pass_id=plan_id,
+                            coins_used=int(notes.get("coins_applied", 0)),
+                            signature="webhook_verified",
+                        )
+                    else:
+                        sub_service = SubscriptionService(db)
+                        await sub_service.verify_and_activate(
+                            user_id=user_id,
+                            order_id=rzp_order_id,
+                            payment_id=rzp_payment_id,
+                            plan_id=plan_id,
+                            coins_used=int(notes.get("coins_applied", 0)),
+                            signature="webhook_verified",
+                        )
+                elif course_id:
+                    from app.services.course_service import CourseService
+                    course_service = CourseService(db)
+                    await course_service.verify_and_enroll(
+                        user_id=user_id,
+                        course_id=course_id,
+                        order_id=rzp_order_id,
+                        payment_id=rzp_payment_id,
+                        signature="webhook_verified",
+                        coins_used=int(notes.get("coins_applied", 0)),
+                    )
+                elif notes.get("type") == "cart_checkout" or (isinstance(order_doc.get("notes"), dict) and order_doc["notes"].get("type") == "cart_checkout"):
+                    from app.services.cart_service import CartService
+                    cart_service = CartService(db)
+                    raw_cids = notes.get("course_ids") or (order_doc.get("notes", {}) if isinstance(order_doc.get("notes"), dict) else {}).get("course_ids", [])
+                    if isinstance(raw_cids, str):
+                        cids = [c.strip() for c in raw_cids.split(",") if c.strip()]
+                    else:
+                        cids = list(raw_cids)
+                    if cids:
+                        await cart_service.verify_and_enroll_all(
+                            user_id=user_id,
+                            order_id=rzp_order_id,
+                            payment_id=rzp_payment_id,
+                            signature="webhook_verified",
+                            coins_used=int(notes.get("coins_applied", 0)),
+                            course_ids=cids,
+                        )
+                        await cart_service.clear_cart(user_id)
+            except Exception as fulfill_err:
+                __import__("logging").getLogger("uvicorn.error").warning(
+                    f"Webhook auto-fulfillment error: {fulfill_err}"
+                )
 
     elif event == "payment.failed":
         rzp_order_id = entity.get("order_id")
@@ -283,13 +351,11 @@ async def razorpay_webhook(
         refund_entity = payload.get("payload", {}).get("refund", {}).get("entity", {})
         await db["refunds"].insert_one(
             {
-                "_id": refund_entity.get("id", str(__import__("uuid").uuid4())),
+                "_id": refund_entity.get("id", str(uuid.uuid4())),
                 "razorpay_payment_id": refund_entity.get("payment_id"),
                 "amount": refund_entity.get("amount", 0) / 100,
                 "status": refund_entity.get("status"),
-                "created_at": __import__("datetime").datetime.now(
-                    __import__("datetime").timezone.utc
-                ),
+                "created_at": datetime.now(timezone.utc),
             }
         )
 

@@ -1,14 +1,15 @@
-import hashlib
-import hmac
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
-
-import razorpay
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestException, NotFoundException
+from app.core.razorpay import (
+    create_razorpay_order,
+    verify_razorpay_signature,
+    verify_razorpay_webhook_signature,
+)
 from app.repositories.user_repo import UserRepository
 
 
@@ -65,13 +66,6 @@ SUBSCRIPTION_PLANS = {
         "popular": False,
     },
 }
-
-
-def _get_razorpay_client() -> razorpay.Client:
-    """Return an authenticated Razorpay client using configured API keys."""
-    return razorpay.Client(
-        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-    )
 
 
 class SubscriptionService:
@@ -146,26 +140,22 @@ class SubscriptionService:
         receipt = f"rcpt_{uuid.uuid4().hex[:12]}"
 
         # ── Call Razorpay Orders API ─────────────────────────────────────────
-        client = _get_razorpay_client()
-        rzp_order = client.order.create(
-            {
-                "amount": final_amount_paise,        # paise
-                "currency": "INR",
-                "receipt": receipt,
-                "payment_capture": 1,                # auto-capture
-                "notes": {
-                    "plan_id": plan_id,
-                    "user_id": user_id,
-                    "coins_applied": str(discount_info["coins_applied"]),
-                },
-            }
+        rzp_order = create_razorpay_order(
+            amount_paise=final_amount_paise,
+            currency="INR",
+            receipt=receipt,
+            notes={
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "coins_applied": str(discount_info["coins_applied"]),
+            },
         )
-        # rzp_order["id"]  →  e.g. "order_P7k8XYZabc123"
+        # rzp_order["order_id"]  →  e.g. "order_P7k8XYZabc123"
 
         # ── Persist internal order document ─────────────────────────────────
         order_doc = {
-            "_id": rzp_order["id"],
-            "razorpay_order_id": rzp_order["id"],
+            "_id": rzp_order["order_id"],
+            "razorpay_order_id": rzp_order["order_id"],
             "user_id": user_id,
             "plan_id": plan_id,
             "base_price": discount_info["base_price"],
@@ -182,7 +172,7 @@ class SubscriptionService:
 
         return {
             # Razorpay checkout.js needs these three
-            "order_id": rzp_order["id"],
+            "order_id": rzp_order["order_id"],
             "amount_paise": final_amount_paise,
             "currency": "INR",
             # Extra context the UI may display
@@ -220,19 +210,11 @@ class SubscriptionService:
             raise NotFoundException("User not found")
 
         # ── Signature Verification ──────────────────────────────────────────
-        # Razorpay specification:
-        #   generated_signature = HMAC-SHA256(order_id + "|" + payment_id, secret)
-        if settings.RAZORPAY_KEY_SECRET and signature:
-            key_secret = settings.RAZORPAY_KEY_SECRET.encode("utf-8")
-            msg = f"{order_id}|{payment_id}".encode("utf-8")
-            expected_sig = hmac.new(key_secret, msg, hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(expected_sig, signature):
-                if not (payment_id.startswith("pay_test") or signature == "mock_signature"):
-                    raise BadRequestException(
-                        "Payment signature verification failed. Possible tampered request."
-                    )
-        elif not signature and not payment_id.startswith("pay_test"):
-            raise BadRequestException("Payment signature is required for verification")
+        is_valid = verify_razorpay_signature(order_id, payment_id, signature)
+        if not is_valid:
+            raise BadRequestException(
+                "Payment signature verification failed. Possible tampered request."
+            )
 
         # ── Activate Subscription ───────────────────────────────────────────
         now = datetime.now(timezone.utc)
@@ -322,16 +304,8 @@ class SubscriptionService:
 
     @staticmethod
     def verify_webhook_signature(payload_body: bytes, signature: str) -> bool:
-        """
-        Verify the Razorpay webhook X-Razorpay-Signature header.
-        Uses HMAC-SHA256 with the webhook secret configured in settings.
-        """
-        expected = hmac.new(
-            settings.RAZORPAY_WEBHOOK_SECRET.encode("utf-8"),
-            payload_body,
-            hashlib.sha256,
-        ).hexdigest()
-        return hmac.compare_digest(expected, signature)
+        """Verify the Razorpay webhook signature header using centralized razorpay module."""
+        return verify_razorpay_webhook_signature(payload_body, signature)
 
     # ── User Subscription Status ──────────────────────────────────────────────
 

@@ -72,7 +72,7 @@ export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess 
 
       const options = {
         key: keyId,
-        amount: order.amount_paise,           // in paise
+        amount: order.amount_paise || order.amount || (order.amount_rupees ? Math.round(order.amount_rupees * 100) : 100),           // in paise
         currency: order.currency || 'INR',
         name: 'PrepMagnet',
         description: title,

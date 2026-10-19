@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import { Navbar } from './components/Navbar';
 import { AuthModal } from './components/AuthModal';
 import { TestRulesModal } from './components/TestRulesModal';
@@ -18,6 +19,7 @@ import { TermsPage } from './pages/TermsPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { AboutUsPage } from './pages/AboutUsPage';
 import { Footer } from './components/Footer';
+import { CartPage } from './pages/CartPage';
 import { api } from './services/api';
 import { ROUTES, DASHBOARD_TABS, homePathFor } from './routes';
 
@@ -337,6 +339,16 @@ function AppContent() {
           <Route path="/about" element={<AboutUsPage />} />
           <Route path={ROUTES.refund} element={<TermsPage />} />
 
+          {/* Multi-Course Cart */}
+          <Route
+            path={ROUTES.cart}
+            element={
+              <RequireRole role="user">
+                <CartPage />
+              </RequireRole>
+            }
+          />
+
           {/* Anything else goes home */}
           <Route path="*" element={<Navigate to={homePathFor(user)} replace />} />
         </Routes>
@@ -369,7 +381,9 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AppContent />
+          <CartProvider>
+            <AppContent />
+          </CartProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

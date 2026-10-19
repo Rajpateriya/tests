@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { RazorpayModal } from '../components/RazorpayModal';
-import { useOpenCourse } from '../routes';
+import { ROUTES, useOpenCourse } from '../routes';
 import {
   SparklesIcon,
   CheckCircleIcon,
@@ -16,6 +19,7 @@ import {
   LockIcon,
   EyeIcon,
   PlayIcon,
+  CartIcon,
 } from '../components/Icons';
 
 const EXAM_CATEGORIES = [
@@ -36,7 +40,12 @@ const COVER_GLOW = {
 };
 
 export const CoursesPage = ({ onStartTest }) => {
+  const navigate = useNavigate();
   const openCourse = useOpenCourse();
+  const { user } = useAuth();
+  const { addToCart, isInCart } = useCart();
+  const [addingCourseId, setAddingCourseId] = useState(null);
+  const [cartNotice, setCartNotice] = useState(null);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState('All');
@@ -55,6 +64,7 @@ export const CoursesPage = ({ onStartTest }) => {
   const [orderData, setOrderData] = useState(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [enrollSuccessMessage, setEnrollSuccessMessage] = useState(null);
+  const [checkoutErrorMessage, setCheckoutErrorMessage] = useState(null);
 
   // Real-time dynamic course details map (courseId -> CourseDetailOut)
   const [courseDetails, setCourseDetails] = useState({});
@@ -137,28 +147,17 @@ export const CoursesPage = ({ onStartTest }) => {
   const handleStartCheckout = async (course) => {
     setSelectedCourseForCheckout(course);
     setOrderLoading(true);
+    setCheckoutErrorMessage(null);
     try {
       const order = await api.courses.createOrder(course.id, useCoins);
       setOrderData(order);
       setCheckoutModalOpen(true);
     } catch (err) {
-      console.error('Failed to create order:', err);
-      // Fallback order for testing
-      const disc = course.discounted_price || 499;
-      const coinDiscount = useCoins ? Math.min(userCoins, 50, disc - 1) : 0;
-      setOrderData({
-        order_id: `order_sim_${Date.now()}`,
-        amount_rupees: Math.max(1, disc - coinDiscount),
-        amount_paise: Math.max(100, (disc - coinDiscount) * 100),
-        currency: 'INR',
-        key_id: 'rzp_test_prepmagnet2026',
-        course_id: course.id,
-        course_title: course.title,
-        coins_applied: coinDiscount,
-        discount_amount: coinDiscount,
-        user_coins_available: userCoins,
-      });
-      setCheckoutModalOpen(true);
+      console.error('Failed to create course order:', err);
+      const msg = err.status === 401
+        ? 'Please sign in to enroll in this course.'
+        : (err.message || 'Could not initiate Razorpay checkout order. Please check credentials or try again.');
+      setCheckoutErrorMessage(msg);
     } finally {
       setOrderLoading(false);
     }
@@ -207,6 +206,46 @@ export const CoursesPage = ({ onStartTest }) => {
             <button
               onClick={() => setEnrollSuccessMessage(null)}
               className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Cart notice banner */}
+        {cartNotice && (
+          <div className="max-w-3xl mx-auto px-4 py-3 rounded-xl bg-institutional-50 dark:bg-institutional-950/50 border border-institutional-300 dark:border-institutional-800 text-institutional-900 dark:text-institutional-100 flex items-center justify-between gap-3 shadow-subtle animate-fade-in">
+            <div className="flex items-center gap-2.5 text-sm font-semibold">
+              <CartIcon size={18} className="text-institutional-600 dark:text-institutional-400 shrink-0" />
+              <span>{cartNotice}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate(ROUTES.cart)}
+                className="text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                View Cart →
+              </button>
+              <button
+                onClick={() => setCartNotice(null)}
+                className="text-xs font-bold text-charcoal-500 hover:text-charcoal-700 dark:hover:text-charcoal-200"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error banner */}
+        {checkoutErrorMessage && (
+          <div className="max-w-3xl mx-auto px-4 py-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 flex items-center justify-between gap-3 shadow-subtle animate-fade-in">
+            <div className="flex items-center gap-2.5 text-sm font-semibold">
+              <span className="text-red-600 dark:text-red-400 font-bold shrink-0">✕</span>
+              <span>{checkoutErrorMessage}</span>
+            </div>
+            <button
+              onClick={() => setCheckoutErrorMessage(null)}
+              className="text-xs font-bold text-red-700 dark:text-red-300 hover:underline shrink-0"
             >
               Dismiss
             </button>
@@ -514,14 +553,43 @@ export const CoursesPage = ({ onStartTest }) => {
                           <ArrowRightIcon size={13} />
                         </button>
                       ) : (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={openDetails}
-                            className="px-3 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors"
-                          >
-                            Details
-                          </button>
+                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:flex-nowrap">
+                          {isInCart(course.id) ? (
+                            <button
+                              type="button"
+                              onClick={() => navigate(ROUTES.cart)}
+                              className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                              title="Already in cart — Click to view cart"
+                            >
+                              <CheckCircleIcon size={13} className="text-emerald-600" />
+                              <span>In Cart</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!user) {
+                                  navigate(ROUTES.cart);
+                                  return;
+                                }
+                                setAddingCourseId(course.id);
+                                try {
+                                  await addToCart(course.id);
+                                  setCartNotice(`Added "${course.title}" to cart!`);
+                                } catch (err) {
+                                  setCheckoutErrorMessage(err.message || 'Could not add to cart');
+                                } finally {
+                                  setAddingCourseId(null);
+                                }
+                              }}
+                              disabled={addingCourseId === course.id}
+                              className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors cursor-pointer"
+                              title="Add to multi-course checkout cart"
+                            >
+                              <CartIcon size={13} />
+                              <span>{addingCourseId === course.id ? 'Adding...' : 'Add to Cart'}</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleStartCheckout(course)}
@@ -530,6 +598,14 @@ export const CoursesPage = ({ onStartTest }) => {
                           >
                             <ShieldIcon size={13} />
                             <span>Enroll</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openDetails}
+                            className="px-2.5 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200 transition-colors"
+                            title="View syllabus & details"
+                          >
+                            Details
                           </button>
                         </div>
                       )}

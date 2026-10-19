@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { api, isRealSession } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { useNavigate, useLocation, matchPath } from 'react-router';
 import { ROUTES } from '../routes';
 import {
@@ -20,6 +21,7 @@ import {
   MailIcon,
   BellIcon,
   CheckCircleIcon,
+  CartIcon,
 } from './Icons';
 
 // Bell: unread count pushed over a server-sent-events stream (no polling), a dropdown listing
@@ -189,6 +191,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
   const isOn = (path, end = false) => !!matchPath({ path, end }, pathname);
   const { theme, toggleTheme } = useTheme();
   const { user, logout, switchRole, isAdmin, canSwitchRole, isPreviewingAsStudent, subscription } = useAuth();
+  const { cartCount = 0 } = useCart();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -446,6 +449,33 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           {/* Notifications Bell */}
           <NotificationBell sessionKey={user?.id} isAdmin={isAdmin} />
 
+          {/* Cart Icon with Live Badge */}
+          {!isAdmin && (
+            <button
+              onClick={() => {
+                if (!user) {
+                  onOpenAuthModal?.('login');
+                } else {
+                  handleNavClick(ROUTES.cart);
+                }
+              }}
+              className={`relative p-1.5 sm:p-2 rounded-full transition-colors focus:outline-none cursor-pointer ${
+                isOn(ROUTES.cart)
+                  ? 'bg-institutional-100 text-institutional-700 dark:bg-institutional-900/60 dark:text-institutional-300'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+              }`}
+              aria-label="Shopping Cart"
+              title={cartCount > 0 ? `${cartCount} course(s) in cart` : 'Cart'}
+            >
+              <CartIcon size={16} />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-institutional-600 text-white text-[9px] font-extrabold flex items-center justify-center shadow-xs">
+                  {cartCount > 9 ? '9+' : cartCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
@@ -564,6 +594,20 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                           className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium"
                         >
                           Enrolled Courses
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleNavClick(ROUTES.cart);
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium flex items-center justify-between"
+                        >
+                          <span>My Cart</span>
+                          {cartCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-institutional-600 text-white text-[10px] font-bold">
+                              {cartCount}
+                            </span>
+                          )}
                         </button>
                         <button
                           onClick={() => {
@@ -839,6 +883,34 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                       <span>Courses & Quizzes</span>
                     </div>
                     <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        setMobileMenuOpen(false);
+                        onOpenAuthModal?.('login');
+                      } else {
+                        handleNavClick(ROUTES.cart);
+                      }
+                    }}
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
+                      isOn(ROUTES.cart)
+                        ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
+                        : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <CartIcon size={16} className="text-institutional-600 dark:text-institutional-400" />
+                      <span>My Cart</span>
+                    </div>
+                    {cartCount > 0 ? (
+                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-institutional-600 text-white text-[11px] font-extrabold flex items-center justify-center">
+                        {cartCount}
+                      </span>
+                    ) : (
+                      <ChevronDownIcon size={14} className="-rotate-90 text-charcoal-400" />
+                    )}
                   </button>
 
                   <button

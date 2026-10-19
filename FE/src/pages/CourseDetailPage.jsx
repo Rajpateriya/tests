@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { RazorpayModal } from '../components/RazorpayModal';
+import { ROUTES } from '../routes';
 import {
   ChevronRightIcon,
   CheckCircleIcon,
@@ -14,6 +18,7 @@ import {
   EyeIcon,
   PlayIcon,
   SparklesIcon,
+  CartIcon,
 } from '../components/Icons';
 
 // A course's quizzes split into the two kinds Admin Studio can tag/create:
@@ -39,6 +44,11 @@ const PAGE_SHELL = 'relative w-full max-w-full overflow-x-hidden -mt-20 pt-20 sm
 const PAGE_MAIN = 'relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-10 min-w-0';
 
 export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backLabel = 'Courses' }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { addToCart, isInCart } = useCart();
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartNotice, setCartNotice] = useState(null);
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -191,6 +201,29 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
           </div>
         )}
 
+        {cartNotice && (
+          <div className="w-full min-w-0 px-3.5 sm:px-4 py-3 rounded-xl bg-institutional-50 dark:bg-institutional-950/50 border border-institutional-300 dark:border-institutional-800 text-institutional-900 dark:text-institutional-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-subtle animate-fade-in">
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold min-w-0">
+              <CartIcon size={18} className="text-institutional-600 dark:text-institutional-400 shrink-0" />
+              <span className="break-words">{cartNotice}</span>
+            </div>
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              <button
+                onClick={() => navigate(ROUTES.cart)}
+                className="text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                View Cart →
+              </button>
+              <button
+                onClick={() => setCartNotice(null)}
+                className="text-xs font-bold text-charcoal-500 hover:text-charcoal-700 dark:hover:text-charcoal-200"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="w-full min-w-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-5 sm:gap-6">
           {/* Course header */}
           <section className="w-full min-w-0 lg:col-start-1 lg:row-start-1 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-subtle overflow-hidden">
@@ -300,6 +333,41 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
                     <ShieldIcon size={16} />
                     <span>{orderLoading ? 'Preparing checkout...' : 'Enroll now'}</span>
                   </button>
+
+                  {isInCart(course.id) ? (
+                    <button
+                      type="button"
+                      onClick={() => navigate(ROUTES.cart)}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 font-bold text-xs transition-all cursor-pointer"
+                    >
+                      <CheckCircleIcon size={15} className="text-emerald-600" />
+                      <span>In Cart — View Cart</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!user) {
+                          navigate(ROUTES.cart);
+                          return;
+                        }
+                        setAddingToCart(true);
+                        try {
+                          await addToCart(course.id);
+                          setCartNotice(`Added "${course.title}" to cart!`);
+                        } catch (err) {
+                          setError(err.message || 'Could not add to cart');
+                        } finally {
+                          setAddingToCart(false);
+                        }
+                      }}
+                      disabled={addingToCart}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white/50 dark:bg-charcoal-800/50 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 font-bold text-xs transition-all cursor-pointer"
+                    >
+                      <CartIcon size={15} />
+                      <span>{addingToCart ? 'Adding to cart...' : 'Add to Multi-Course Cart'}</span>
+                    </button>
+                  )}
 
                   {userCoins > 0 && (
                     <label className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer select-none">

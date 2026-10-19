@@ -72,23 +72,12 @@ export const PassDetailModal = ({
       setCreatedOrder(order);
       setIsRazorpayOpen(true);
     } catch (err) {
-      console.warn('Backend order creation error, using fallback format:', err);
-      // Fallback local order structure so RazorpayModal can proceed smoothly
-      setCreatedOrder({
-        order_id: `order_${Date.now().toString(36)}`,
-        amount_paise: finalPayable * 100,
-        amount_rupees: finalPayable,
-        currency: 'INR',
-        plan_id: pass.id,
-        pass_id: pass.id,
-        pass_title: pass.title,
-        base_price: basePrice,
-        coins_applied: coinsToApply,
-        discount_amount: discountFromCoins,
-        user_coins_available: coinsBalance,
-        razorpay_key_id: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_mock',
-      });
-      setIsRazorpayOpen(true);
+      console.warn('Backend order creation error:', err);
+      setErrorMessage(
+        err.status === 401
+          ? 'Please sign in to complete your pass purchase.'
+          : (err.message || 'Could not initiate Razorpay checkout order. Please try again.')
+      );
     } finally {
       setOrderLoading(false);
     }
