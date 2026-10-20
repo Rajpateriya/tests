@@ -38,6 +38,9 @@ class BaseRepository:
         await self.collection.insert_one(document)
         return document
 
+    # Convenient alias for insert
+    create = insert
+
     async def insert_many(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not documents:
             return []

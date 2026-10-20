@@ -525,7 +525,7 @@ class AuthService:
                     "current_streak": 0,
                 },
             }
-            await self.repo.create(new_user_doc)
+            await self.repo.insert(new_user_doc)
             user = await self.repo.get_by_email(email)
             logger.info("New user auto-registered via Google SSO: %s", email)
 
