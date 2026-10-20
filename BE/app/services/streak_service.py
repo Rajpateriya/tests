@@ -280,9 +280,9 @@ class StreakService:
         )
         new_balance = await self.user_repo.update_coins(user_id, earned_coins)
 
-        msg = f"Awesome! Daily quiz completed ({correct_count}/{total_count} correct)! 🔥 Streak: {new_streak} days (+{earned_coins} GovCoins)"
+        msg = f"Awesome! Daily quiz completed ({correct_count}/{total_count} correct)! 🔥 Streak: {new_streak} days (+{earned_coins} PrepCoins)"
         if is_milestone:
-            msg = f"🎉 {milestone_title.upper()} UNLOCKED! Earned {earned_coins} GovCoins milestone jackpot!"
+            msg = f"🎉 {milestone_title.upper()} UNLOCKED! Earned {earned_coins} PrepCoins milestone jackpot!"
 
         return {
             "success": True,

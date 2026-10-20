@@ -595,7 +595,7 @@ export const ResultScorecardPage = ({ attemptId, onRetake, onGoToDashboard, onBa
                   Examine Every Response in the Real CBT Exam Interface
                 </h3>
                 <p className="text-xs sm:text-sm text-charcoal-300 leading-relaxed">
-                  Review all {questionsList.length} questions in the exact TCS iON examination room layout.
+                  Review all {questionsList.length} questions in the authentic PrepMagnet CBT examination room layout.
                   Your selected answers are pre-ticked, incorrect answers are clearly flagged, and official keys
                   are provided with step-by-step conceptual derivations.
                 </p>

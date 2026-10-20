@@ -75,7 +75,7 @@ async def solve_daily_quiz(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Mark today's daily quiz solved, advance daily streak, and award GovCoins (+20 daily, +100 on 7-day milestone)."""
+    """Mark today's daily quiz solved, advance daily streak, and award PrepCoins (+20 daily, +100 on 7-day milestone)."""
     service = StreakService(db)
     req = payload or DailyQuizSolveRequest()
     result = await service.solve_daily_quiz(

@@ -260,11 +260,10 @@ export const CoursesPage = ({ onStartTest }) => {
               <button
                 key={cat.id}
                 onClick={() => setSelectedExam(cat.id)}
-                className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all ${
-                  selectedExam === cat.id
+                className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all ${selectedExam === cat.id
                     ? 'bg-white dark:bg-charcoal-900 text-institutional-700 dark:text-institutional-300 shadow-sm font-extrabold'
                     : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 {cat.label}
               </button>
@@ -296,10 +295,10 @@ export const CoursesPage = ({ onStartTest }) => {
               </button>
             </div>
 
-            {/* GovCoins pill */}
+            {/* PrepCoins pill */}
             <label
               className="w-full sm:w-auto inline-flex items-center justify-between sm:justify-start gap-2 pl-3 pr-2.5 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer select-none"
-              title="100 GovCoins = ₹10 off. Applied automatically when you enroll."
+              title="100 PrepCoins = ₹10 off. Applied automatically when you enroll."
             >
               <div className="flex items-center gap-1.5">
                 <span>🪙</span>
@@ -312,7 +311,7 @@ export const CoursesPage = ({ onStartTest }) => {
                   checked={useCoins}
                   onChange={(e) => setUseCoins(e.target.checked)}
                   className="peer sr-only"
-                  aria-label="Apply GovCoins discount"
+                  aria-label="Apply PrepCoins discount"
                 />
                 <span className="w-8 h-[18px] rounded-full bg-charcoal-300 dark:bg-charcoal-700 peer-checked:bg-amber-500 transition-colors" />
                 <span className="absolute left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-[14px]" />
@@ -666,17 +665,15 @@ export const CoursesPage = ({ onStartTest }) => {
                     return (
                       <div
                         key={opt.id}
-                        className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${
-                          isCorrect
+                        className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${isCorrect
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200'
                             : 'bg-white dark:bg-charcoal-850 border-charcoal-200 dark:border-charcoal-800 text-charcoal-700 dark:text-charcoal-300'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-2.5">
                           <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${
-                              isCorrect ? 'bg-emerald-600 text-white' : 'bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-800 dark:text-charcoal-200'
-                            }`}
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${isCorrect ? 'bg-emerald-600 text-white' : 'bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-800 dark:text-charcoal-200'
+                              }`}
                           >
                             {opt.id}
                           </span>

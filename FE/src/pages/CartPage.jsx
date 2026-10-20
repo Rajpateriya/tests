@@ -6,7 +6,7 @@
  * - Normal document flow without breaking stacking contexts (no fixed inset bugs)
  * - Dual Theme: Seamless Charcoal-50 / Charcoal-950 Dark & Light Mode
  * - Internal scrollbar strictly on cart items list if many courses are added
- * - Order Summary with GovCoins discount toggle & Razorpay checkout
+ * - Order Summary with PrepCoins discount toggle & Razorpay checkout
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -229,7 +229,7 @@ function CartEmptyState({ onBrowse }) {
         {/* 3-point feature row */}
         <div className="pt-4 border-t border-charcoal-200/60 dark:border-charcoal-800/80 grid grid-cols-3 gap-2 text-center text-[10px] sm:text-[11px] text-charcoal-500 dark:text-charcoal-400">
           <div>⚡ Instant Digital Access</div>
-          <div>🛡️ TCS Exam Calibrated</div>
+          <div>🛡️ Official Exam Calibrated</div>
           <div>📊 AI Accuracy Matrix</div>
         </div>
       </div>
@@ -593,7 +593,7 @@ export function CartPage() {
                 </span>
               </div>
 
-              {/* GovCoins Redemption Toggle */}
+              {/* PrepCoins Redemption Toggle */}
               {availableCoins > 0 && (
                 <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-institutional-500/10 border border-amber-300 dark:border-amber-700/80">
                   <div className="flex items-center justify-between">
@@ -601,7 +601,7 @@ export function CartPage() {
                       <span className="text-base">🪙</span>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-charcoal-900 dark:text-white truncate">
-                          Redeem GovCoins
+                          Redeem PrepCoins
                         </p>
                         <p className="text-[10px] text-charcoal-600 dark:text-charcoal-300 truncate">
                           {availableCoins} coins (100 coins = ₹10 off)
@@ -614,14 +614,12 @@ export function CartPage() {
                       role="switch"
                       aria-checked={applyCoins}
                       onClick={() => setApplyCoins((v) => !v)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                        applyCoins ? 'bg-amber-500' : 'bg-charcoal-200 dark:bg-charcoal-700'
-                      }`}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${applyCoins ? 'bg-amber-500' : 'bg-charcoal-200 dark:bg-charcoal-700'
+                        }`}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                          applyCoins ? 'translate-x-4' : 'translate-x-0'
-                        }`}
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${applyCoins ? 'translate-x-4' : 'translate-x-0'
+                          }`}
                       />
                     </button>
                   </div>
@@ -661,7 +659,7 @@ export function CartPage() {
                   {coinsDiscount > 0 && (
                     <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 font-semibold">
                       <span className="flex items-center gap-1">
-                        <span>🪙</span> GovCoins Redeemed
+                        <span>🪙</span> PrepCoins Redeemed
                       </span>
                       <span className="font-mono">-₹{coinsDiscount.toFixed(2)}</span>
                     </div>

@@ -157,13 +157,13 @@ export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess 
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, order?.order_id]);
 
   // Close Razorpay popup if parent closes modal
   useEffect(() => {
     if (!isOpen && razorpayRef.current) {
-      try { razorpayRef.current.close(); } catch {}
+      try { razorpayRef.current.close(); } catch { }
     }
   }, [isOpen]);
 
@@ -207,7 +207,7 @@ export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess 
           <div className="font-extrabold text-charcoal-900 dark:text-white text-sm truncate">{title}</div>
           {coinsApplied > 0 && (
             <div className="flex justify-between text-amber-700 dark:text-amber-300 font-semibold">
-              <span>🪙 GovCoins Applied ({coinsApplied})</span>
+              <span>🪙 PrepCoins Applied ({coinsApplied})</span>
               <span>-₹{discountAmount}</span>
             </div>
           )}
@@ -260,7 +260,7 @@ export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess 
             </p>
             {coinsApplied > 0 && (
               <div className="text-xs text-amber-700 dark:text-amber-300 font-semibold bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200 dark:border-amber-800">
-                🪙 {coinsApplied} GovCoins redeemed (saved ₹{discountAmount})
+                🪙 {coinsApplied} PrepCoins redeemed (saved ₹{discountAmount})
               </div>
             )}
           </div>

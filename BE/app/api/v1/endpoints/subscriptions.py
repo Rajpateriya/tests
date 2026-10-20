@@ -83,7 +83,7 @@ async def calculate_discount(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Calculate the final payable price after applying eligible user GovCoins (100 coins = 10 Rs)."""
+    """Calculate the final payable price after applying eligible user PrepCoins (100 coins = 10 Rs)."""
     # Check if this is a dynamic pass
     pass_service = PassService(db)
     pass_doc = await pass_service.pass_repo.get_by_id(req.plan_id)
@@ -148,7 +148,7 @@ async def verify_payment(
 ):
     """
     Verify Razorpay HMAC-SHA256 payment signature, activate user subscription or pass,
-    and deduct redeemed GovCoins atomically.
+    and deduct redeemed PrepCoins atomically.
     """
     pass_service = PassService(db)
     pass_doc = await pass_service.pass_repo.get_by_id(req.plan_id)

@@ -234,14 +234,14 @@ export const PassDetailModal = ({
                   )}
                 </div>
 
-                {/* GovCoins Redemption Toggle Box */}
+                {/* PrepCoins Redemption Toggle Box */}
                 <div className="p-3 rounded-xl bg-white/80 dark:bg-charcoal-800 border border-charcoal-200/80 dark:border-charcoal-700 min-w-[220px]">
                   {user ? (
                     <div className="space-y-1.5 text-xs">
                       <div className="flex items-center justify-between font-bold">
                         <span className="flex items-center gap-1 text-amber-700 dark:text-amber-300">
                           <span>🪙</span>
-                          <span>{coinsBalance} GovCoins</span>
+                          <span>{coinsBalance} PrepCoins</span>
                         </span>
                         <span className="text-[10px] text-charcoal-500 font-mono">
                           = ₹{(coinsBalance * 0.10).toFixed(1)}
@@ -268,7 +268,7 @@ export const PassDetailModal = ({
                     </div>
                   ) : (
                     <div className="text-xs text-charcoal-500">
-                      <span className="font-semibold text-charcoal-700 dark:text-charcoal-300">GovCoins Wallet:</span>
+                      <span className="font-semibold text-charcoal-700 dark:text-charcoal-300">PrepCoins Wallet:</span>
                       <p className="text-[10px] text-charcoal-400 mt-0.5">Sign in to redeem coins for instant discounts.</p>
                     </div>
                   )}

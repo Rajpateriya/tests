@@ -118,7 +118,7 @@ async def verify_cart_payment(
 ):
     """
     Verify Razorpay HMAC-SHA256 payment signature, bulk-enroll in all cart courses,
-    deduct GovCoins, and clear the cart.
+    deduct PrepCoins, and clear the cart.
     """
     service = CartService(db)
     result = await service.verify_and_enroll_all(

@@ -162,7 +162,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             if (parsed.verificationResult) setVerificationResult(parsed.verificationResult);
             if (parsed.reward) setDailyReward(parsed.reward);
             if (parsed.questionTimer) setQuestionTimer(parsed.questionTimer);
-          } catch (e) {}
+          } catch (e) { }
         }
       } else {
         await loadDailyQuestion();
@@ -366,7 +366,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
           reward: rewardRes,
           questionTimer,
         }));
-      } catch (e) {}
+      } catch (e) { }
     } catch (err) {
       console.error('Daily answer verification failed:', err);
     } finally {
@@ -553,11 +553,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                   {user.profile.tags.map((tag) => (
                     <span
                       key={tag}
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                        tag === 'PRO USER'
-                          ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-400/60 shadow-2xs'
-                          : 'bg-institutional-100 dark:bg-institutional-950/80 text-institutional-800 dark:text-institutional-300 border border-institutional-300/60 dark:border-institutional-800'
-                      }`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${tag === 'PRO USER'
+                        ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-400/60 shadow-2xs'
+                        : 'bg-institutional-100 dark:bg-institutional-950/80 text-institutional-800 dark:text-institutional-300 border border-institutional-300/60 dark:border-institutional-800'
+                        }`}
                     >
                       {tag === 'PRO USER' ? <CrownIcon size={11} className="text-amber-500 fill-amber-500" /> : <ShieldIcon size={11} />}
                       <span>{tag}</span>
@@ -596,11 +595,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                 <span className="truncate">{user?.email || ''}</span>
                 {avatarToast && (
                   <span
-                    className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
-                      avatarToast.type === 'success'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
-                        : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300'
-                    }`}
+                    className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${avatarToast.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                      : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300'
+                      }`}
                   >
                     {avatarToast.message}
                   </span>
@@ -611,13 +609,13 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
 
           {/* Wallet & Quick Action Center */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-            {/* GovCoins Wallet Card */}
+            {/* PrepCoins Wallet Card */}
             <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 text-charcoal-900 dark:text-white shadow-xs">
               <span className="text-2xl shrink-0">🪙</span>
               <div className="min-w-0">
                 <div className="text-xs font-black tracking-tight leading-tight flex items-center gap-1.5">
                   <span className="font-mono text-base font-extrabold text-amber-700 dark:text-amber-300">{coinsBalance}</span>
-                  <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">GovCoins</span>
+                  <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">PrepCoins</span>
                 </div>
                 <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400 font-medium truncate">
                   = ₹{(coinsBalance * 0.10).toFixed(1)} exam discount (100 coins = ₹10)
@@ -791,20 +789,18 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-white dark:bg-charcoal-800 text-charcoal-950 dark:text-white shadow-sm ring-1 ring-charcoal-200 dark:ring-charcoal-700'
-                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-white/50 dark:hover:bg-charcoal-800/50'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${isActive
+                ? 'bg-white dark:bg-charcoal-800 text-charcoal-950 dark:text-white shadow-sm ring-1 ring-charcoal-200 dark:ring-charcoal-700'
+                : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-white/50 dark:hover:bg-charcoal-800/50'
+                }`}
             >
               <Icon size={14} className={isActive ? 'text-institutional-600 dark:text-institutional-400' : ''} />
               <span>{tab.label}</span>
               {tab.badge && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                  isDailyCompleted
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                }`}>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${isDailyCompleted
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  }`}>
                   {tab.badge}
                 </span>
               )}
@@ -839,7 +835,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                     </h2>
                   </div>
                   <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-0.5">
-                    1 high-yield practice question auto-picked from the Question Bank. Solve to keep streak active and earn GovCoins!
+                    Solve 1 high-yield question daily to maintain your streak and earn PrepCoins!
                   </p>
                 </div>
 
@@ -1072,17 +1068,16 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                       return (
                         <div
                           key={step.day_number}
-                          className={`group relative aspect-square p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-md ${
-                            isTodaySuccess
-                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 dark:border-teal-400 shadow-md ring-2 ring-emerald-400/50 scale-[1.03] hover:scale-[1.08] hover:shadow-emerald-500/30'
-                              : isDone
+                          className={`group relative aspect-square p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-center transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-md ${isTodaySuccess
+                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 dark:border-teal-400 shadow-md ring-2 ring-emerald-400/50 scale-[1.03] hover:scale-[1.08] hover:shadow-emerald-500/30'
+                            : isDone
                               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/15'
                               : isToday
-                              ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 shadow-xs animate-pulse hover:animate-none hover:border-amber-400'
-                              : isJackpot
-                              ? 'bg-amber-500/10 border-amber-300 text-charcoal-800 dark:text-charcoal-200 hover:border-amber-400 hover:bg-amber-500/20'
-                              : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400 hover:border-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800/80'
-                          }`}
+                                ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 shadow-xs animate-pulse hover:animate-none hover:border-amber-400'
+                                : isJackpot
+                                  ? 'bg-amber-500/10 border-amber-300 text-charcoal-800 dark:text-charcoal-200 hover:border-amber-400 hover:bg-amber-500/20'
+                                  : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400 hover:border-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800/80'
+                            }`}
                         >
                           {/* Topup Floating Pill on Hover */}
                           <div className="absolute -top-7 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-150 z-30 whitespace-nowrap">
@@ -1103,9 +1098,8 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                           </div>
 
                           {/* Hover State: ONLY +5 or +20 */}
-                          <div className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 scale-90 group-hover:scale-100 ${
-                            isTodaySuccess ? 'text-white' : 'text-amber-600 dark:text-amber-400'
-                          }`}>
+                          <div className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 scale-90 group-hover:scale-100 ${isTodaySuccess ? 'text-white' : 'text-amber-600 dark:text-amber-400'
+                            }`}>
                             <span className="text-xs sm:text-sm font-black font-mono leading-none tracking-tight">
                               +{step.coins_reward}
                             </span>
@@ -1285,7 +1279,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
           <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-charcoal-150 dark:border-charcoal-800">
               <h3 className="text-sm font-extrabold text-charcoal-900 dark:text-white">
-                Recommended Courses with GovCoins Discount
+                Recommended Courses with PrepCoins Discount
               </h3>
               <button
                 onClick={() => navigate(ROUTES.courses)}
@@ -1407,19 +1401,18 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                 <button
                   key={filterKey}
                   onClick={() => setSelectedFilter(filterKey)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    selectedFilter === filterKey
-                      ? 'bg-institutional-600 text-white shadow-xs'
-                      : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-400'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedFilter === filterKey
+                    ? 'bg-institutional-600 text-white shadow-xs'
+                    : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-400'
+                    }`}
                 >
                   {filterKey === 'ALL'
                     ? 'All'
                     : filterKey === 'FULL'
-                    ? 'Full Tests'
-                    : filterKey === 'SUBJECT'
-                    ? 'Sectional'
-                    : 'Topic Drills'}
+                      ? 'Full Tests'
+                      : filterKey === 'SUBJECT'
+                        ? 'Sectional'
+                        : 'Topic Drills'}
                 </button>
               ))}
             </div>
@@ -1538,18 +1531,16 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                 <button
                   type="button"
                   onClick={() => setTicketStatusFilter('ALL')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    ticketStatusFilter === 'ALL'
-                      ? 'bg-white dark:bg-charcoal-900 text-charcoal-950 dark:text-white shadow-2xs'
-                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-950 dark:hover:text-white'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ticketStatusFilter === 'ALL'
+                    ? 'bg-white dark:bg-charcoal-900 text-charcoal-950 dark:text-white shadow-2xs'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-950 dark:hover:text-white'
+                    }`}
                 >
                   <span>All Tickets</span>
-                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                    ticketStatusFilter === 'ALL'
-                      ? 'bg-charcoal-150 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-200'
-                      : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
-                  }`}>
+                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${ticketStatusFilter === 'ALL'
+                    ? 'bg-charcoal-150 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-200'
+                    : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
+                    }`}>
                     {totalTicketsCount}
                   </span>
                 </button>
@@ -1557,19 +1548,17 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                 <button
                   type="button"
                   onClick={() => setTicketStatusFilter('ACTIVE')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    ticketStatusFilter === 'ACTIVE'
-                      ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/30 shadow-2xs'
-                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-amber-600 dark:hover:text-amber-400'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ticketStatusFilter === 'ACTIVE'
+                    ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/30 shadow-2xs'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-amber-600 dark:hover:text-amber-400'
+                    }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                   <span>Active & In Review</span>
-                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${
-                    ticketStatusFilter === 'ACTIVE'
-                      ? 'bg-amber-500/25 text-amber-900 dark:text-amber-100'
-                      : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
-                  }`}>
+                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${ticketStatusFilter === 'ACTIVE'
+                    ? 'bg-amber-500/25 text-amber-900 dark:text-amber-100'
+                    : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
+                    }`}>
                     {activeTicketsCount}
                   </span>
                 </button>
@@ -1577,19 +1566,17 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                 <button
                   type="button"
                   onClick={() => setTicketStatusFilter('RESOLVED')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    ticketStatusFilter === 'RESOLVED'
-                      ? 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 border border-emerald-500/30 shadow-2xs'
-                      : 'text-charcoal-600 dark:text-charcoal-400 hover:text-emerald-600 dark:hover:text-emerald-400'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ticketStatusFilter === 'RESOLVED'
+                    ? 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 border border-emerald-500/30 shadow-2xs'
+                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span>Resolved</span>
-                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${
-                    ticketStatusFilter === 'RESOLVED'
-                      ? 'bg-emerald-500/25 text-emerald-900 dark:text-emerald-100'
-                      : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
-                  }`}>
+                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${ticketStatusFilter === 'RESOLVED'
+                    ? 'bg-emerald-500/25 text-emerald-900 dark:text-emerald-100'
+                    : 'bg-charcoal-200/60 dark:bg-charcoal-750 text-charcoal-600 dark:text-charcoal-400'
+                    }`}>
                     {resolvedTicketsCount}
                   </span>
                 </button>
@@ -1675,11 +1662,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                     <article
                       key={t.id}
                       id={`ticket-row-${t.id}`}
-                      className={`group relative p-4.5 sm:p-5 rounded-2xl border transition-all duration-200 ${
-                        isHighlighted
-                          ? 'border-institutional-500 bg-institutional-50/20 dark:bg-institutional-950/25 ring-2 ring-institutional-500/30 shadow-md'
-                          : 'border-charcoal-200/90 dark:border-charcoal-800 bg-white dark:bg-charcoal-850/70 hover:border-charcoal-350 dark:hover:border-charcoal-700 shadow-2xs hover:shadow-xs'
-                      }`}
+                      className={`group relative p-4.5 sm:p-5 rounded-2xl border transition-all duration-200 ${isHighlighted
+                        ? 'border-institutional-500 bg-institutional-50/20 dark:bg-institutional-950/25 ring-2 ring-institutional-500/30 shadow-md'
+                        : 'border-charcoal-200/90 dark:border-charcoal-800 bg-white dark:bg-charcoal-850/70 hover:border-charcoal-350 dark:hover:border-charcoal-700 shadow-2xs hover:shadow-xs'
+                        }`}
                     >
                       {/* Top Meta Header: ID + Status + Date */}
                       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1688,16 +1674,14 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                             {t.ticket_number}
                           </span>
                           <span
-                            className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border shadow-2xs ${
-                              isResolved
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/70'
-                                : 'bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/70'
-                            }`}
+                            className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border shadow-2xs ${isResolved
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/70'
+                              : 'bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/70'
+                              }`}
                           >
                             <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                isResolved ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
-                              }`}
+                              className={`w-1.5 h-1.5 rounded-full ${isResolved ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                                }`}
                             />
                             <span>{isResolved ? 'Resolved' : 'Active / In Review'}</span>
                           </span>
@@ -1808,15 +1792,14 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                     return (
                       <div
                         key={step.day_number}
-                        className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all ${
-                          isDone
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                            : isToday
+                        className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all ${isDone
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                          : isToday
                             ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 scale-105 shadow-sm'
                             : isJackpot
-                            ? 'bg-gradient-to-b from-amber-500/10 to-institutional-500/10 border-amber-400/40 text-charcoal-800 dark:text-charcoal-200'
-                            : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400'
-                        }`}
+                              ? 'bg-gradient-to-b from-amber-500/10 to-institutional-500/10 border-amber-400/40 text-charcoal-800 dark:text-charcoal-200'
+                              : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400'
+                          }`}
                       >
                         <span className="text-[10px] font-bold uppercase">{step.label}</span>
                         <div className="my-2">
@@ -1919,11 +1902,10 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                         setActiveQuizQuestionIdx(0);
                         setSelectedAnswers({});
                       }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
-                        selectedQuizIdx === idx
-                          ? 'bg-institutional-600 text-white shadow-xs'
-                          : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${selectedQuizIdx === idx
+                        ? 'bg-institutional-600 text-white shadow-xs'
+                        : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300'
+                        }`}
                     >
                       <span>{quiz.subject || quiz.title}</span>
                       <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white">
@@ -1986,13 +1968,12 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                             <button
                               key={qIdx}
                               onClick={() => setActiveQuizQuestionIdx(qIdx)}
-                              className={`w-6 h-6 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                activeQuizQuestionIdx === qIdx
-                                  ? 'bg-institutional-600 text-white'
-                                  : selectedAnswers[qIdx] !== undefined
+                              className={`w-6 h-6 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeQuizQuestionIdx === qIdx
+                                ? 'bg-institutional-600 text-white'
+                                : selectedAnswers[qIdx] !== undefined
                                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                                   : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-500'
-                              }`}
+                                }`}
                             >
                               {qIdx + 1}
                             </button>
@@ -2035,13 +2016,12 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                                 className={`w-full p-3 rounded-xl border text-left text-xs sm:text-sm transition-all flex items-center justify-between cursor-pointer ${btnStyle}`}
                               >
                                 <div className="flex items-center gap-3">
-                                  <span className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
-                                    isAnswered && isCorrect
-                                      ? 'bg-emerald-600 text-white'
-                                      : isAnswered && isChosen && !isCorrect
+                                  <span className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${isAnswered && isCorrect
+                                    ? 'bg-emerald-600 text-white'
+                                    : isAnswered && isChosen && !isCorrect
                                       ? 'bg-rose-600 text-white'
                                       : 'bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-700 dark:text-charcoal-300'
-                                  }`}>
+                                    }`}>
                                     {optId}
                                   </span>
                                   <span className="leading-snug">{optText}</span>

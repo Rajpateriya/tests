@@ -21,4 +21,4 @@ class VerifyPaymentRequest(BaseModel):
     payment_id: str         # razorpay_payment_id from checkout
     signature: Optional[str] = None  # razorpay_signature from checkout
     plan_id: str            # our internal plan / pass identifier
-    coins_used: int = 0     # GovCoins redeemed (0 if none)
+    coins_used: int = 0     # PrepCoins redeemed (0 if none)

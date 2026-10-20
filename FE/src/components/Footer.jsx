@@ -223,7 +223,7 @@ export const Footer = () => {
               </div>
 
               <p className="text-xs text-charcoal-500 dark:text-charcoal-400 leading-relaxed max-w-sm">
-                India's high-trust mock examination portal. Engineered with authentic PrepMagnet CBT examination physics, strict negative scoring models, and All-India percentile benchmarks.
+                India’s trusted CBT mock exam platform with real exam simulations, strict negative marking, and All-India percentile rankings.
               </p>
 
               {/* Engine Status & Security Badges */}
@@ -236,21 +236,21 @@ export const Footer = () => {
                   <span>Engine Online • 99.98% SLA</span>
                 </div>
 
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-charcoal-100/80 dark:bg-charcoal-800/80 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700/80 text-[11px] font-semibold">
+                {/* <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-charcoal-100/80 dark:bg-charcoal-800/80 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700/80 text-[11px] font-semibold">
                   <LockIcon size={12} className="text-institutional-600 dark:text-institutional-400" />
                   <span>256-Bit Encrypted</span>
-                </div>
+                </div> */}
               </div>
 
-              <div className="pt-1 text-[11px] text-charcoal-500 dark:text-charcoal-400 flex items-center gap-2">
+              {/* <div className="pt-1 text-[11px] text-charcoal-500 dark:text-charcoal-400 flex items-center gap-2">
                 <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>PrepMagnet Authentic National CBT Simulator</span>
-              </div>
+              </div> */}
             </div>
 
             {/* Horizontal 3-Section Container: One line horizontally on mobile (grid-cols-3), exactly 6 columns on desktop */}
             <div className="col-span-1 sm:col-span-2 lg:col-span-6 grid grid-cols-3 gap-3 sm:gap-6 lg:gap-8 py-3.5 sm:py-4 lg:py-0 border-y lg:border-y-0 border-charcoal-200/70 dark:border-charcoal-800/70">
-              
+
               {/* Column 2: Exam Blueprints */}
               <div className="space-y-2.5 sm:space-y-3 min-w-0">
                 <h4 className="font-extrabold text-[11px] sm:text-xs uppercase tracking-wider text-charcoal-900 dark:text-charcoal-100 flex items-center gap-1 sm:gap-1.5 sm:whitespace-nowrap">

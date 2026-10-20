@@ -114,8 +114,8 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
 
   const faqs = [
     {
-      q: 'How do GovCoins work and how can I earn them?',
-      a: 'You earn GovCoins automatically by solving practice quizzes every day! Daily quiz completion rewards 5 GovCoins, plus milestone rewards (20 coins on 7 days streak, 40 coins on 15 days streak, and 100 coins on a full 30-day month). 100 GovCoins equals ₹10 discount (1 coin = ₹0.10) on all courses and passes!',
+      q: 'How do PrepCoins work and how can I earn them?',
+      a: 'You earn PrepCoins automatically by solving practice quizzes every day! Daily quiz completion rewards 5 PrepCoins, plus milestone rewards (20 coins on 7 days streak, 40 coins on 15 days streak, and 100 coins on a full 30-day month). 100 PrepCoins equals ₹10 discount (1 coin = ₹0.10) on all courses and passes!',
     },
     {
       q: 'What happens if I miss a daily practice day?',
@@ -178,7 +178,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
             Unlock unrestricted full mocks, deep AI topic diagnostics, peer percentiles, and instant step-by-step mathematical proofs across all covered exam courses.
           </p>
 
-          {/* GovCoins Discount Feature Card */}
+          {/* PrepCoins Discount Feature Card */}
           <div className="max-w-md mx-auto p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-institutional-500/10 border border-amber-300 dark:border-amber-700/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-left">
             <div className="flex items-center gap-2.5 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-base sm:text-xl shadow-md shrink-0">
@@ -186,7 +186,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
               </div>
               <div>
                 <div className="text-xs font-extrabold text-charcoal-900 dark:text-white flex items-center gap-1.5">
-                  <span>Your Balance: {coinsBalance} GovCoins</span>
+                  <span>Your Balance: {coinsBalance} PrepCoins</span>
                 </div>
                 <div className="text-[10px] sm:text-[11px] text-charcoal-600 dark:text-charcoal-300">
                   Earned from streak challenges (100 Coins = ₹10 Discount)
@@ -196,7 +196,7 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
 
             <label className="flex items-center justify-between sm:justify-start gap-2 cursor-pointer select-none shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-200/60 dark:border-amber-800/60">
               <span className="text-xs font-bold text-charcoal-800 dark:text-charcoal-200 sm:hidden">
-                Use GovCoins for Discount
+                Use PrepCoins for Discount
               </span>
               <div className="flex items-center gap-2">
                 <input
@@ -266,138 +266,136 @@ export const SubscriptionPage = ({ onGoToMocks }) => {
         ) : (
           <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch justify-center">
             {plans.map((plan) => {
-            const isCurrent = currentPlanId === plan.id;
-            const maxCoinDiscount = plan.max_coins_discount || 0;
-            const coinsEligible = applyCoins ? Math.min(coinsBalance, maxCoinDiscount) : 0;
-            const discountRupees = Math.round(coinsEligible * 0.10);
-            const finalPayable = Math.max(1, plan.base_price - discountRupees);
-            const coveredCourses = plan.covered_courses || [];
-            const coveredCount = coveredCourses.length || plan.covered_course_ids?.length || 0;
+              const isCurrent = currentPlanId === plan.id;
+              const maxCoinDiscount = plan.max_coins_discount || 0;
+              const coinsEligible = applyCoins ? Math.min(coinsBalance, maxCoinDiscount) : 0;
+              const discountRupees = Math.round(coinsEligible * 0.10);
+              const finalPayable = Math.max(1, plan.base_price - discountRupees);
+              const coveredCourses = plan.covered_courses || [];
+              const coveredCount = coveredCourses.length || plan.covered_course_ids?.length || 0;
 
-            return (
-              <div
-                key={plan.id}
-                className={`relative rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 border shadow-subtle ${
-                  plan.popular
-                    ? 'bg-white dark:bg-charcoal-900 border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted md:-translate-y-1 ring-2 ring-institutional-500/20'
-                    : 'bg-white dark:bg-charcoal-900 border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-400'
-                }`}
-              >
-                {/* Popular Ribbon */}
-                {plan.popular && (
-                  <div className="absolute top-0 right-0">
-                    <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] sm:text-[10px] tracking-wider uppercase px-3 py-1 rounded-bl-2xl shadow-sm flex items-center gap-1.5">
-                      <SparklesIcon size={11} />
-                      <span>{plan.badge}</span>
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 border shadow-subtle ${plan.popular
+                      ? 'bg-white dark:bg-charcoal-900 border-2 border-institutional-600 dark:border-institutional-500 shadow-lifted md:-translate-y-1 ring-2 ring-institutional-500/20'
+                      : 'bg-white dark:bg-charcoal-900 border-charcoal-200 dark:border-charcoal-800 hover:border-institutional-400'
+                    }`}
+                >
+                  {/* Popular Ribbon */}
+                  {plan.popular && (
+                    <div className="absolute top-0 right-0">
+                      <div className="bg-gradient-to-r from-institutional-600 to-indigo-600 text-white font-extrabold text-[9px] sm:text-[10px] tracking-wider uppercase px-3 py-1 rounded-bl-2xl shadow-sm flex items-center gap-1.5">
+                        <SparklesIcon size={11} />
+                        <span>{plan.badge}</span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-1 pr-16">
-                    <h3 className="text-lg sm:text-xl font-black text-charcoal-900 dark:text-charcoal-100">
-                      {plan.name}
-                    </h3>
-                  </div>
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1 pr-16">
+                      <h3 className="text-lg sm:text-xl font-black text-charcoal-900 dark:text-charcoal-100">
+                        {plan.name}
+                      </h3>
+                    </div>
 
-                  <p className="text-xs sm:text-sm text-charcoal-500 mb-4 leading-relaxed">
-                    {plan.description}
-                  </p>
+                    <p className="text-xs sm:text-sm text-charcoal-500 mb-4 leading-relaxed">
+                      {plan.description}
+                    </p>
 
-                  {/* Price Box with Coin Discount */}
-                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-charcoal-50 dark:bg-charcoal-850/80 border border-charcoal-200 dark:border-charcoal-800 mb-4 sm:mb-5">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-xs text-charcoal-500 font-semibold">Payable Price</span>
-                      {discountRupees > 0 && (
-                        <span className="text-xs text-charcoal-400 line-through font-mono">
-                          ₹{plan.base_price}
+                    {/* Price Box with Coin Discount */}
+                    <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-charcoal-50 dark:bg-charcoal-850/80 border border-charcoal-200 dark:border-charcoal-800 mb-4 sm:mb-5">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xs text-charcoal-500 font-semibold">Payable Price</span>
+                        {discountRupees > 0 && (
+                          <span className="text-xs text-charcoal-400 line-through font-mono">
+                            ₹{plan.base_price}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-baseline gap-2 mt-0.5">
+                        <span className="text-3xl sm:text-4xl font-black font-mono text-charcoal-950 dark:text-white">
+                          ₹{finalPayable}
                         </span>
+                        <span className="text-xs text-charcoal-500 font-bold">
+                          / {plan.duration_days} Days
+                        </span>
+                      </div>
+
+                      {discountRupees > 0 ? (
+                        <div className="mt-2 text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                          <span>🪙 Applied {coinsEligible} Coins (-₹{discountRupees} Off)</span>
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-[11px] text-charcoal-400">
+                          Eligible for up to ₹{(maxCoinDiscount * 0.1).toFixed(0)} off with PrepCoins (100 coins = ₹10)
+                        </div>
                       )}
                     </div>
 
-                    <div className="flex items-baseline gap-2 mt-0.5">
-                      <span className="text-3xl sm:text-4xl font-black font-mono text-charcoal-950 dark:text-white">
-                        ₹{finalPayable}
-                      </span>
-                      <span className="text-xs text-charcoal-500 font-bold">
-                        / {plan.duration_days} Days
-                      </span>
+                    {/* Dynamic Courses Unlocked Box */}
+                    <div className="mb-4 p-3.5 rounded-xl sm:rounded-2xl bg-institutional-50/70 dark:bg-institutional-950/40 border border-institutional-200/60 dark:border-institutional-800/60 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-institutional-900 dark:text-institutional-200">
+                        <span className="flex items-center gap-1.5">
+                          <BookOpenIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
+                          <span>Includes {coveredCount} Prime Courses</span>
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">
+                          All-Access
+                        </span>
+                      </div>
+
+                      {coveredCourses.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {coveredCourses.map((c) => (
+                            <span
+                              key={c.id}
+                              className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 border border-charcoal-200/80 dark:border-charcoal-700 shadow-2xs"
+                            >
+                              {c.target_exam || c.title}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {discountRupees > 0 ? (
-                      <div className="mt-2 text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                        <span>🪙 Applied {coinsEligible} Coins (-₹{discountRupees} Off)</span>
+                    {/* Feature Bullets */}
+                    <div className="space-y-2 mb-6">
+                      {plan.features?.map((feat, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-xs">
+                          <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                          <span className="text-charcoal-700 dark:text-charcoal-300 font-medium leading-tight">{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Checkout CTA */}
+                  <div className="pt-3 border-t border-charcoal-150 dark:border-charcoal-800">
+                    {isCurrent ? (
+                      <div className="w-full py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold text-xs text-center flex items-center justify-center gap-1.5">
+                        <CheckIcon size={14} />
+                        <span>Active Pass</span>
                       </div>
                     ) : (
-                      <div className="mt-2 text-[11px] text-charcoal-400">
-                        Eligible for up to ₹{(maxCoinDiscount * 0.1).toFixed(0)} off with GovCoins (100 coins = ₹10)
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPassForDetail(plan)}
+                        className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer ${plan.popular
+                            ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/25 ring-1 ring-institutional-500'
+                            : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-850 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
+                          }`}
+                      >
+                        <span>Select {plan.name} & View Courses</span>
+                        <ArrowRightIcon size={14} />
+                      </button>
                     )}
                   </div>
-
-                  {/* Dynamic Courses Unlocked Box */}
-                  <div className="mb-4 p-3.5 rounded-xl sm:rounded-2xl bg-institutional-50/70 dark:bg-institutional-950/40 border border-institutional-200/60 dark:border-institutional-800/60 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-institutional-900 dark:text-institutional-200">
-                      <span className="flex items-center gap-1.5">
-                        <BookOpenIcon size={14} className="text-institutional-600 dark:text-institutional-400" />
-                        <span>Includes {coveredCount} Prime Courses</span>
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">
-                        All-Access
-                      </span>
-                    </div>
-
-                    {coveredCourses.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {coveredCourses.map((c) => (
-                          <span
-                            key={c.id}
-                            className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-white dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 border border-charcoal-200/80 dark:border-charcoal-700 shadow-2xs"
-                          >
-                            {c.target_exam || c.title}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Feature Bullets */}
-                  <div className="space-y-2 mb-6">
-                    {plan.features?.map((feat, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs">
-                        <CheckCircleIcon size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="text-charcoal-700 dark:text-charcoal-300 font-medium leading-tight">{feat}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-
-                {/* Checkout CTA */}
-                <div className="pt-3 border-t border-charcoal-150 dark:border-charcoal-800">
-                  {isCurrent ? (
-                    <div className="w-full py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold text-xs text-center flex items-center justify-center gap-1.5">
-                      <CheckIcon size={14} />
-                      <span>Active Pass</span>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPassForDetail(plan)}
-                      className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer ${
-                        plan.popular
-                          ? 'bg-institutional-600 hover:bg-institutional-700 text-white shadow-institutional-600/25 ring-1 ring-institutional-500'
-                          : 'border border-charcoal-300 dark:border-charcoal-700 hover:border-institutional-500 text-charcoal-850 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800'
-                      }`}
-                    >
-                      <span>Select {plan.name} & View Courses</span>
-                      <ArrowRightIcon size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
         )}
 
         {/* Social Proof Banner */}

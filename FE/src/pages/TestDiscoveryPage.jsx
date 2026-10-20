@@ -28,6 +28,8 @@ import {
   MessageSquareIcon,
   InstagramIcon,
   LinkedinIcon,
+  MonitorIcon,
+  LightbulbIcon,
 } from '../components/Icons';
 
 import { PassDetailModal } from '../components/PassDetailModal';
@@ -64,6 +66,9 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
   // Dynamic Passes Section (Detail Modal)
   const [selectedPassForDetail, setSelectedPassForDetail] = useState(null);
+
+  // Technical Matrix Toggle
+  const [showComparisonMatrix, setShowComparisonMatrix] = useState(false);
 
   // Interactive Candidate Grievance & Helpdesk Form State
   const [contactName, setContactName] = useState(user?.full_name || '');
@@ -1225,78 +1230,286 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         </section>
 
         {/* ========================================================================= */}
-        {/* 8. COMPARISON SECTION: Generic Mock Portals vs. GovExam Pro               */}
+        {/* 8. WHY PREPMAGNET: Engineered for Real Ranks, Not False Confidence       */}
         {/* ========================================================================= */}
-        <section className="relative rounded-3xl p-6 sm:p-10 shadow-subtle space-y-6 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 overflow-hidden bg-ledger-pattern">
-          {/* Moving Atmospheric Audit Glows */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/8 dark:bg-amber-400/12 blur-[100px] rounded-full pointer-events-none animate-blob" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-institutional-600/8 dark:bg-institutional-500/12 blur-[100px] rounded-full pointer-events-none animate-blob-delayed" />
+        <section className="relative rounded-3xl p-6 sm:p-12 space-y-10 sm:space-y-12 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-md border border-charcoal-200 dark:border-charcoal-800 shadow-card overflow-hidden">
+          {/* Subtle Ambient Institutional Glows */}
+          <div className="absolute -top-24 -left-20 w-80 h-80 bg-institutional-500/10 dark:bg-institutional-400/15 blur-[120px] rounded-full pointer-events-none" />
+          <div className="absolute -bottom-24 -right-20 w-80 h-80 bg-emerald-500/10 dark:bg-emerald-400/12 blur-[120px] rounded-full pointer-events-none" />
 
-          <div className="text-center max-w-xl mx-auto space-y-2 relative z-10">
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-charcoal-900 dark:text-charcoal-100">
-              Why Serious Rankers Choose PrepMagnet
+          {/* Section Header */}
+          <div className="text-center max-w-3xl mx-auto space-y-3.5 relative z-10">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950/70 text-institutional-700 dark:text-institutional-300 border border-institutional-200/90 dark:border-institutional-800/90 shadow-2xs">
+              <SparklesIcon size={13} className="text-institutional-600 dark:text-institutional-400" />
+              <span>Why PrepMagnet?</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.2]">
+              India's Most Rigorous Exam Simulation Platform
             </h2>
-            <p className="text-xs text-charcoal-500">
-              Don't be fooled by inflated mock scores that give false confidence before the official exam.
+
+            {/* Stylized Center Node Divider (Guidely reference inspired) */}
+            <div className="flex items-center justify-center gap-2 py-1">
+              <div className="w-14 sm:w-20 h-0.5 bg-gradient-to-r from-transparent via-institutional-300 to-institutional-600 dark:via-institutional-700 dark:to-institutional-400 rounded-full" />
+              <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-institutional-600 dark:bg-institutional-400 ring-4 ring-institutional-100 dark:ring-institutional-950" />
+              <div className="w-14 sm:w-20 h-0.5 bg-gradient-to-l from-transparent via-institutional-300 to-institutional-600 dark:via-institutional-700 dark:to-institutional-400 rounded-full" />
+            </div>
+
+            <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-300 max-w-2xl mx-auto leading-relaxed">
+              Don't be misled by inflated mock scores from generic portals. PrepMagnet trains your mental reflexes under authentic CBT examination room pressure, strict negative penalties, and real All-India peer rankings.
             </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 uppercase tracking-wider font-bold">
-                  <th className="pb-3 pr-4">Evaluation Metric</th>
-                  <th className="pb-3 px-4 text-rose-700 dark:text-rose-400">Generic Test Series</th>
-                  <th className="pb-3 px-4 text-emerald-700 dark:text-emerald-400 font-extrabold">PrepMagnet Platform</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-charcoal-100 dark:divide-charcoal-800">
-                <tr>
-                  <td className="py-3.5 pr-4 font-bold text-charcoal-800 dark:text-charcoal-200">
-                    Exam Room Simulation
-                  </td>
-                  <td className="py-3.5 px-4 text-charcoal-500">
-                    Generic web forms with distracting popups and ads.
-                  </td>
-                  <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
-                    1:1 Pixel-exact PrepMagnet CBT examination room layout.
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 pr-4 font-bold text-charcoal-800 dark:text-charcoal-200">
-                    Marking & Penalties
-                  </td>
-                  <td className="py-3.5 px-4 text-charcoal-500">
-                    Soft or optional negative deductions.
-                  </td>
-                  <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
-                    Rigorous -0.50 marks deduction and unattempted tracking.
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 pr-4 font-bold text-charcoal-800 dark:text-charcoal-200">
-                    Percentile Benchmarking
-                  </td>
-                  <td className="py-3.5 px-4 text-charcoal-500">
-                    Arbitrary percentage scores without peer ranking.
-                  </td>
-                  <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
-                    Real percentile computed against 45,000+ serious aspirants.
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 pr-4 font-bold text-charcoal-800 dark:text-charcoal-200">
-                    Explanations & Concept Notes
-                  </td>
-                  <td className="py-3.5 px-4 text-charcoal-500">
-                    1-line answers with skipped formulas.
-                  </td>
-                  <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
-                    Step-by-step mathematical proofs with formula shortcuts.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          {/* 4 Feature Content Cards (4-col on desktop, 2-col on tablet, 1-col on mobile) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 relative z-10 items-stretch">
+            {/* Card 1: 1:1 Exam Room Simulation */}
+            <div className="group relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-sky-400/80 dark:hover:border-sky-500/80 shadow-subtle overflow-hidden">
+              {/* Arched Top Accent Strip */}
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-indigo-500 to-sky-500" />
+
+              <div className="space-y-4">
+                {/* Arch Icon Container */}
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200/80 dark:border-sky-800/80 text-sky-600 dark:text-sky-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
+                    <MonitorIcon size={22} />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-100/80 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60">
+                    1:1 CBT Engine
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white leading-snug">
+                    Pixel-Exact CBT Exam Environment
+                  </h3>
+                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
+                    Replicates the authentic official CBT examination room layout — countdown timer, official question palette colors, sectional rules, and full keyboard lock so actual exam day feels 100% familiar.
+                  </p>
+                </div>
+              </div>
+
+              {/* Comparative Edge Callout */}
+              <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11px]">
+                <div className="flex items-start gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircleIcon size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>1:1 official layout with zero popups</span>
+                </div>
+                <div className="flex items-start gap-1.5 text-charcoal-400 dark:text-charcoal-500">
+                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 mt-0.5">✕</span>
+                  <span>Generic web forms cluttered with ads</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Marking & Negative Deductions */}
+            <div className="group relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-rose-400/80 dark:hover:border-rose-500/80 shadow-subtle overflow-hidden">
+              {/* Arched Top Accent Strip */}
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-rose-500 via-amber-500 to-rose-500" />
+
+              <div className="space-y-4">
+                {/* Arch Icon Container */}
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-800/80 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
+                    <TargetIcon size={22} />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100/80 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
+                    Rigorous Scoring
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white leading-snug">
+                    Authentic Negative Penalties & Marking
+                  </h3>
+                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
+                    No inflated scores or lenient rules. We apply strict -0.50 (SSC) and -0.25 (Banking) mark deductions on every wrong choice, training you to eliminate wild guessing and master risk management.
+                  </p>
+                </div>
+              </div>
+
+              {/* Comparative Edge Callout */}
+              <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11px]">
+                <div className="flex items-start gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircleIcon size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Strict -0.50 deductions & penalty audits</span>
+                </div>
+                <div className="flex items-start gap-1.5 text-charcoal-400 dark:text-charcoal-500">
+                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 mt-0.5">✕</span>
+                  <span>Soft or optional negative deductions</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: 45,000+ Percentile Benchmarking */}
+            <div className="group relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-amber-400/80 dark:hover:border-amber-500/80 shadow-subtle overflow-hidden">
+              {/* Arched Top Accent Strip */}
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500" />
+
+              <div className="space-y-4">
+                {/* Arch Icon Container */}
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/80 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
+                    <BarChart3Icon size={22} />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-100/80 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60">
+                    Live All-India AIR
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white leading-snug">
+                    Real Percentile & AIR Benchmarking
+                  </h3>
+                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
+                    Percentage in isolation is useless if the cut-off is 80%. Compute your true All-India percentile against 45,000+ active aspirants with live cut-off projections and topper pace diagnostics.
+                  </p>
+                </div>
+              </div>
+
+              {/* Comparative Edge Callout */}
+              <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11px]">
+                <div className="flex items-start gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircleIcon size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Real percentile against 45,000+ active peers</span>
+                </div>
+                <div className="flex items-start gap-1.5 text-charcoal-400 dark:text-charcoal-500">
+                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 mt-0.5">✕</span>
+                  <span>Arbitrary percentage scores without rank</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Step-by-Step Proofs & Shortcuts */}
+            <div className="group relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-emerald-400/80 dark:hover:border-emerald-500/80 shadow-subtle overflow-hidden">
+              {/* Arched Top Accent Strip */}
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-500" />
+
+              <div className="space-y-4">
+                {/* Arch Icon Container */}
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
+                    <LightbulbIcon size={22} />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+                    Topper Solutions
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white leading-snug">
+                    Step-by-Step Proofs & Shortcuts
+                  </h3>
+                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
+                    Never get stuck with a lazy 1-line answer key. Every question delivers full conceptual proofs alongside 25-second shortcut tricks, option elimination methods, and formula revision cards.
+                  </p>
+                </div>
+              </div>
+
+              {/* Comparative Edge Callout */}
+              <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11px]">
+                <div className="flex items-start gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircleIcon size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Mathematical proofs + shortcut formulas</span>
+                </div>
+                <div className="flex items-start gap-1.5 text-charcoal-400 dark:text-charcoal-500">
+                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 mt-0.5">✕</span>
+                  <span>1-line answers with skipped formulas</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Trust Metric Bar */}
+          <div className="relative z-10 p-4 sm:p-5 rounded-2xl bg-charcoal-50/80 dark:bg-charcoal-850/80 border border-charcoal-200/90 dark:border-charcoal-800/90 grid grid-cols-2 lg:grid-cols-4 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-charcoal-200 dark:divide-charcoal-800 text-center">
+            <div className="space-y-0.5">
+              <div className="text-lg sm:text-xl font-black text-charcoal-950 dark:text-white font-mono">1:1 Exact</div>
+              <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400">Official CBT Exam Hall Simulation</div>
+            </div>
+            <div className="space-y-0.5 pt-3 sm:pt-0 sm:pl-4">
+              <div className="text-lg sm:text-xl font-black text-rose-600 dark:text-rose-400 font-mono">-0.50 Mark</div>
+              <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400">Strict Official Negative Deductions</div>
+            </div>
+            <div className="space-y-0.5 pt-3 sm:pt-0 sm:pl-4">
+              <div className="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400 font-mono">45,000+</div>
+              <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400">Real Aspirant Percentile Pool</div>
+            </div>
+            <div className="space-y-0.5 pt-3 sm:pt-0 sm:pl-4">
+              <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">25s Saved</div>
+              <div className="text-[11px] text-charcoal-500 dark:text-charcoal-400">Average Per Quant Question</div>
+            </div>
+          </div>
+
+          {/* Expandable Technical Comparison Matrix Toggle */}
+          <div className="relative z-10 pt-2 text-center space-y-4">
+            <button
+              type="button"
+              onClick={() => setShowComparisonMatrix(!showComparisonMatrix)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 hover:text-charcoal-950 dark:hover:text-white border border-charcoal-200 dark:border-charcoal-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+            >
+              <span>{showComparisonMatrix ? 'Hide Side-by-Side Matrix' : 'View Detailed Technical Comparison Matrix'}</span>
+              <ChevronDownIcon size={14} className={`transition-transform duration-200 ${showComparisonMatrix ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Smooth Collapsible Matrix Table */}
+            {showComparisonMatrix && (
+              <div className="overflow-x-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 p-4 sm:p-6 shadow-subtle animate-fade-in text-left">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 uppercase tracking-wider font-bold">
+                      <th className="pb-3 pr-4">Evaluation Metric</th>
+                      <th className="pb-3 px-4 text-rose-700 dark:text-rose-400">Generic Test Series</th>
+                      <th className="pb-3 px-4 text-emerald-700 dark:text-emerald-400 font-extrabold">PrepMagnet Platform</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-charcoal-100 dark:divide-charcoal-800">
+                    <tr>
+                      <td className="py-3.5 pr-4 font-bold text-charcoal-800 dark:text-charcoal-200">
+                        Exam Room Simulation
+                      </td>
+                      <td className="py-3.5 px-4 text-charcoal-500">
+                        Generic web forms with distracting popups and ads.
+                      </td>
+                      <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
+                        1:1 Pixel-exact PrepMagnet CBT examination room layout.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 pr-4 font-bold text-charcoal-800 dark:text-charcoal-200">
+                        Marking & Penalties
+                      </td>
+                      <td className="py-3.5 px-4 text-charcoal-500">
+                        Soft or optional negative deductions.
+                      </td>
+                      <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
+                        Rigorous -0.50 marks deduction and unattempted tracking.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 pr-4 font-bold text-charcoal-800 dark:text-charcoal-200">
+                        Percentile Benchmarking
+                      </td>
+                      <td className="py-3.5 px-4 text-charcoal-500">
+                        Arbitrary percentage scores without peer ranking.
+                      </td>
+                      <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
+                        Real percentile computed against 45,000+ serious aspirants.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-3.5 pr-4 font-bold text-charcoal-800 dark:text-charcoal-200">
+                        Explanations & Concept Notes
+                      </td>
+                      <td className="py-3.5 px-4 text-charcoal-500">
+                        1-line answers with skipped formulas.
+                      </td>
+                      <td className="py-3.5 px-4 text-emerald-800 dark:text-emerald-300 font-semibold">
+                        Step-by-step mathematical proofs with formula shortcuts.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </section>
 
@@ -1334,7 +1547,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </p>
               <div className="pt-2 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-institutional-600 text-white font-bold flex items-center justify-center text-xs">
-                  S
+                  R
                 </div>
                 <div>
                   <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Raj Pateriya</div>
@@ -1376,7 +1589,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               </p>
               <div className="pt-2 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-xs">
-                  R
+                  p
                 </div>
                 <div>
                   <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Prabhanshu Tiwari</div>

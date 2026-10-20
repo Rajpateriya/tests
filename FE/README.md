@@ -1,6 +1,6 @@
-# GovExam Pro — Frontend (React + Vite)
+# PrepMagnet — Frontend (React + Vite)
 
-A modern, production-grade mock test & analytics platform engineered for Government Job Aspirants (SSC CGL, CHSL, RRB, Banking, State PSC). Built with standard TCS iON exam simulation, instant scoring, AI diagnostic insights, and premium subscription passes.
+A modern, production-grade mock test & analytics platform engineered for Government Job Aspirants (SSC CGL, CHSL, RRB, Banking, State PSC). Built with official CBT exam simulation, instant scoring, AI diagnostic insights, and premium subscription passes.
 
 ---
 
@@ -30,7 +30,7 @@ npm run preview
 
 ### 1. 👑 Premium Subscription Plans & Razorpay Checkout
 * **Plans Available:**
-  * **Basic Aspirant Pass** (₹99/mo or ₹299/yr): 15 full mocks, 50 speed drills, standard TCS iON exam engine.
+  * **Basic Aspirant Pass** (₹99/mo or ₹299/yr): 15 full mocks, 50 speed drills, official CBT exam engine.
   * **Pro Ranker Pass (Most Popular)** (₹199/mo or ₹699/yr): Unlimited mocks, deep topic diagnostics, All-India peer percentiles, step-by-step solutions with shortcuts.
   * **Max Ultimate Pass** (₹299/mo or ₹1,299/yr): Multi-exam coverage (SSC, Railways, Banking), unlimited dynamic auto mock generator, personalized 1-on-1 AI study strategy.
 * **Monthly / Annual Billing Switcher:** With 40% savings badge.
@@ -40,8 +40,8 @@ npm run preview
   * Auto-activates premium perks across the entire app and updates the user's membership badge (`PRO PASS` / `MAX PASS`).
 * **Navbar "Try Premium" Shortcut:** Glowing, animated button in the top header.
 
-### 2. 📝 TCS iON Standard Exam Engine
-* Standardized TCS iON UI matching real government exam halls.
+### 2. 📝 Official CBT Standard Exam Engine
+* Authentic PrepMagnet CBT UI matching real government examination halls.
 * Server-side countdown timer with visual color alerts (`< 5m` amber, `< 1m` pulsing red) and auto-submit at `00:00`.
 * Official Question Palette Legend:
   * 🟢 Answered

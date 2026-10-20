@@ -435,12 +435,12 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
             </button>
           )}
 
-          {/* Student GovCoins Wallet Pill (Desktop) */}
+          {/* Student PrepCoins Wallet Pill (Desktop) */}
           {user && !isAdmin && (
             <button
               onClick={() => handleNavClick(ROUTES.courses)}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-amber-900 bg-amber-100/90 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300 dark:border-amber-800 hover:bg-amber-200/80 transition-colors shadow-sm group"
-              title="Your GovCoins wallet: Redeem for instant discount on exam courses!"
+              title="Your PrepCoins wallet: Redeem for instant discount on exam courses!"
             >
               <span className="text-xs group-hover:scale-110 transition-transform">🪙</span>
               <span className="font-mono font-extrabold">{user?.profile?.coins_balance ?? 0}</span>
@@ -460,11 +460,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                 handleNavClick(ROUTES.cart);
               }
             }}
-            className={`relative p-1.5 sm:p-2 rounded-full transition-colors focus:outline-none cursor-pointer ${
-              isOn(ROUTES.cart)
+            className={`relative p-1.5 sm:p-2 rounded-full transition-colors focus:outline-none cursor-pointer ${isOn(ROUTES.cart)
                 ? 'bg-institutional-100 text-institutional-700 dark:bg-institutional-900/60 dark:text-institutional-300'
                 : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-100 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-            }`}
+              }`}
             aria-label="Shopping Cart"
             title={cartCount > 0 ? `${cartCount} course(s) in cart` : 'Cart'}
           >
@@ -729,13 +728,12 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                 <span className="font-extrabold text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
                   PrepMagnet
                 </span>
-                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full font-mono tracking-wider ${
-                  !user
+                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full font-mono tracking-wider ${!user
                     ? 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400'
                     : isAdmin
                       ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
                       : 'bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800'
-                }`}>
+                  }`}>
                   {!user ? 'PRO' : isAdmin ? 'ADMIN' : 'USER'}
                 </span>
               </div>
@@ -820,7 +818,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                   <h4 className="font-black text-sm text-charcoal-900 dark:text-white">
                     Ace Your Exam Preparation
                   </h4>
-                  
+
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
@@ -857,11 +855,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                   {user && (
                     <button
                       onClick={() => handleNavClick(ROUTES.dashboard)}
-                      className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                        isOn(ROUTES.dashboard)
+                      className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.dashboard)
                           ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
                           : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2.5">
                         <BarChart3Icon size={16} />
@@ -873,11 +870,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
 
                   <button
                     onClick={() => handleNavClick(ROUTES.home)}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.home, true)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.home, true)
                         ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <BookOpenIcon size={16} />
@@ -888,11 +884,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
 
                   <button
                     onClick={() => handleNavClick(ROUTES.courses)}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.courses)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.courses)
                         ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <SparklesIcon size={16} className="text-amber-500" />
@@ -910,11 +905,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         handleNavClick(ROUTES.cart);
                       }
                     }}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.cart)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.cart)
                         ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <CartIcon size={16} className="text-institutional-600 dark:text-institutional-400" />
@@ -931,11 +925,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
 
                   <button
                     onClick={() => handleNavClick(ROUTES.typing)}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.typing)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.typing)
                         ? 'bg-institutional-50 text-institutional-700 dark:bg-institutional-950/60 dark:text-institutional-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <span>⌨️</span>
@@ -960,11 +953,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                 <>
                   <button
                     onClick={() => handleNavClick(ROUTES.admin)}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.admin)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.admin)
                         ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <ShieldIcon size={16} />
@@ -975,11 +967,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
 
                   <button
                     onClick={() => handleNavClick(ROUTES.pipeline)}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.pipeline)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.pipeline)
                         ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <CpuIcon size={16} />
@@ -990,11 +981,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
 
                   <button
                     onClick={() => handleNavClick(ROUTES.courses)}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.courses)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.courses)
                         ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <SparklesIcon size={16} />
@@ -1005,11 +995,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
 
                   <button
                     onClick={() => handleNavClick(ROUTES.cart)}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.cart)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.cart)
                         ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <CartIcon size={16} className="text-institutional-600 dark:text-institutional-400" />
@@ -1024,11 +1013,10 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
 
                   <button
                     onClick={() => handleNavClick(ROUTES.typing)}
-                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${
-                      isOn(ROUTES.typing)
+                    className={`w-full text-left py-2.5 px-3.5 rounded-xl flex items-center justify-between transition-colors ${isOn(ROUTES.typing)
                         ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold'
                         : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <span>⌨️</span>

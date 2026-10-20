@@ -34,7 +34,7 @@ export const AboutUsPage = () => {
   const pillars = [
     {
       title: 'Authentic Exam Engine Physics',
-      desc: 'We replicate the exact screen ergonomics, sectional timers, question palettes, and negative scoring models used by TCS-iON and national conducting agencies.',
+      desc: 'We replicate the exact screen ergonomics, sectional timers, question palettes, and negative scoring models used by national examination conducting agencies.',
       tag: 'True-to-Life CBT',
     },
     {
@@ -132,7 +132,7 @@ export const AboutUsPage = () => {
               Authentic CBT Exam Physics in Your Browser
             </h2>
             <p className="text-xs sm:text-sm text-white/90 leading-relaxed">
-              PrepMagnet bridges the gap between preparation and exam day. Our testing engine faithfully mirrors the TCS-iON assessment interface, including candidate declaration modals, question status palettes (Answered, Marked for Review, Visited), and instantaneous AI-driven rank predictions.
+              PrepMagnet bridges the gap between preparation and exam day. Our testing engine faithfully mirrors the official national CBT assessment interface, including candidate declaration modals, question status palettes (Answered, Marked for Review, Visited), and instantaneous AI-driven rank predictions.
             </p>
             <div className="space-y-2 pt-2 text-xs">
               <div className="flex items-center gap-2">
