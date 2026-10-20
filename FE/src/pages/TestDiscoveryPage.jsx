@@ -18,6 +18,7 @@ import {
   BarChart3Icon,
   FlameIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   HelpCircleIcon,
   CheckIcon,
   CrownIcon,

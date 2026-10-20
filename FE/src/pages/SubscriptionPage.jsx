@@ -10,6 +10,7 @@ import {
   ZapIcon,
   ArrowRightIcon,
   CheckIcon,
+  BookOpenIcon,
 } from '../components/Icons';
 import { RazorpayModal } from '../components/RazorpayModal';
 import { PassDetailModal } from '../components/PassDetailModal';
