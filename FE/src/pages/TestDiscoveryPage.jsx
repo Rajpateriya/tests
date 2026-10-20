@@ -381,25 +381,27 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             Calibrated strictly for <strong className="text-charcoal-900 dark:text-charcoal-100 font-bold">SSC CGL, Banking (IBPS/SBI PO), Railways (RRB NTPC)</strong>, and <strong className="text-charcoal-900 dark:text-charcoal-100 font-bold">State PSCs</strong>. Experience the PrepMagnet CBT test interface, server-synchronized countdowns, official negative deduction rules, and deep diagnostic percentiles.
           </p>
 
-          {/* Dual Action CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3.5 pt-1 sm:pt-2 w-full max-w-md sm:max-w-none mx-auto">
+          {/* Dual Action CTAs - Responsive Side-by-Side on Mobile with Concise Content */}
+          <div className="flex flex-row items-center justify-center gap-2 sm:gap-3.5 pt-1 sm:pt-2 w-full max-w-md sm:max-w-none mx-auto px-1 sm:px-0">
             <button
               onClick={() => {
                 const el = document.getElementById('mock-catalog');
                 el?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="w-full sm:w-auto px-5 py-2.5 sm:px-7 sm:py-3 rounded-full bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              className="flex-1 sm:flex-initial px-3 sm:px-7 py-2.5 sm:py-3 rounded-full bg-institutional-600 hover:bg-institutional-700 active:scale-[0.98] text-white font-bold sm:font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer whitespace-nowrap min-w-0"
             >
-              <span>Explore Available Mocks (50+ Full Tests)</span>
-              <ArrowRightIcon size={15} className="group-hover:translate-x-0.5 transition-transform" />
+              <span className="sm:hidden">Explore Mocks</span>
+              <span className="hidden sm:inline">Explore Available Mocks (50+ Full Tests)</span>
+              <ArrowRightIcon size={14} className="shrink-0 group-hover:translate-x-0.5 transition-transform" />
             </button>
 
             {!user ? (
               <button
                 onClick={() => onOpenAuthModal('register')}
-                className="w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-300 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 font-bold text-xs sm:text-sm transition-all shadow-subtle cursor-pointer"
+                className="flex-1 sm:flex-initial px-3 sm:px-6 py-2.5 sm:py-3 rounded-full bg-white dark:bg-charcoal-900 border border-charcoal-300 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 active:scale-[0.98] font-bold text-xs sm:text-sm transition-all shadow-subtle cursor-pointer whitespace-nowrap min-w-0"
               >
-                Sign In / Join Free
+                <span className="sm:hidden">Join Free</span>
+                <span className="hidden sm:inline">Sign In / Join Free</span>
               </button>
             ) : (
               <button
@@ -407,10 +409,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   const firstTest = tests[0];
                   if (firstTest) onStartTest(firstTest);
                 }}
-                className="w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition-all shadow-subtle flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 sm:flex-initial px-3 sm:px-6 py-2.5 sm:py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm transition-all shadow-subtle flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap min-w-0"
               >
-                <PlayIcon size={14} />
-                <span>Launch Quick Mock Exam</span>
+                <PlayIcon size={13} className="shrink-0" />
+                <span className="sm:hidden">Quick Mock</span>
+                <span className="hidden sm:inline">Launch Quick Mock Exam</span>
               </button>
             )}
           </div>
