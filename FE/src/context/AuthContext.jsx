@@ -186,6 +186,53 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (credential) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.auth.googleLogin(credential);
+      const loggedUser = res.user;
+      const accessToken = res.tokens?.access_token;
+      const isAdminAccount = loggedUser.role === 'admin';
+      const realRole = isAdminAccount ? 'admin' : (loggedUser.role || 'user');
+      setBaseRole(realRole);
+      localStorage.setItem('govexam_base_role', realRole);
+
+      setUser(loggedUser);
+      setToken(accessToken);
+      localStorage.setItem('govexam_token', accessToken);
+      localStorage.setItem('govexam_user', JSON.stringify(loggedUser));
+      if (res.tokens?.refresh_token) {
+        localStorage.setItem('govexam_refresh_token', res.tokens.refresh_token);
+      } else {
+        localStorage.removeItem('govexam_refresh_token');
+      }
+
+      if (isAdminAccount) {
+        setSubscription({ plan: 'NONE', status: 'INACTIVE' });
+        localStorage.removeItem('govexam_subscription');
+      } else {
+        if (loggedUser.profile?.subscription_plan && loggedUser.profile?.subscription_status === 'ACTIVE') {
+          setSubscription({
+            plan: loggedUser.profile.subscription_plan,
+            status: 'ACTIVE',
+            expiresAt: loggedUser.profile.subscription_expires_at,
+          });
+        } else {
+          setSubscription({ plan: 'FREE', status: 'INACTIVE' });
+          localStorage.removeItem('govexam_subscription');
+        }
+      }
+
+      return loggedUser;
+    } catch (err) {
+      setError(err.message || 'Google Sign-In failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const register = async (data) => {
     setLoading(true);
     setError(null);
@@ -298,6 +345,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         error,
         login,
+        loginWithGoogle,
         register,
         logout,
         switchRole,

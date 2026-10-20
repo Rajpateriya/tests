@@ -259,6 +259,14 @@ export const api = {
       return await request('/auth/me');
     },
 
+    // Google SSO / OAuth credential verification
+    googleLogin: async (credential) => {
+      return await request('/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({ credential }),
+      });
+    },
+
     // Blacklists the current access token server-side (and the refresh token, if there is
     // one), so neither can be used again even though they have not expired yet.
     logout: async (refreshToken) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -56,7 +56,7 @@ const GoogleGIcon = () => (
 
 export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
   const navigate = useNavigate();
-  const { login, register, loading: authLoading } = useAuth();
+  const { login, loginWithGoogle, register, loading: authLoading } = useAuth();
   const [tab, setTab] = useState(initialTab); // 'login' | 'register' | 'verify_email' | 'forgot_request' | 'forgot_reset' | 'forgot_success'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,6 +66,8 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [legalModalType, setLegalModalType] = useState(null); // 'terms' | 'privacy' | null
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleBtnRef = useRef(null);
 
   // OTP verification state
   const [otpCode, setOtpCode] = useState('');
@@ -109,6 +111,69 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
       }
     }
   }, [isOpen, initialTab]);
+
+  // Initialize and render official Google Sign-In button
+  useEffect(() => {
+    if (!isOpen || (tab !== 'login' && tab !== 'register')) return;
+    if (!GOOGLE_CLIENT_ID) return;
+
+    let intervalId = null;
+
+    const setupGoogleBtn = () => {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return false;
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async (response) => {
+            if (!response?.credential) return;
+            setGoogleLoading(true);
+            setErrorMsg('');
+            try {
+              const loggedUser = await loginWithGoogle(response.credential);
+              onClose();
+              navigate(loggedUser?.role === 'admin' ? '/admin' : '/dashboard');
+            } catch (err) {
+              setErrorMsg(err.message || 'Google Sign-In failed. Please try again.');
+            } finally {
+              setGoogleLoading(false);
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        googleBtnRef.current.innerHTML = '';
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: document.documentElement.classList.contains('dark') ? 'filled_black' : 'outline',
+          size: 'large',
+          type: 'standard',
+          text: tab === 'login' ? 'signin_with' : 'signup_with',
+          shape: 'rectangular',
+          width: 320,
+          logo_alignment: 'left',
+        });
+        setGoogleReady(true);
+        return true;
+      } catch (e) {
+        console.warn('Google Sign-In setup error:', e);
+        return false;
+      }
+    };
+
+    if (!setupGoogleBtn()) {
+      let attempts = 0;
+      intervalId = setInterval(() => {
+        attempts++;
+        if (setupGoogleBtn() || attempts > 20) {
+          clearInterval(intervalId);
+        }
+      }, 200);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isOpen, tab, loginWithGoogle, navigate, onClose]);
 
   if (!isOpen) return null;
 
@@ -562,82 +627,44 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                 <div className="flex-1 h-px bg-slate-200 dark:bg-charcoal-700" />
               </div>
 
-              {/* Google Sign-In Button */}
-              <button
-                type="button"
-                disabled={googleLoading || authLoading}
-                onClick={async () => {
-                  if (!GOOGLE_CLIENT_ID) {
-                    setErrorMsg('Google Sign-In is not yet configured. Please use email & password for now.');
-                    return;
-                  }
-                  if (!window.google?.accounts?.id) {
-                    setErrorMsg('Google Sign-In SDK is loading. Please try again in a moment.');
-                    return;
-                  }
-                  setGoogleLoading(true);
-                  setErrorMsg('');
-                  try {
-                    await new Promise((resolve, reject) => {
-                      window.google.accounts.id.initialize({
-                        client_id: GOOGLE_CLIENT_ID,
-                        callback: async (response) => {
-                          try {
-                            const res = await fetch('/api/v1/auth/google', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ credential: response.credential }),
-                            });
-                            const data = await res.json();
-                            if (!res.ok || !data.success) throw new Error(data.detail || data.message || 'Google sign-in failed.');
-                            const { user: gUser, tokens } = data.data;
-                            localStorage.setItem('govexam_token', tokens.access_token);
-                            localStorage.setItem('govexam_user', JSON.stringify(gUser));
-                            if (tokens.refresh_token) localStorage.setItem('govexam_refresh_token', tokens.refresh_token);
-                            onClose();
-                            navigate(gUser?.role === 'admin' ? '/admin' : '/dashboard');
-                            resolve();
-                          } catch (err) {
-                            reject(err);
-                          }
-                        },
-                        auto_select: false,
-                        cancel_on_tap_outside: true,
-                      });
-                      window.google.accounts.id.prompt((notification) => {
-                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                          // Fallback: render button in a temp element and click
-                          const tmp = document.createElement('div');
-                          tmp.style.display = 'none';
-                          document.body.appendChild(tmp);
-                          window.google.accounts.id.renderButton(tmp, { type: 'standard' });
-                          tmp.querySelector('div[role=button]')?.click();
-                          setTimeout(() => document.body.removeChild(tmp), 3000);
-                          resolve();
-                        }
-                      });
-                    });
-                  } catch (err) {
-                    setErrorMsg(err.message || 'Google Sign-In failed. Please try again.');
-                  } finally {
-                    setGoogleLoading(false);
-                  }
-                }}
-                className="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-charcoal-800 border border-slate-300 dark:border-charcoal-600 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-charcoal-750 hover:border-slate-400 dark:hover:border-charcoal-500 active:scale-[0.99] font-bold text-xs transition-all shadow-xs hover:shadow-sm flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60"
-                aria-label="Sign in with Google"
-              >
+              {/* Google Sign-In Official Rendered Button & Fallback */}
+              <div className="w-full flex flex-col items-center justify-center min-h-[44px]">
                 {googleLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                    <span>Connecting to Google...</span>
-                  </>
+                  <div className="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-charcoal-800 border border-slate-300 dark:border-charcoal-600 flex items-center justify-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs">
+                    <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                    <span>Verifying with Google...</span>
+                  </div>
                 ) : (
                   <>
-                    <GoogleGIcon />
-                    <span>{tab === 'login' ? 'Sign in with Google' : 'Sign up with Google'}</span>
+                    <div
+                      ref={googleBtnRef}
+                      className={`w-full flex justify-center ${!googleReady ? 'hidden' : ''}`}
+                    />
+                    {!googleReady && (
+                      <button
+                        type="button"
+                        disabled={googleLoading || authLoading}
+                        onClick={() => {
+                          if (!GOOGLE_CLIENT_ID) {
+                            setErrorMsg('Google Sign-In is not configured yet. Please use email & password.');
+                            return;
+                          }
+                          if (!window.google?.accounts?.id) {
+                            setErrorMsg('Google Sign-In SDK is loading. Please try again in a moment.');
+                            return;
+                          }
+                          window.google.accounts.id.prompt();
+                        }}
+                        className="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-charcoal-800 border border-slate-300 dark:border-charcoal-600 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-charcoal-750 hover:border-slate-400 dark:hover:border-charcoal-500 active:scale-[0.99] font-bold text-xs transition-all shadow-xs hover:shadow-sm flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60"
+                        aria-label="Sign in with Google"
+                      >
+                        <GoogleGIcon />
+                        <span>{tab === 'login' ? 'Sign in with Google' : 'Sign up with Google'}</span>
+                      </button>
+                    )}
                   </>
                 )}
-              </button>
+              </div>
             </form>
           )}
 
