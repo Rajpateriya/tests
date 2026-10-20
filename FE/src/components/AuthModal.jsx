@@ -41,6 +41,19 @@ const TARGET_EXAM_OPTIONS = [
   { id: 'Defence / CDS', label: 'Defence (CDS / NDA)', badge: 'Defence' },
 ];
 
+/** Google OAuth Client ID — set in environment variable VITE_GOOGLE_CLIENT_ID */
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+/** Inline SVG Google "G" logo for the auth button */
+const GoogleGIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+    <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/>
+  </svg>
+);
+
 export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
   const navigate = useNavigate();
   const { login, register, loading: authLoading } = useAuth();
@@ -52,7 +65,8 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
   const [rememberMe, setRememberMe] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [legalModalType, setLegalModalType] = useState(null); // 'terms' | 'privacy' | null
-  
+  const [googleLoading, setGoogleLoading] = useState(false);
+
   // OTP verification state
   const [otpCode, setOtpCode] = useState('');
 
@@ -538,6 +552,90 @@ export const AuthModal = ({ isOpen, onClose, initialTab = 'login' }) => {
                   <span>Sign In to Platform</span>
                 ) : (
                   <span>Create Free Account & Start Mocks</span>
+                )}
+              </button>
+
+              {/* Google Sign-In Divider */}
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex-1 h-px bg-slate-200 dark:bg-charcoal-700" />
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold shrink-0">or continue with</span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-charcoal-700" />
+              </div>
+
+              {/* Google Sign-In Button */}
+              <button
+                type="button"
+                disabled={googleLoading || authLoading}
+                onClick={async () => {
+                  if (!GOOGLE_CLIENT_ID) {
+                    setErrorMsg('Google Sign-In is not yet configured. Please use email & password for now.');
+                    return;
+                  }
+                  if (!window.google?.accounts?.id) {
+                    setErrorMsg('Google Sign-In SDK is loading. Please try again in a moment.');
+                    return;
+                  }
+                  setGoogleLoading(true);
+                  setErrorMsg('');
+                  try {
+                    await new Promise((resolve, reject) => {
+                      window.google.accounts.id.initialize({
+                        client_id: GOOGLE_CLIENT_ID,
+                        callback: async (response) => {
+                          try {
+                            const res = await fetch('/api/v1/auth/google', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ credential: response.credential }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok || !data.success) throw new Error(data.detail || data.message || 'Google sign-in failed.');
+                            const { user: gUser, tokens } = data.data;
+                            localStorage.setItem('govexam_token', tokens.access_token);
+                            localStorage.setItem('govexam_user', JSON.stringify(gUser));
+                            if (tokens.refresh_token) localStorage.setItem('govexam_refresh_token', tokens.refresh_token);
+                            onClose();
+                            navigate(gUser?.role === 'admin' ? '/admin' : '/dashboard');
+                            resolve();
+                          } catch (err) {
+                            reject(err);
+                          }
+                        },
+                        auto_select: false,
+                        cancel_on_tap_outside: true,
+                      });
+                      window.google.accounts.id.prompt((notification) => {
+                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                          // Fallback: render button in a temp element and click
+                          const tmp = document.createElement('div');
+                          tmp.style.display = 'none';
+                          document.body.appendChild(tmp);
+                          window.google.accounts.id.renderButton(tmp, { type: 'standard' });
+                          tmp.querySelector('div[role=button]')?.click();
+                          setTimeout(() => document.body.removeChild(tmp), 3000);
+                          resolve();
+                        }
+                      });
+                    });
+                  } catch (err) {
+                    setErrorMsg(err.message || 'Google Sign-In failed. Please try again.');
+                  } finally {
+                    setGoogleLoading(false);
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-charcoal-800 border border-slate-300 dark:border-charcoal-600 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-charcoal-750 hover:border-slate-400 dark:hover:border-charcoal-500 active:scale-[0.99] font-bold text-xs transition-all shadow-xs hover:shadow-sm flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60"
+                aria-label="Sign in with Google"
+              >
+                {googleLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                    <span>Connecting to Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <GoogleGIcon />
+                    <span>{tab === 'login' ? 'Sign in with Google' : 'Sign up with Google'}</span>
+                  </>
                 )}
               </button>
             </form>

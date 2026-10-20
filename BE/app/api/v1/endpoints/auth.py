@@ -171,3 +171,62 @@ async def refresh_token(
         message="Token refreshed successfully",
         data=new_tokens,
     )
+
+
+@router.post("/google", response_model=APIResponse[dict])
+async def google_oauth(
+    credential: str = Body(..., embed=True),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Authenticate or register a user via Google Identity Services ID token.
+    
+    The frontend sends the `credential` JWT obtained from Google's OAuth popup.
+    We verify it against Google's public certs, extract the email + profile, then
+    either log in the existing user or create a new one (email-verified, no password).
+    Returns the same {tokens, user} shape as the regular /login endpoint.
+    
+    Prerequisites (one-time setup):
+      1. Create a Google Cloud project → APIs & Services → Credentials → OAuth 2.0 Client ID (Web app).
+      2. Add your domain (https://prepmagnet.in) to 'Authorised JavaScript origins'.
+      3. Copy the Client ID and set GOOGLE_OAUTH_CLIENT_ID in BE/.env and VITE_GOOGLE_CLIENT_ID in FE/.env
+    """
+    from app.core.config import settings
+
+    if not settings.GOOGLE_OAUTH_CLIENT_ID:
+        from app.core.exceptions import BadRequestException
+        raise BadRequestException("Google Sign-In is not configured on this server. Please contact support.")
+
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        id_info = id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            settings.GOOGLE_OAUTH_CLIENT_ID,
+            clock_skew_in_seconds=10,
+        )
+    except Exception as exc:
+        from app.core.exceptions import UnauthorizedException
+        raise UnauthorizedException(f"Invalid Google credential: {exc}")
+
+    google_email = id_info.get("email", "").lower().strip()
+    google_name = id_info.get("name") or id_info.get("given_name") or "PrepMagnet User"
+    email_verified = id_info.get("email_verified", False)
+
+    if not google_email or not email_verified:
+        from app.core.exceptions import BadRequestException
+        raise BadRequestException("Google account email is not verified or unavailable.")
+
+    auth_service = AuthService(db)
+    result = await auth_service.google_login_or_register(
+        email=google_email,
+        full_name=google_name,
+    )
+    return APIResponse(
+        success=True,
+        message="Google sign-in successful",
+        data={
+            "tokens": result["token"].model_dump(),
+            "user": result["user"].model_dump(),
+        },
+    )

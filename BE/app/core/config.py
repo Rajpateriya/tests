@@ -59,6 +59,8 @@ class Settings(BaseSettings):
 
     # AI Quiz Generation Pipeline
     GOOGLE_API_KEY: str = ""
+    # Google OAuth 2.0 Client ID (for Sign-in with Google feature)
+    GOOGLE_OAUTH_CLIENT_ID: str = ""
     # Both tiers point at flash-lite for now — the free-tier RPM quota for
     # plain gemini-3.5-flash (5/min) gets exhausted almost immediately by a
     # multi-subtopic blueprint run; flash-lite's quota is higher.

@@ -490,3 +490,63 @@ class AuthService:
             profile=doc.get("profile", {}),
             created_at=doc["created_at"],
         )
+
+    async def google_login_or_register(self, email: str, full_name: str) -> Dict[str, Any]:
+        """Find or auto-create a PrepMagnet account for a Google-authenticated user.
+
+        - If an account with this email already exists → log them in directly.
+        - If no account exists → create one (email already verified by Google, no password needed).
+        - Returns the same {token, user} dict as the regular login() method.
+        """
+        user = await self.repo.get_by_email(email)
+
+        if user:
+            # Existing user — just issue tokens; ensure account is active
+            if not user.get("is_active", True):
+                raise UnauthorizedException("Your account has been disabled. Please contact support.")
+        else:
+            # New user — auto-create with a random secure password (they will always use Google SSO)
+            random_password = secrets.token_urlsafe(32)
+            new_user_doc = {
+                "_id": str(uuid.uuid4()),
+                "email": email,
+                "full_name": full_name,
+                "hashed_password": hash_password(random_password),
+                "role": "user",
+                "is_active": True,
+                "is_email_verified": True,  # Google has already verified the email
+                "auth_provider": "google",
+                "target_exams": ["SSC CGL"],  # default; user can update in profile
+                "created_at": datetime.now(timezone.utc),
+                "profile": {
+                    "coins_balance": 0,
+                    "subscription_plan": "FREE",
+                    "subscription_status": "INACTIVE",
+                    "current_streak": 0,
+                },
+            }
+            await self.repo.create(new_user_doc)
+            user = await self.repo.get_by_email(email)
+            logger.info("New user auto-registered via Google SSO: %s", email)
+
+        access_token = create_access_token(
+            subject=user["_id"],
+            role=user.get("role", "user"),
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            extra_claims={"email": user["email"], "auth_provider": "google"},
+        )
+        refresh_token_str = create_refresh_token(
+            subject=user["_id"],
+            role=user.get("role", "user"),
+            expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        )
+
+        return {
+            "token": TokenResponse(
+                access_token=access_token,
+                refresh_token=refresh_token_str,
+                token_type="bearer",
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            ),
+            "user": self._to_user_response(user),
+        }
