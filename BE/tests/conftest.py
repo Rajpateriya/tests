@@ -10,6 +10,10 @@ from mongomock_motor import AsyncMongoMockClient
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.config import settings
+
+# Force test environment in pytest suite
+settings.ENVIRONMENT = "test"
+
 from app.db.indexes import init_db_indexes
 from app.db.mongodb import db_manager
 from app.db.redis import InMemoryCache, redis_manager

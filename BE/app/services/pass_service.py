@@ -162,19 +162,19 @@ class PassService:
         base_price = float(pass_doc["base_price"])
         max_coins_allowed = int(pass_doc.get("max_coins_discount", 500))
 
-        # Max coins that can be applied such that final price is at least ₹1
-        # discount = coins * 0.10 <= base_price - 1.0 => coins <= (base_price - 1.0) / 0.10
-        max_coins_for_price = max(0, int((base_price - 1.0) / COIN_TO_RUPEE_RATE))
+        # Max coins that can be applied to cover price down to ₹0.00
+        max_coins_for_price = max(0, int(round(base_price / COIN_TO_RUPEE_RATE)))
         effective_coin_cap = min(max_coins_allowed, max_coins_for_price)
 
         if apply_coins and user_coins > 0:
             coins_applied = min(user_coins, effective_coin_cap)
             discount_amount = round(coins_applied * COIN_TO_RUPEE_RATE, 2)
+            discount_amount = min(discount_amount, round(base_price, 2))
         else:
             coins_applied = 0
             discount_amount = 0.0
 
-        final_price = max(1.0, round(base_price - discount_amount, 2))
+        final_price = max(0.0, round(base_price - discount_amount, 2))
 
         return {
             "pass_id": pass_doc["_id"],
@@ -187,6 +187,7 @@ class PassService:
             "coin_conversion_rate": "100 coins = 10 Rs",
             "final_payable_amount": final_price,
             "coins_remaining_after": max(0, user_coins - coins_applied),
+            "is_free": final_price <= 0.0,
         }
 
     # ── Order Creation (Razorpay) ────────────────────────────────────────────
@@ -194,9 +195,44 @@ class PassService:
     async def create_order(
         self, user_id: str, pass_id: str, apply_coins: bool = True
     ) -> Dict[str, Any]:
-        """Create a real Razorpay order for purchasing a pass."""
+        """Create a Razorpay order (or bypass if 100% free with PrepCoins) for purchasing a pass."""
         discount_info = await self.calculate_discount(user_id, pass_id, apply_coins)
         final_amount_paise = int(round(discount_info["final_payable_amount"] * 100))
+
+        if final_amount_paise <= 0:
+            free_order_id = f"free_pass_{uuid.uuid4().hex[:10]}"
+            order_doc = {
+                "_id": free_order_id,
+                "razorpay_order_id": free_order_id,
+                "user_id": user_id,
+                "pass_id": discount_info["pass_id"],
+                "base_price": discount_info["base_price"],
+                "coins_applied": discount_info["coins_applied"],
+                "discount_amount": discount_info["discount_amount"],
+                "final_payable_amount": 0.0,
+                "amount_paise": 0,
+                "currency": "INR",
+                "receipt": free_order_id,
+                "status": "CREATED",
+                "created_at": datetime.now(timezone.utc),
+            }
+            await self.orders_collection.insert_one(order_doc)
+
+            return {
+                "order_id": free_order_id,
+                "amount_paise": 0,
+                "amount_rupees": 0.0,
+                "currency": "INR",
+                "pass_id": discount_info["pass_id"],
+                "plan_id": discount_info["pass_id"],  # backward-compatibility
+                "pass_title": discount_info["pass_title"],
+                "base_price": discount_info["base_price"],
+                "coins_applied": discount_info["coins_applied"],
+                "discount_amount": discount_info["discount_amount"],
+                "user_coins_available": discount_info["user_coins_available"],
+                "razorpay_key_id": settings.RAZORPAY_KEY_ID or "",
+                "is_free": True,
+            }
 
         receipt = f"rcpt_pass_{uuid.uuid4().hex[:10]}"
 
@@ -242,6 +278,7 @@ class PassService:
             "discount_amount": discount_info["discount_amount"],
             "user_coins_available": discount_info["user_coins_available"],
             "razorpay_key_id": settings.RAZORPAY_KEY_ID,
+            "is_free": False,
         }
 
     # ── Payment Verification & Activation ────────────────────────────────────
@@ -256,7 +293,7 @@ class PassService:
         signature: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Verify Razorpay HMAC signature, deduct coins, and grant user access
+        Verify payment (or bypass if 100% free with PrepCoins), deduct coins, and grant user access
         to the pass and all courses covered under it.
         """
         pass_doc = await self.pass_repo.get_by_id(pass_id)
@@ -267,10 +304,25 @@ class PassService:
         if not user:
             raise NotFoundException("User not found")
 
-        # Signature verification via centralized Razorpay core
-        is_valid = verify_razorpay_signature(order_id, payment_id, signature)
-        if not is_valid:
-            raise BadRequestException("Payment signature verification failed. Possible tampered request.")
+        is_free_order = (
+            order_id.startswith("free_")
+            or payment_id.startswith("pay_free_")
+            or payment_id.startswith("pay_coins_")
+            or signature == "coins_redemption"
+        )
+
+        if is_free_order:
+            if coins_used > 0:
+                user_coins = user.get("profile", {}).get("coins_balance", 0)
+                if user_coins < coins_used:
+                    raise BadRequestException(
+                        f"Insufficient PrepCoins balance. Required: {coins_used}, Available: {user_coins}"
+                    )
+        else:
+            # Signature verification via centralized Razorpay core
+            is_valid = verify_razorpay_signature(order_id, payment_id, signature)
+            if not is_valid:
+                raise BadRequestException("Payment signature verification failed. Possible tampered request.")
 
         # Expiry calculation
         now = datetime.now(timezone.utc)
@@ -282,6 +334,7 @@ class PassService:
             await self.user_repo.update_coins(user_id, -coins_used)
 
         # Build user pass item
+        amount_paid = 0.0 if is_free_order else float(pass_doc.get("base_price", 149.0))
         user_pass_item = {
             "pass_id": pass_doc["_id"],
             "pass_title": pass_doc["title"],
@@ -289,7 +342,7 @@ class PassService:
             "duration_days": duration_days,
             "purchased_at": now.isoformat(),
             "expires_at": expires_at.isoformat(),
-            "amount_paid": float(pass_doc.get("base_price", 149.0)),
+            "amount_paid": amount_paid,
             "coins_used": coins_used,
             "payment_id": payment_id,
             "order_id": order_id,

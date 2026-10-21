@@ -22,7 +22,11 @@ import {
   BellIcon,
   CheckCircleIcon,
   CartIcon,
+  EditIcon,
+  TargetIcon,
 } from './Icons';
+import { EditProfileModal } from './EditProfileModal';
+
 
 // Bell: unread count pushed over a server-sent-events stream (no polling), a dropdown listing
 // notifications, mark-read on click/"mark all".
@@ -193,8 +197,17 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
   const { user, logout, switchRole, isAdmin, canSwitchRole, isPreviewingAsStudent, subscription } = useAuth();
   const { cartCount = 0 } = useCart();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+
+  useEffect(() => {
+    const handleOpenEdit = () => setEditProfileModalOpen(true);
+    window.addEventListener('open-edit-profile', handleOpenEdit);
+    return () => window.removeEventListener('open-edit-profile', handleOpenEdit);
+  }, []);
+
 
   const formatPlanTitle = (planId) => {
     if (!planId || planId === 'FREE' || planId === 'NONE') return '';
@@ -219,8 +232,23 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
   // from inside themselves, so a click never resets the tab or leaves an extra history entry.
   const SECTION_ROOTS = [ROUTES.dashboard, ROUTES.admin, ROUTES.pipeline];
   const handleNavClick = (path) => {
-    if (!isOn(path, !SECTION_ROOTS.includes(path))) navigate(path);
+    if (path === ROUTES.home && (pathname === ROUTES.home || pathname === '/')) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } else if (!isOn(path, !SECTION_ROOTS.includes(path))) {
+      navigate(path);
+    }
     setMobileMenuOpen(false);
+  };
+
+  const handleLogoClick = (e) => {
+    e?.preventDefault();
+    setMobileMenuOpen(false);
+    if (pathname === ROUTES.home || pathname === '/') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } else {
+      navigate(ROUTES.home);
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
   };
 
   const handleContactClick = () => {
@@ -264,8 +292,12 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
       >
         {/* 1. BRAND EMBLEM (Sleek, Compact) */}
         <div
-          onClick={() => handleNavClick(ROUTES.home)}
+          onClick={handleLogoClick}
           className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(e); }}
+          title="Scroll to top"
         >
           <img
             src="/prepmagnet.png"
@@ -570,12 +602,39 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         </span>
                       )}
                     </div>
+
+                    {/* Edit Profile & Target Exams Direct Button */}
+                    <button
+                      onClick={() => {
+                        setEditProfileModalOpen(true);
+                        setUserDropdownOpen(false);
+                      }}
+                      className="w-full mt-2 py-1.5 px-2.5 rounded-xl bg-charcoal-100 hover:bg-institutional-50 dark:bg-charcoal-800 dark:hover:bg-institutional-950/50 text-charcoal-800 dark:text-charcoal-200 hover:text-institutional-700 dark:hover:text-institutional-300 font-bold text-xs flex items-center justify-between border border-charcoal-200 dark:border-charcoal-700 hover:border-institutional-300 dark:hover:border-institutional-800 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <EditIcon size={13} className="text-institutional-600 dark:text-institutional-400 group-hover:scale-110 transition-transform" />
+                        <span>Edit Profile & Exams</span>
+                      </div>
+                      <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white dark:bg-charcoal-900 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200/80 dark:border-charcoal-700 shadow-2xs">
+                        Edit
+                      </span>
+                    </button>
                   </div>
 
                   {/* Navigation Shortcuts */}
                   <div className="space-y-1 pt-1 border-t border-charcoal-150 dark:border-charcoal-800">
                     {!isAdmin ? (
                       <>
+                        <button
+                          onClick={() => {
+                            setEditProfileModalOpen(true);
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium flex items-center gap-2 cursor-pointer"
+                        >
+                          <TargetIcon size={14} className="text-amber-500" />
+                          <span>Target Exam & Profile</span>
+                        </button>
                         <button
                           onClick={() => {
                             handleNavClick(ROUTES.dashboard);
@@ -585,6 +644,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         >
                           Performance Dashboard
                         </button>
+
                         <button
                           onClick={() => {
                             handleNavClick(`${ROUTES.dashboard}/courses`);
@@ -622,6 +682,16 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                       <>
                         <button
                           onClick={() => {
+                            setEditProfileModalOpen(true);
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full text-left py-1.5 px-2 rounded-lg hover:bg-charcoal-50 dark:hover:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-medium flex items-center gap-2 cursor-pointer"
+                        >
+                          <EditIcon size={14} className="text-purple-600" />
+                          <span>Admin Profile & Password</span>
+                        </button>
+                        <button
+                          onClick={() => {
                             handleNavClick(ROUTES.admin);
                             setUserDropdownOpen(false);
                           }}
@@ -629,6 +699,7 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                         >
                           Admin Studio Hub
                         </button>
+
                         <button
                           onClick={() => {
                             handleNavClick(`${ROUTES.admin}/courses/new`);
@@ -719,11 +790,17 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           >
             {/* Header: Brand & Close Button */}
             <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
-              <div className="flex items-center gap-2">
+              <div
+                onClick={handleLogoClick}
+                className="flex items-center gap-2 cursor-pointer select-none group"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(e); }}
+              >
                 <img
                   src="/prepmagnet.png"
                   alt="PrepMagnet Logo"
-                  className="w-8 h-8 object-contain"
+                  className="w-8 h-8 object-contain group-hover:scale-105 transition-transform"
                 />
                 <span className="font-extrabold text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
                   PrepMagnet
@@ -810,7 +887,20 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
                     </span>
                   )}
                 </div>
+
+                {/* Mobile Drawer Edit Profile Button */}
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setEditProfileModalOpen(true);
+                  }}
+                  className="w-full mt-2 py-2 px-3 rounded-xl bg-institutional-50 hover:bg-institutional-100 dark:bg-institutional-950/60 dark:hover:bg-institutional-900 text-institutional-750 dark:text-institutional-300 font-bold text-xs flex items-center justify-center gap-2 border border-institutional-200/80 dark:border-institutional-800 transition-colors cursor-pointer"
+                >
+                  <EditIcon size={14} />
+                  <span>Edit Profile & Target Exams</span>
+                </button>
               </div>
+
             ) : (
               /* Guest Welcome Banner & Action Buttons */
               <div className="p-4 rounded-2xl bg-gradient-to-br from-institutional-50 to-indigo-50/50 dark:from-institutional-950/40 dark:to-indigo-950/20 border border-institutional-200 dark:border-institutional-800/60 space-y-3">
@@ -1058,6 +1148,13 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           </div>
         </>
       )}
+
+      {/* Edit Profile & Target Exams Modal */}
+      <EditProfileModal
+        isOpen={editProfileModalOpen}
+        onClose={() => setEditProfileModalOpen(false)}
+      />
     </>
   );
 };
+

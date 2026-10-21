@@ -94,6 +94,7 @@ class CourseOrderResponse(BaseModel):
     coins_applied: int
     discount_amount: float
     user_coins_available: int
+    is_free: bool = False
 
 
 class CourseVerifyPaymentRequest(BaseModel):

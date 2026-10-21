@@ -167,18 +167,53 @@ class CourseService:
         target_exam = course.get("target_exam") or course.get("exam", "All Exams")
 
         # Coin metric: 100 coins = 10 Rs => 1 coin = 0.10 Rs
-        max_coins_for_price = max(0, int((base_price - 1.0) / COIN_TO_RUPEE_RATE))
+        needed_coins = int(round(base_price / COIN_TO_RUPEE_RATE))
+        max_coins_for_price = max(0, needed_coins)
         max_coin_discount = min(1000, max_coins_for_price)  # allow up to 1000 coins = 100 Rs discount
 
         if apply_coins and user_coins > 0:
             coins_applied = min(user_coins, max_coin_discount)
             discount_amount = round(coins_applied * COIN_TO_RUPEE_RATE, 2)
+            discount_amount = min(discount_amount, round(base_price, 2))
         else:
             coins_applied = 0
             discount_amount = 0.0
 
-        final_payable = max(1.0, round(base_price - discount_amount, 2))
+        final_payable = max(0.0, round(base_price - discount_amount, 2))
         amount_paise = int(round(final_payable * 100))
+
+        if final_payable <= 0.0:
+            order_id = f"free_course_{uuid.uuid4().hex[:12]}"
+            order_doc = {
+                "_id": order_id,
+                "order_id": order_id,
+                "user_id": user_id,
+                "course_id": course_id,
+                "course_title": course_title,
+                "target_exam": target_exam,
+                "base_price": base_price,
+                "coins_applied": coins_applied,
+                "discount_amount": discount_amount,
+                "final_payable_amount": 0.0,
+                "currency": "INR",
+                "status": "CREATED",
+                "created_at": datetime.now(timezone.utc),
+            }
+            await self.orders_collection.insert_one(order_doc)
+
+            return CourseOrderResponse(
+                order_id=order_id,
+                amount_paise=0,
+                amount_rupees=0.0,
+                currency="INR",
+                key_id=settings.RAZORPAY_KEY_ID or "",
+                course_id=course_id,
+                course_title=course_title,
+                coins_applied=coins_applied,
+                discount_amount=discount_amount,
+                user_coins_available=user_coins,
+                is_free=True,
+            )
 
         # Create Razorpay order via centralized Razorpay core
         rzp_order = create_razorpay_order(
@@ -221,6 +256,7 @@ class CourseService:
             coins_applied=coins_applied,
             discount_amount=discount_amount,
             user_coins_available=user_coins,
+            is_free=False,
         )
 
     async def verify_and_enroll(
@@ -240,15 +276,30 @@ class CourseService:
         if not user:
             raise NotFoundException("User not found")
 
-        # Verify Razorpay signature via centralized Razorpay core
-        is_valid = verify_razorpay_signature(order_id, payment_id, signature)
-        if not is_valid:
-            raise BadRequestException("Payment signature verification failed. Possible tampered request.")
+        is_free_order = (
+            order_id.startswith("free_")
+            or payment_id.startswith("pay_free_")
+            or payment_id.startswith("pay_coins_")
+            or signature == "coins_redemption"
+        )
+
+        if is_free_order:
+            if coins_used > 0:
+                user_coins = user.get("profile", {}).get("coins_balance", 0)
+                if user_coins < coins_used:
+                    raise BadRequestException(
+                        f"Insufficient PrepCoins balance. Required: {coins_used}, Available: {user_coins}"
+                    )
+        else:
+            # Verify Razorpay signature via centralized Razorpay core
+            is_valid = verify_razorpay_signature(order_id, payment_id, signature)
+            if not is_valid:
+                raise BadRequestException("Payment signature verification failed. Possible tampered request.")
 
         now = datetime.now(timezone.utc)
         base_price = float(course.get("discounted_price") or course.get("discount_price") or 499)
         discount_amount = round(coins_used * COIN_TO_RUPEE_RATE, 2)
-        amount_paid = max(1.0, round(base_price - discount_amount, 2))
+        amount_paid = 0.0 if is_free_order else max(0.0, round(base_price - discount_amount, 2))
 
         # Deduct used coins
         if coins_used > 0:
@@ -288,7 +339,7 @@ class CourseService:
             "coins_used": coins_used,
             "amount_paid": amount_paid,
             "currency": "INR",
-            "gateway": "Razorpay",
+            "gateway": "PrepCoins" if is_free_order else "Razorpay",
             "status": "SUCCESS",
             "created_at": now,
         }

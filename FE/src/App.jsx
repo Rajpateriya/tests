@@ -98,15 +98,6 @@ function AppContent() {
     setAuthModalState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  // Landing: a signed-in user opening '/' goes straight to their own area. Runs once, so the brand
-  // logo can still take them back to the landing page afterwards.
-  const landed = useRef(false);
-  useEffect(() => {
-    if (landed.current) return;
-    landed.current = true;
-    if (pathname === ROUTES.home && user) navigate(homePathFor(user), { replace: true });
-  }, []);
-
   // The "just finished" flag only bridges the moment between clearing the attempt and arriving on
   // the results screen; once we have left the exam address it has done its job.
   useEffect(() => {

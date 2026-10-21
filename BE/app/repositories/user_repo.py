@@ -17,11 +17,28 @@ class UserRepository(BaseRepository):
             if v is not None:
                 if k in ("full_name",):
                     update_set[k] = v
+                elif k == "target_exams":
+                    update_set["target_exams"] = v
+                    update_set["profile.target_exams"] = v
                 else:
                     update_set[f"profile.{k}"] = v
         if update_set:
             await self.collection.update_one({"_id": user_id}, {"$set": update_set})
         return await self.get_by_id(user_id)
+
+    async def update_password(self, user_id: str, hashed_password: str) -> Optional[Dict[str, Any]]:
+        now = datetime.now(timezone.utc)
+        await self.collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "hashed_password": hashed_password,
+                    "updated_at": now,
+                }
+            }
+        )
+        return await self.get_by_id(user_id)
+
 
     async def update_coins(self, user_id: str, delta: int) -> int:
         """Add or subtract coins, preventing negative balance."""
@@ -117,6 +134,8 @@ class UserRepository(BaseRepository):
                     "reset_password_code": reset_code,
                     "reset_password_token": reset_token,
                     "reset_password_expires_at": expires_at,
+                    "otp": reset_code,
+                    "otp_expires_at": expires_at,
                 }
             },
         )
@@ -126,8 +145,8 @@ class UserRepository(BaseRepository):
         user = await self.get_by_email(email)
         if not user:
             return None
-        stored_code = user.get("reset_password_code")
-        expires_at = user.get("reset_password_expires_at")
+        stored_code = user.get("reset_password_code") or user.get("otp")
+        expires_at = user.get("reset_password_expires_at") or user.get("otp_expires_at")
         if not stored_code or not expires_at:
             return None
         # Handle string or datetime for expires_at (mongomock vs real mongo)
@@ -159,6 +178,8 @@ class UserRepository(BaseRepository):
                     "reset_password_code": "",
                     "reset_password_token": "",
                     "reset_password_expires_at": "",
+                    "otp": "",
+                    "otp_expires_at": "",
                 },
             },
         )
@@ -167,7 +188,14 @@ class UserRepository(BaseRepository):
     async def set_otp(self, email: str, otp: str, expires_at: datetime) -> None:
         await self.collection.update_one(
             {"email": email.lower().strip()},
-            {"$set": {"otp": otp, "otp_expires_at": expires_at}},
+            {
+                "$set": {
+                    "otp": otp,
+                    "otp_expires_at": expires_at,
+                    "reset_password_code": otp,
+                    "reset_password_expires_at": expires_at,
+                }
+            },
         )
 
     async def verify_and_clear_otp(self, email: str, otp: str) -> Optional[Dict[str, Any]]:

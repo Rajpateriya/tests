@@ -32,7 +32,7 @@ function loadRazorpayScript() {
 }
 
 export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess }) => {
-  const { user } = useAuth();
+  const { user, updateCoins, refreshProfile } = useAuth();
   const [state, setState] = useState('IDLE'); // IDLE | LOADING | PROCESSING | SUCCESS | ERROR
   const [errorMsg, setErrorMsg] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
@@ -48,11 +48,53 @@ export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess 
   const discountAmount = order?.discount_amount ?? 0;
   const title = item?.title || item?.name || 'PrepMagnet Pass';
 
-  // ── Open Razorpay Checkout when modal becomes visible ───────────────────
+  // ── Open Razorpay Checkout or Direct Free Enrollment when modal becomes visible ──
   useEffect(() => {
     if (!isOpen || !order?.order_id) return;
 
     let cancelled = false;
+
+    // Zero-rupee 100% PrepCoins bypass: enroll immediately without Razorpay SDK
+    if (finalAmount <= 0 || order?.is_free) {
+      const processFreeActivation = async () => {
+        setState('PROCESSING');
+        try {
+          let result;
+          if (isCourse) {
+            result = await api.courses.verifyPayment(item.id, {
+              order_id: order.order_id,
+              payment_id: `pay_coins_${Date.now()}`,
+              signature: 'coins_redemption',
+              coins_used: coinsApplied,
+            });
+          } else {
+            result = await api.subscriptions.verifyPayment({
+              order_id: order.order_id,
+              payment_id: `pay_coins_${Date.now()}`,
+              signature: 'coins_redemption',
+              plan_id: plan?.id || order?.plan_id,
+              coins_used: coinsApplied,
+            });
+          }
+          if (cancelled) return;
+          if (result.coins_balance !== undefined) {
+            updateCoins?.(result.coins_balance);
+          }
+          await refreshProfile?.();
+          setVerifyResult(result);
+          setState('SUCCESS');
+          setTimeout(() => onSuccess(result), 1400);
+        } catch (err) {
+          if (cancelled) return;
+          setState('ERROR');
+          setErrorMsg(err.message || 'Enrollment with PrepCoins failed.');
+        }
+      };
+      processFreeActivation();
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const openCheckout = async () => {
       setState('LOADING');
@@ -118,6 +160,10 @@ export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess 
                 coins_used: coinsApplied,
               });
             }
+            if (result.coins_balance !== undefined) {
+              updateCoins?.(result.coins_balance);
+            }
+            await refreshProfile?.();
             setVerifyResult(result);
             setState('SUCCESS');
             setTimeout(() => onSuccess(result), 1800);
