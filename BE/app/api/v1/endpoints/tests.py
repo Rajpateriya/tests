@@ -61,9 +61,10 @@ async def get_test_filter_options(db: AsyncIOMotorDatabase = Depends(get_db)):
     all_subjects = sorted(list(set(str(s).strip() for s in (tax_subjects + test_subjects + q_subjects) if s and str(s).strip())))
 
     test_exams = await db.tests.distinct("target_exam")
-    course_exams = await db.courses.distinct("target_exam")
+    course_exams_target = await db.courses.distinct("target_exam", {"is_active": {"$ne": False}, "is_published": {"$ne": False}})
+    course_exams_legacy = await db.courses.distinct("exam", {"is_active": {"$ne": False}, "is_published": {"$ne": False}})
     q_exams = await db.questions.distinct("target_exam")
-    all_exams = sorted(list(set(str(e).strip() for e in (test_exams + course_exams + q_exams) if e and str(e).strip())))
+    all_exams = sorted(list(set(str(e).strip() for e in (test_exams + course_exams_target + course_exams_legacy + q_exams) if e and str(e).strip())))
 
     return APIResponse(
         success=True,

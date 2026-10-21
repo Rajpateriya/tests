@@ -298,6 +298,10 @@ export const api = {
     start: async (testId) => {
       return await request(`/tests/${testId}/start`, { method: 'POST' });
     },
+
+    getFilterOptions: async () => {
+      return await request('/tests/filter-options');
+    },
   },
 
   // Attempts & Live Exam Room

@@ -199,10 +199,13 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
     }
   };
 
-  const loadCourses = async () => {
+  const [courseExamCategories, setCourseExamCategories] = useState([{ id: 'All', label: 'All Exams' }]);
+  const [selectedCourseExam, setSelectedCourseExam] = useState('All');
+
+  const loadCourses = async (exam = selectedCourseExam) => {
     setCoursesLoading(true);
     try {
-      setCourses(await api.courses.list());
+      setCourses(await api.courses.list(exam));
     } catch (err) {
       console.warn('Failed to load courses:', err);
       setCourses([]);
@@ -215,9 +218,27 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   const [passesLoading, setPassesLoading] = useState(false);
 
   useEffect(() => {
-    loadCourses();
+    const loadFilterOptions = async () => {
+      try {
+        const res = await api.tests.getFilterOptions();
+        const exams = res?.exams || [];
+        if (exams.length > 0) {
+          setCourseExamCategories([
+            { id: 'All', label: 'All Exams' },
+            ...exams.map((e) => ({ id: e, label: e })),
+          ]);
+        }
+      } catch (err) {
+        console.warn('Failed to load filter options:', err);
+      }
+    };
+    loadFilterOptions();
     loadPasses();
   }, []);
+
+  useEffect(() => {
+    loadCourses(selectedCourseExam);
+  }, [selectedCourseExam]);
 
   const loadPasses = async () => {
     setPassesLoading(true);
@@ -911,7 +932,25 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           </div>
 
           {catalogTab === 'courses' ? (
-            coursesLoading ? (
+            <>
+              {courseExamCategories.length > 1 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-wrap">
+                  {courseExamCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCourseExam(cat.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        selectedCourseExam === cat.id
+                          ? 'bg-institutional-600 text-white shadow-sm'
+                          : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {coursesLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 animate-pulse">
                 {[1, 2, 3].map((n) => (
                   <div key={n} className="h-64 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl sm:rounded-2xl" />
@@ -965,8 +1004,9 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   </article>
                 ))}
               </div>
-            )
-          ) : (
+            )}
+          </>
+        ) : (
             <>
               {/* Search & Subject Bar */}
               <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-2.5 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">

@@ -12,6 +12,7 @@ import {
   SearchIcon,
   HelpCircleIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   ArrowRightIcon,
   BookOpenIcon,
   RefreshCwIcon,
@@ -21,14 +22,6 @@ import {
   PlayIcon,
   CartIcon,
 } from '../components/Icons';
-
-const EXAM_CATEGORIES = [
-  { id: 'All', label: 'All Exams' },
-  { id: 'SSC CGL', label: 'SSC CGL' },
-  { id: 'RRB NTPC', label: 'RRB NTPC' },
-  { id: 'SSC CHSL', label: 'SSC CHSL' },
-  { id: 'Banking', label: 'Banking' },
-];
 
 const COVER_GRID = {
   backgroundImage:
@@ -48,6 +41,7 @@ export const CoursesPage = ({ onStartTest }) => {
   const [cartNotice, setCartNotice] = useState(null);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [examCategories, setExamCategories] = useState([{ id: 'All', label: 'All Exams' }]);
   const [selectedExam, setSelectedExam] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [userCoins, setUserCoins] = useState(0);
@@ -69,6 +63,24 @@ export const CoursesPage = ({ onStartTest }) => {
   // Real-time dynamic course details map (courseId -> CourseDetailOut)
   const [courseDetails, setCourseDetails] = useState({});
   const [loadingDetails, setLoadingDetails] = useState({});
+
+  useEffect(() => {
+    const loadExams = async () => {
+      try {
+        const res = await api.tests.getFilterOptions();
+        const exams = res?.exams || [];
+        if (exams.length > 0) {
+          setExamCategories([
+            { id: 'All', label: 'All Exams' },
+            ...exams.map((e) => ({ id: e, label: e })),
+          ]);
+        }
+      } catch (err) {
+        console.warn('Failed to load filter options:', err);
+      }
+    };
+    loadExams();
+  }, []);
 
   useEffect(() => {
     fetchCourses();
@@ -256,13 +268,13 @@ export const CoursesPage = ({ onStartTest }) => {
         {/* Toolbar: exam tabs · search · refresh · coins */}
         <section className="bg-white/80 dark:bg-charcoal-900/80 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 rounded-2xl p-3 shadow-subtle flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex items-center p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-xl text-xs font-bold overflow-x-auto scrollbar-none max-w-full">
-            {EXAM_CATEGORIES.map((cat) => (
+            {examCategories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedExam(cat.id)}
                 className={`px-3.5 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all ${selectedExam === cat.id
-                    ? 'bg-white dark:bg-charcoal-900 text-institutional-700 dark:text-institutional-300 shadow-sm font-extrabold'
-                    : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-charcoal-900 text-institutional-700 dark:text-institutional-300 shadow-sm font-extrabold'
+                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
                   }`}
               >
                 {cat.label}
@@ -393,15 +405,19 @@ export const CoursesPage = ({ onStartTest }) => {
                   {/* Body */}
                   <div className="flex-1 p-3.5 sm:p-5 space-y-2.5 sm:space-y-3.5">
                     <div className="space-y-1 sm:space-y-1.5">
-                      <h3
-                        onClick={openDetails}
-                        className={`text-sm sm:text-base font-extrabold tracking-tight leading-snug min-h-0 sm:min-h-[2.75rem] text-charcoal-900 dark:text-white line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors cursor-pointer`}
-                      >
-                        {course.title}
-                      </h3>
-                      <p className="text-[11px] sm:text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 leading-relaxed min-h-0 sm:min-h-[2.5rem]">
-                        {course.description}
-                      </p>
+                      <div className="min-h-[2.5rem] sm:min-h-[2.75rem]">
+                        <h3
+                          onClick={openDetails}
+                          className="text-sm sm:text-base font-extrabold tracking-tight leading-snug text-charcoal-900 dark:text-white line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors cursor-pointer"
+                        >
+                          {course.title}
+                        </h3>
+                      </div>
+                      <div className="min-h-[2.25rem] sm:min-h-[2.5rem]">
+                        <p className="text-[11px] sm:text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 leading-relaxed">
+                          {course.description}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Stat strip */}
@@ -452,13 +468,13 @@ export const CoursesPage = ({ onStartTest }) => {
                     <button
                       type="button"
                       onClick={() => toggleExpandCourseQuizzes(course.id)}
-                      className="w-full flex items-center justify-between text-[11px] font-bold text-institutional-600 dark:text-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors"
+                      className="w-full flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-charcoal-50 dark:bg-charcoal-850 hover:bg-institutional-50 dark:hover:bg-institutional-950/40 border border-charcoal-150 dark:border-charcoal-800 text-[11px] font-bold text-institutional-600 dark:text-institutional-400 transition-all cursor-pointer group/ql"
                     >
                       <span className="inline-flex items-center gap-1.5">
-                        <EyeIcon size={13} />
-                        {isExpanded ? 'Hide quick look' : 'Quick look · preview quizzes & answers'}
+                        <EyeIcon size={13} className="text-institutional-500" />
+                        <span>{isExpanded ? 'Hide quick look' : 'Quick look · preview quizzes & answers'}</span>
                       </span>
-                      <ChevronDownIcon size={14} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      <ChevronDownIcon size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : 'group-hover/ql:translate-y-0.5'}`} />
                     </button>
 
                     {/* Quick look panel — scrolls inside the card so it never grows tall */}
@@ -519,12 +535,12 @@ export const CoursesPage = ({ onStartTest }) => {
                     )}
                   </div>
 
-                  {/* Footer: price + actions */}
-                  <div className="px-5 pb-5">
-                    <div className="pt-3.5 border-t border-charcoal-150 dark:border-charcoal-800 min-h-[4.25rem] flex items-center justify-between gap-3">
+                  {/* Footer: price, details & actions */}
+                  <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-charcoal-150 dark:border-charcoal-800 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
                       {isEnrolled ? (
                         <div className="min-w-0 text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                          <CheckCircleIcon size={15} className="shrink-0" />
+                          <CheckCircleIcon size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
                           <span className="truncate">
                             {course.access_source === 'PASS' ? `Included in ${course.pass_title || 'Active Pass'}` : 'You own this course'}
                           </span>
@@ -543,73 +559,76 @@ export const CoursesPage = ({ onStartTest }) => {
                         </div>
                       )}
 
-                      {isEnrolled ? (
+                      <button
+                        type="button"
+                        onClick={openDetails}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-institutional-600 dark:text-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors cursor-pointer group/link shrink-0 py-1"
+                        title="View full course syllabus and test list"
+                      >
+                        <span>View Details</span>
+                        <ChevronRightIcon size={14} className="group-hover/link:translate-x-0.5 transition-transform" />
+                      </button>
+                    </div>
+
+                    {isEnrolled ? (
+                      <button
+                        type="button"
+                        onClick={openDetails}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-extrabold text-white bg-institutional-600 hover:bg-institutional-700 rounded-xl shadow-sm transition-all cursor-pointer"
+                      >
+                        <span>Open Course</span>
+                        <ArrowRightIcon size={14} />
+                      </button>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {isInCart(course.id) ? (
+                          <button
+                            type="button"
+                            onClick={() => navigate(ROUTES.cart)}
+                            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                            title="Already in cart — Click to view cart"
+                          >
+                            <CheckCircleIcon size={14} className="text-emerald-600" />
+                            <span>In Cart</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!user) {
+                                navigate(ROUTES.cart);
+                                return;
+                              }
+                              setAddingCourseId(course.id);
+                              try {
+                                await addToCart(course.id);
+                                setCartNotice(`Added "${course.title}" to cart!`);
+                              } catch (err) {
+                                setCheckoutErrorMessage(err.message || 'Could not add to cart');
+                              } finally {
+                                setAddingCourseId(null);
+                              }
+                            }}
+                            disabled={addingCourseId === course.id}
+                            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-850 transition-colors cursor-pointer"
+                            title="Add to multi-course checkout cart"
+                          >
+                            <CartIcon size={14} />
+                            <span>{addingCourseId === course.id ? 'Adding...' : 'Add to Cart'}</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
-                          onClick={openDetails}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg shadow-sm transition-colors shrink-0"
+                          onClick={() => handleStartCheckout(course)}
+                          disabled={orderLoading}
+                          className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-white bg-institutional-600 hover:bg-institutional-700 rounded-xl shadow-sm hover:shadow transition-all disabled:opacity-70 cursor-pointer"
                         >
-                          <span>Open course</span>
-                          <ArrowRightIcon size={13} />
+                          <ShieldIcon size={13} />
+                          <span>Enroll Now</span>
                         </button>
-                      ) : (
-                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:flex-nowrap">
-                          {isInCart(course.id) ? (
-                            <button
-                              type="button"
-                              onClick={() => navigate(ROUTES.cart)}
-                              className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
-                              title="Already in cart — Click to view cart"
-                            >
-                              <CheckCircleIcon size={13} className="text-emerald-600" />
-                              <span>In Cart</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                if (!user) {
-                                  navigate(ROUTES.cart);
-                                  return;
-                                }
-                                setAddingCourseId(course.id);
-                                try {
-                                  await addToCart(course.id);
-                                  setCartNotice(`Added "${course.title}" to cart!`);
-                                } catch (err) {
-                                  setCheckoutErrorMessage(err.message || 'Could not add to cart');
-                                } finally {
-                                  setAddingCourseId(null);
-                                }
-                              }}
-                              disabled={addingCourseId === course.id}
-                              className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:border-institutional-400 hover:text-institutional-700 dark:hover:text-institutional-300 transition-colors cursor-pointer"
-                              title="Add to multi-course checkout cart"
-                            >
-                              <CartIcon size={13} />
-                              <span>{addingCourseId === course.id ? 'Adding...' : 'Add to Cart'}</span>
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleStartCheckout(course)}
-                            disabled={orderLoading}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg shadow-sm transition-colors disabled:opacity-70 cursor-pointer"
-                          >
-                            <ShieldIcon size={13} />
-                            <span>Enroll</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={openDetails}
-                            className="px-2.5 py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 text-charcoal-500 hover:text-charcoal-900 dark:hover:text-charcoal-200 transition-colors"
-                            title="View syllabus & details"
-                          >
-                            Details
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </article>
               );
@@ -666,8 +685,8 @@ export const CoursesPage = ({ onStartTest }) => {
                       <div
                         key={opt.id}
                         className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${isCorrect
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200'
-                            : 'bg-white dark:bg-charcoal-850 border-charcoal-200 dark:border-charcoal-800 text-charcoal-700 dark:text-charcoal-300'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200'
+                          : 'bg-white dark:bg-charcoal-850 border-charcoal-200 dark:border-charcoal-800 text-charcoal-700 dark:text-charcoal-300'
                           }`}
                       >
                         <div className="flex items-center gap-2.5">
