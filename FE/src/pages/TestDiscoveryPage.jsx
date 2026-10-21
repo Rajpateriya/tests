@@ -52,7 +52,6 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   const [selectedType, setSelectedType] = useState('ALL'); // ALL | FULL | SUBJECT | TOPIC_MINI
   const [selectedSubject, setSelectedSubject] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFeatureTab, setActiveFeatureTab] = useState('engine'); // 'engine' | 'analytics' | 'solutions'
 
   // Interactive Blueprint Explorer State
   const [selectedExamBlueprint, setSelectedExamBlueprint] = useState('cgl'); // 'cgl' | 'banking' | 'rrb' | 'psc'
@@ -866,127 +865,6 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
         </section>
 
         {/* ========================================================================= */}
-        {/* 6. INSTITUTIONAL RIGOR: Real Engine vs Diagnostics vs Derivations          */}
-        {/* ========================================================================= */}
-        <section id="platform-features" className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-10 shadow-subtle space-y-4 sm:space-y-8 scroll-mt-24 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-sm border border-charcoal-200 dark:border-charcoal-800 overflow-hidden bg-nodes-pattern">
-          {/* Moving Neural Analytics Glowing Core */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/10 dark:bg-purple-500/15 blur-[110px] rounded-full pointer-events-none animate-glow-pulse" />
-          <div className="absolute top-0 right-10 w-64 h-64 bg-cyan-500/8 dark:bg-cyan-400/10 blur-[90px] rounded-full pointer-events-none animate-float-slow" />
-
-          <div className="text-center max-w-2xl mx-auto space-y-2 relative z-10">
-            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-charcoal-950 dark:text-charcoal-50">
-              Engineered with Institutional Rigor
-            </h2>
-            <p className="text-xs sm:text-sm text-charcoal-500 dark:text-charcoal-400">
-              Built specifically to eliminate exam-day friction and accurately predict your All-India Standing.
-            </p>
-
-            {/* Interactive Capability Tabs */}
-            <div className="flex max-w-full overflow-x-auto p-1 bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl sm:rounded-full text-xs font-bold gap-1 mt-4 scrollbar-none justify-start sm:justify-center">
-              <button
-                onClick={() => setActiveFeatureTab('engine')}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'engine'
-                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                  }`}
-              >
-                1. PrepMagnet CBT Engine
-              </button>
-              <button
-                onClick={() => setActiveFeatureTab('analytics')}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'analytics'
-                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                  }`}
-              >
-                2. Deep Percentile Analytics
-              </button>
-              <button
-                onClick={() => setActiveFeatureTab('solutions')}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all text-xs ${activeFeatureTab === 'solutions'
-                  ? 'bg-white dark:bg-charcoal-900 text-charcoal-900 dark:text-charcoal-100 shadow-sm'
-                  : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                  }`}
-              >
-                3. Mathematical Derivations
-              </button>
-            </div>
-          </div>
-
-          {/* Interactive Feature Display Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-6 pt-1 sm:pt-2">
-            {/* Box 1 */}
-            <div
-              className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'engine'
-                ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
-                : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
-                }`}
-            >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-institutional-100 dark:bg-institutional-900/60 text-institutional-700 dark:text-institutional-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
-                <ClockIcon size={18} />
-              </div>
-              <h3 className="font-bold text-sm sm:text-base text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2">
-                Server-Synchronized Engine
-              </h3>
-              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-3 sm:mb-4">
-                Exact replica of the official examination layout. Countdown timers run on the server clock, preventing client tampering or timing drift.
-              </p>
-              <ul className="text-xs space-y-1.5 text-charcoal-700 dark:text-charcoal-300 font-medium">
-                <li className="flex items-center gap-2">✓ Official 5-State Question Palette</li>
-                <li className="flex items-center gap-2">✓ Strict -0.50 Mark Deduction Rules</li>
-                <li className="flex items-center gap-2">✓ 8-Second Auto Heartbeat Sync</li>
-              </ul>
-            </div>
-
-            {/* Box 2 */}
-            <div
-              className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'analytics'
-                ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
-                : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
-                }`}
-            >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
-                <BarChart3Icon size={18} />
-              </div>
-              <h3 className="font-bold text-sm sm:text-base text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2">
-                Percentile & Speed Diagnostics
-              </h3>
-              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-3 sm:mb-4">
-                Compare your dwell time against question difficulty. Identify whether wrong answers stemmed from conceptual confusion or hurried pacing.
-              </p>
-              <ul className="text-xs space-y-1.5 text-charcoal-700 dark:text-charcoal-300 font-medium">
-                <li className="flex items-center gap-2">✓ All-India Standing Calibration</li>
-                <li className="flex items-center gap-2">✓ Speed vs. Accuracy Tradeoff Curve</li>
-                <li className="flex items-center gap-2">✓ Weak Syllabus Topic Isolator</li>
-              </ul>
-            </div>
-
-            {/* Box 3 */}
-            <div
-              className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${activeFeatureTab === 'solutions'
-                ? 'border-institutional-500 bg-institutional-50/50 dark:bg-institutional-950/20 shadow-md ring-1 ring-institutional-500/20'
-                : 'border-charcoal-200 dark:border-charcoal-800 bg-charcoal-50/40 dark:bg-charcoal-850/30'
-                }`}
-            >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold mb-3 sm:mb-4">
-                <HelpCircleIcon size={18} />
-              </div>
-              <h3 className="font-bold text-sm sm:text-base text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2">
-                Rigorous Concept Derivations
-              </h3>
-              <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-3 sm:mb-4">
-                Every single solution contains step-by-step mathematical reasoning, formula shortcuts, and official PYQ cross-references.
-              </p>
-              <ul className="text-xs space-y-1.5 text-charcoal-700 dark:text-charcoal-300 font-medium">
-                <li className="flex items-center gap-2">✓ Multi-Method Shortcut Proofs</li>
-                <li className="flex items-center gap-2">✓ Soft Red/Green Highlighting</li>
-                <li className="flex items-center gap-2">✓ Bookmark for Weekly Revision</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================================= */}
         {/* 7. MOCK TEST CATALOG: Search, Filter Tabs & Interactive Cards             */}
         {/* ========================================================================= */}
         <section id="mock-catalog" className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-8 space-y-4 sm:space-y-6 pt-4 sm:pt-6 scroll-mt-24 bg-white/60 dark:bg-charcoal-900/60 backdrop-blur-sm border border-charcoal-200/80 dark:border-charcoal-800/80 overflow-hidden bg-dots-pattern shadow-subtle">
@@ -1242,13 +1120,16 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           <div className="absolute -bottom-24 -right-20 w-80 h-80 bg-emerald-500/10 dark:bg-emerald-400/12 blur-[120px] rounded-full pointer-events-none" />
 
           {/* Section Header */}
-          <div className="text-center max-w-3xl mx-auto space-y-3.5 relative z-10">
+          <div className="text-center max-w-5xl mx-auto space-y-3.5 relative z-10">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950/70 text-institutional-700 dark:text-institutional-300 border border-institutional-200/90 dark:border-institutional-800/90 shadow-2xs">
               <SparklesIcon size={13} className="text-institutional-600 dark:text-institutional-400" />
               <span>Why PrepMagnet?</span>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-[1.2]">
+            <h2 
+              className="font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-tight whitespace-nowrap text-center max-w-full"
+              style={{ fontSize: 'clamp(11.5px, 3.55vw, 36px)' }}
+            >
               India's Most Rigorous Exam Simulation Platform
             </h2>
 
@@ -1259,165 +1140,170 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               <div className="w-14 sm:w-20 h-0.5 bg-gradient-to-l from-transparent via-institutional-300 to-institutional-600 dark:via-institutional-700 dark:to-institutional-400 rounded-full" />
             </div>
 
-            <p className="text-xs sm:text-sm text-charcoal-600 dark:text-charcoal-300 max-w-2xl mx-auto leading-relaxed">
-              Don't be misled by inflated mock scores from generic portals. PrepMagnet trains your mental reflexes under authentic CBT examination room pressure, strict negative penalties, and real All-India peer rankings.
-            </p>
           </div>
 
           {/* 4 Feature Content Cards (4-col on desktop, 2-col on tablet, 1-col on mobile) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 relative z-10 items-stretch">
             {/* Card 1: 1:1 Exam Room Simulation */}
-            <div className="group relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-sky-400/80 dark:hover:border-sky-500/80 shadow-subtle overflow-hidden">
+            <div className="group relative rounded-3xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-sky-400/80 dark:hover:border-sky-500/80 shadow-subtle overflow-hidden">
               {/* Arched Top Accent Strip */}
               <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-400 via-indigo-500 to-sky-500" />
 
-              <div className="space-y-4">
-                {/* Arch Icon Container */}
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200/80 dark:border-sky-800/80 text-sky-600 dark:text-sky-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
+              <div className="flex-1 flex flex-col">
+                {/* Arch Icon Container & Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200/80 dark:border-sky-800/80 text-sky-600 dark:text-sky-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
                     <MonitorIcon size={22} />
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-100/80 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-sky-100/80 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60">
                     1:1 CBT Engine
                   </span>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white leading-snug">
-                    Pixel-Exact CBT Exam Environment
-                  </h3>
-                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                    Replicates the authentic official CBT examination room layout — countdown timer, official question palette colors, sectional rules, and full keyboard lock so actual exam day feels 100% familiar.
+                <div className="space-y-2 mb-4">
+                  <div className="min-h-[48px] flex items-center">
+                    <h3 className="text-base sm:text-[17px] font-bold text-charcoal-900 dark:text-white leading-snug tracking-tight">
+                      Pixel-Exact CBT Interface
+                    </h3>
+                  </div>
+                  <p className="text-xs sm:text-[13px] text-charcoal-600 dark:text-charcoal-300 leading-relaxed font-normal">
+                    Replicates the official CBT hall layout — live timer, question palette colors, and keyboard lock for zero exam-day surprises.
                   </p>
                 </div>
               </div>
 
               {/* Comparative Edge Callout */}
-              <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11px]">
-                <div className="flex items-start gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                  <CheckCircleIcon size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+              <div className="mt-4 pt-3.5 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11.5px] sm:text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircleIcon size={14} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <span>1:1 official layout with zero popups</span>
                 </div>
-                <div className="flex items-start gap-1.5 text-charcoal-400 dark:text-charcoal-500">
-                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 mt-0.5">✕</span>
-                  <span>Generic web forms cluttered with ads</span>
+                <div className="flex items-center gap-1.5 text-charcoal-500 dark:text-charcoal-400 font-medium">
+                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 w-3.5 text-center">✕</span>
+                  <span>Cluttered generic web forms</span>
                 </div>
               </div>
             </div>
 
             {/* Card 2: Marking & Negative Deductions */}
-            <div className="group relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-rose-400/80 dark:hover:border-rose-500/80 shadow-subtle overflow-hidden">
+            <div className="group relative rounded-3xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-rose-400/80 dark:hover:border-rose-500/80 shadow-subtle overflow-hidden">
               {/* Arched Top Accent Strip */}
               <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-rose-500 via-amber-500 to-rose-500" />
 
-              <div className="space-y-4">
-                {/* Arch Icon Container */}
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-800/80 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
+              <div className="flex-1 flex flex-col">
+                {/* Arch Icon Container & Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-800/80 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
                     <TargetIcon size={22} />
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100/80 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-100/80 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
                     Rigorous Scoring
                   </span>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white leading-snug">
-                    Authentic Negative Penalties & Marking
-                  </h3>
-                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                    No inflated scores or lenient rules. We apply strict -0.50 (SSC) and -0.25 (Banking) mark deductions on every wrong choice, training you to eliminate wild guessing and master risk management.
+                <div className="space-y-2 mb-4">
+                  <div className="min-h-[48px] flex items-center">
+                    <h3 className="text-base sm:text-[17px] font-bold text-charcoal-900 dark:text-white leading-snug tracking-tight">
+                      Authentic Negative Marking
+                    </h3>
+                  </div>
+                  <p className="text-xs sm:text-[13px] text-charcoal-600 dark:text-charcoal-300 leading-relaxed font-normal">
+                    Applies strict -0.50 (SSC) and -0.25 (Banking) penalties on wrong choices, eliminating guesswork and teaching risk control.
                   </p>
                 </div>
               </div>
 
               {/* Comparative Edge Callout */}
-              <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11px]">
-                <div className="flex items-start gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                  <CheckCircleIcon size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Strict -0.50 deductions & penalty audits</span>
+              <div className="mt-4 pt-3.5 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11.5px] sm:text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircleIcon size={14} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>Strict official penalty deductions</span>
                 </div>
-                <div className="flex items-start gap-1.5 text-charcoal-400 dark:text-charcoal-500">
-                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 mt-0.5">✕</span>
-                  <span>Soft or optional negative deductions</span>
+                <div className="flex items-center gap-1.5 text-charcoal-500 dark:text-charcoal-400 font-medium">
+                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 w-3.5 text-center">✕</span>
+                  <span>Soft zero-penalty scoring</span>
                 </div>
               </div>
             </div>
 
             {/* Card 3: 45,000+ Percentile Benchmarking */}
-            <div className="group relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-amber-400/80 dark:hover:border-amber-500/80 shadow-subtle overflow-hidden">
+            <div className="group relative rounded-3xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-amber-400/80 dark:hover:border-amber-500/80 shadow-subtle overflow-hidden">
               {/* Arched Top Accent Strip */}
               <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500" />
 
-              <div className="space-y-4">
-                {/* Arch Icon Container */}
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/80 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
+              <div className="flex-1 flex flex-col">
+                {/* Arch Icon Container & Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/80 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
                     <BarChart3Icon size={22} />
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-100/80 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-100/80 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60">
                     Live All-India AIR
                   </span>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white leading-snug">
-                    Real Percentile & AIR Benchmarking
-                  </h3>
-                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                    Percentage in isolation is useless if the cut-off is 80%. Compute your true All-India percentile against 45,000+ active aspirants with live cut-off projections and topper pace diagnostics.
+                <div className="space-y-2 mb-4">
+                  <div className="min-h-[48px] flex items-center">
+                    <h3 className="text-base sm:text-[17px] font-bold text-charcoal-900 dark:text-white leading-snug tracking-tight">
+                      Real Percentile & AIR Rank
+                    </h3>
+                  </div>
+                  <p className="text-xs sm:text-[13px] text-charcoal-600 dark:text-charcoal-300 leading-relaxed font-normal">
+                    Computes your true All-India percentile against 45,000+ active aspirants with live cut-off projections and topper pace.
                   </p>
                 </div>
               </div>
 
               {/* Comparative Edge Callout */}
-              <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11px]">
-                <div className="flex items-start gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                  <CheckCircleIcon size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Real percentile against 45,000+ active peers</span>
+              <div className="mt-4 pt-3.5 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11.5px] sm:text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircleIcon size={14} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>Real rank among 45,000+ peers</span>
                 </div>
-                <div className="flex items-start gap-1.5 text-charcoal-400 dark:text-charcoal-500">
-                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 mt-0.5">✕</span>
-                  <span>Arbitrary percentage scores without rank</span>
+                <div className="flex items-center gap-1.5 text-charcoal-500 dark:text-charcoal-400 font-medium">
+                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 w-3.5 text-center">✕</span>
+                  <span>Raw scores without rank context</span>
                 </div>
               </div>
             </div>
 
             {/* Card 4: Step-by-Step Proofs & Shortcuts */}
-            <div className="group relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-emerald-400/80 dark:hover:border-emerald-500/80 shadow-subtle overflow-hidden">
+            <div className="group relative rounded-3xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 hover:border-emerald-400/80 dark:hover:border-emerald-500/80 shadow-subtle overflow-hidden">
               {/* Arched Top Accent Strip */}
               <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-500" />
 
-              <div className="space-y-4">
-                {/* Arch Icon Container */}
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
+              <div className="flex-1 flex flex-col">
+                {/* Arch Icon Container & Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
                     <LightbulbIcon size={22} />
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
                     Topper Solutions
                   </span>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-base sm:text-lg font-extrabold text-charcoal-950 dark:text-white leading-snug">
-                    Step-by-Step Proofs & Shortcuts
-                  </h3>
-                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">
-                    Never get stuck with a lazy 1-line answer key. Every question delivers full conceptual proofs alongside 25-second shortcut tricks, option elimination methods, and formula revision cards.
+                <div className="space-y-2 mb-4">
+                  <div className="min-h-[48px] flex items-center">
+                    <h3 className="text-base sm:text-[17px] font-bold text-charcoal-900 dark:text-white leading-snug tracking-tight">
+                      Step-by-Step Proofs & Tricks
+                    </h3>
+                  </div>
+                  <p className="text-xs sm:text-[13px] text-charcoal-600 dark:text-charcoal-300 leading-relaxed font-normal">
+                    Delivers complete conceptual proofs alongside 25-second topper shortcuts, option elimination, and formula revision cards.
                   </p>
                 </div>
               </div>
 
               {/* Comparative Edge Callout */}
-              <div className="mt-6 pt-4 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11px]">
-                <div className="flex items-start gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                  <CheckCircleIcon size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Mathematical proofs + shortcut formulas</span>
+              <div className="mt-4 pt-3.5 border-t border-charcoal-150 dark:border-charcoal-800 space-y-1.5 text-[11.5px] sm:text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircleIcon size={14} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>Full proofs & shortcut formulas</span>
                 </div>
-                <div className="flex items-start gap-1.5 text-charcoal-400 dark:text-charcoal-500">
-                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 mt-0.5">✕</span>
-                  <span>1-line answers with skipped formulas</span>
+                <div className="flex items-center gap-1.5 text-charcoal-500 dark:text-charcoal-400 font-medium">
+                  <span className="text-rose-500 font-bold text-xs leading-none shrink-0 w-3.5 text-center">✕</span>
+                  <span>Lazy 1-line answer keys</span>
                 </div>
               </div>
             </div>

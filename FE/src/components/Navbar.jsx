@@ -232,8 +232,23 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
   // from inside themselves, so a click never resets the tab or leaves an extra history entry.
   const SECTION_ROOTS = [ROUTES.dashboard, ROUTES.admin, ROUTES.pipeline];
   const handleNavClick = (path) => {
-    if (!isOn(path, !SECTION_ROOTS.includes(path))) navigate(path);
+    if (path === ROUTES.home && (pathname === ROUTES.home || pathname === '/')) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } else if (!isOn(path, !SECTION_ROOTS.includes(path))) {
+      navigate(path);
+    }
     setMobileMenuOpen(false);
+  };
+
+  const handleLogoClick = (e) => {
+    e?.preventDefault();
+    setMobileMenuOpen(false);
+    if (pathname === ROUTES.home || pathname === '/') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } else {
+      navigate(ROUTES.home);
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
   };
 
   const handleContactClick = () => {
@@ -277,8 +292,12 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
       >
         {/* 1. BRAND EMBLEM (Sleek, Compact) */}
         <div
-          onClick={() => handleNavClick(ROUTES.home)}
+          onClick={handleLogoClick}
           className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(e); }}
+          title="Scroll to top"
         >
           <img
             src="/prepmagnet.png"
@@ -771,11 +790,17 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           >
             {/* Header: Brand & Close Button */}
             <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
-              <div className="flex items-center gap-2">
+              <div
+                onClick={handleLogoClick}
+                className="flex items-center gap-2 cursor-pointer select-none group"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(e); }}
+              >
                 <img
                   src="/prepmagnet.png"
                   alt="PrepMagnet Logo"
-                  className="w-8 h-8 object-contain"
+                  className="w-8 h-8 object-contain group-hover:scale-105 transition-transform"
                 />
                 <span className="font-extrabold text-base tracking-tight text-charcoal-900 dark:text-charcoal-100">
                   PrepMagnet
