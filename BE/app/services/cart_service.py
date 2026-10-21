@@ -203,15 +203,17 @@ class CartService:
         coins_available = cart_data["coins_available"]
 
         if apply_coins and coins_available > 0:
-            # Max discount: coins can cover at most (subtotal - 1) so ≥ ₹1 is always payable
-            max_coins = min(coins_available, int((subtotal - 1.0) / COIN_TO_RUPEE))
-            coins_applied = max(0, max_coins)
+            # 1 coin = ₹0.10 => 10 coins = ₹1.00
+            # Coins can cover the full subtotal down to ₹0.00
+            needed_coins = int(round(subtotal / COIN_TO_RUPEE))
+            coins_applied = min(coins_available, needed_coins)
             discount = round(coins_applied * COIN_TO_RUPEE, 2)
+            discount = min(discount, round(subtotal, 2))
         else:
             coins_applied = 0
             discount = 0.0
 
-        final = max(1.0, round(subtotal - discount, 2))
+        final = max(0.0, round(subtotal - discount, 2))
 
         return {
             "subtotal": round(subtotal, 2),
@@ -222,13 +224,51 @@ class CartService:
             "final_payable_paise": int(round(final * 100)),
             "course_ids": [i["course_id"] for i in payable_items],
             "course_titles": [i["course_title"] for i in payable_items],
+            "is_free": final <= 0.0,
         }
 
     async def create_checkout_order(
         self, user_id: str, apply_coins: bool = True
     ) -> Dict[str, Any]:
-        """Create one Razorpay order for all payable cart items."""
+        """Create one Razorpay order for all payable cart items, or bypass if 100% free with PrepCoins."""
         disc = await self.calculate_discount(user_id, apply_coins)
+
+        if disc["final_payable"] <= 0.0:
+            free_order_id = f"free_cart_{uuid.uuid4().hex[:12]}"
+            order_doc = {
+                "_id": free_order_id,
+                "order_id": free_order_id,
+                "user_id": user_id,
+                "amount_paise": 0,
+                "amount_rupees": 0.0,
+                "currency": "INR",
+                "receipt": free_order_id,
+                "status": "CREATED",
+                "created_at": datetime.now(timezone.utc),
+                "notes": {
+                    "type": "cart_checkout",
+                    "course_ids": disc["course_ids"],
+                    "coins_applied": disc["coins_applied"],
+                    "is_free": True,
+                },
+            }
+            await self.orders_col.insert_one(order_doc)
+
+            return {
+                "order_id": free_order_id,
+                "amount_paise": 0,
+                "amount_rupees": 0.0,
+                "currency": "INR",
+                "key_id": settings.RAZORPAY_KEY_ID or "",
+                "course_ids": disc["course_ids"],
+                "course_titles": disc["course_titles"],
+                "subtotal": disc["subtotal"],
+                "coins_applied": disc["coins_applied"],
+                "discount_amount": disc["discount_amount"],
+                "final_amount": 0.0,
+                "user_coins_available": disc["coins_available"],
+                "is_free": True,
+            }
 
         receipt = f"cart_{uuid.uuid4().hex[:12]}"
         rzp_order = create_razorpay_order(
@@ -270,6 +310,7 @@ class CartService:
             "discount_amount": disc["discount_amount"],
             "final_amount": disc["final_payable"],
             "user_coins_available": disc["coins_available"],
+            "is_free": False,
         }
 
     async def verify_and_enroll_all(
@@ -281,12 +322,29 @@ class CartService:
         coins_used: int,
         course_ids: List[str],
     ) -> Dict[str, Any]:
-        """Verify Razorpay signature then bulk-enroll all courses. Deducts coins once."""
-        is_valid = verify_razorpay_signature(order_id, payment_id, signature)
-        if not is_valid:
-            raise BadRequestException(
-                "Payment signature verification failed. Possible tampered request."
-            )
+        """Verify payment (or bypass if 100% coins free checkout) then bulk-enroll all courses. Deducts coins once."""
+        is_free_order = (
+            order_id.startswith("free_")
+            or payment_id.startswith("pay_free_")
+            or payment_id.startswith("pay_coins_")
+            or signature == "coins_redemption"
+        )
+
+        if is_free_order:
+            user = await self.user_repo.get_by_id(user_id)
+            if not user:
+                raise NotFoundException("User not found")
+            user_coins = user.get("profile", {}).get("coins_balance", 0)
+            if coins_used > 0 and user_coins < coins_used:
+                raise BadRequestException(
+                    f"Insufficient PrepCoins balance. Required: {coins_used}, Available: {user_coins}"
+                )
+        else:
+            is_valid = verify_razorpay_signature(order_id, payment_id, signature)
+            if not is_valid:
+                raise BadRequestException(
+                    "Payment signature verification failed. Possible tampered request."
+                )
 
         # Deduct coins once for entire cart
         if coins_used > 0:
@@ -303,7 +361,7 @@ class CartService:
                     failed.append(course_id)
                     continue
 
-                amount_paid = float(course.get("discounted_price", 0))
+                amount_paid = 0.0 if is_free_order else float(course.get("discounted_price", 0))
                 enrollment_record = {
                     "course_id": course["_id"],
                     "course_title": course.get("title", course_id),
@@ -326,21 +384,45 @@ class CartService:
             except Exception:
                 failed.append(course_id)
 
-        # Record payment audit once for the cart order
-        await record_payment_in_db(
-            db=self.db,
-            order_id=order_id,
-            payment_id=payment_id,
-            signature=signature or "webhook_verified",
-            user_id=user_id,
-            source="cart_checkout",
-            metadata={
-                "course_ids": course_ids,
-                "enrolled": enrolled,
-                "failed": failed,
+        # Record payment audit
+        if is_free_order:
+            payment_doc = {
+                "_id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "order_id": order_id,
+                "payment_id": payment_id,
                 "coins_used": coins_used,
-            },
-        )
+                "amount_paid": 0.0,
+                "currency": "INR",
+                "gateway": "PrepCoins",
+                "status": "SUCCESS",
+                "created_at": now,
+                "metadata": {
+                    "course_ids": course_ids,
+                    "enrolled": enrolled,
+                    "failed": failed,
+                },
+            }
+            await self.payments_col.insert_one(payment_doc)
+            await self.orders_col.update_one(
+                {"_id": order_id},
+                {"$set": {"status": "PAID", "payment_id": payment_id, "updated_at": now}},
+            )
+        else:
+            await record_payment_in_db(
+                db=self.db,
+                order_id=order_id,
+                payment_id=payment_id,
+                signature=signature or "webhook_verified",
+                user_id=user_id,
+                source="cart_checkout",
+                metadata={
+                    "course_ids": course_ids,
+                    "enrolled": enrolled,
+                    "failed": failed,
+                    "coins_used": coins_used,
+                },
+            )
 
         # Clear the cart after successful checkout
         if enrolled:
@@ -352,9 +434,13 @@ class CartService:
         return {
             "success": len(enrolled) > 0,
             "message": (
-                f"Successfully enrolled in {len(enrolled)} course(s)!"
-                if enrolled
-                else "Enrollment failed for all courses."
+                f"Successfully enrolled in {len(enrolled)} course(s) with PrepCoins!"
+                if is_free_order
+                else (
+                    f"Successfully enrolled in {len(enrolled)} course(s)!"
+                    if enrolled
+                    else "Enrollment failed for all courses."
+                )
             ),
             "enrolled_courses": enrolled,
             "failed_courses": failed,
@@ -363,3 +449,4 @@ class CartService:
             "coins_deducted": coins_used,
             "coins_balance": coins_balance,
         }
+

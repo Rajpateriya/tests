@@ -134,12 +134,11 @@ def verify_razorpay_signature(order_id: str, payment_id: str, signature: Optiona
     # Asynchronous webhook fulfillment where webhook signature was already validated
     if signature == "webhook_verified":
         return True
-
     # Development/Testing environment mock support for offline fixture runs
     if settings.ENVIRONMENT in ("development", "test", "testing"):
         if signature in ("mock_signature_test", "mock_signature"):
             return True
-        if signature is None and payment_id.startswith("pay_test_"):
+        if signature is None and payment_id.startswith("pay_test"):
             return True
 
     if not signature:

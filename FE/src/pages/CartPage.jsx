@@ -306,7 +306,7 @@ function CartSuccessState({ success, onGoToCourses, onBrowseMore }) {
 
 // ── Main CartPage Component ───────────────────────────────────────────────────
 export function CartPage() {
-  const { user } = useAuth();
+  const { user, updateCoins, refreshProfile } = useAuth();
   const { cart, cartCount, removeFromCart, clearCart, refreshCart } = useCart();
   const navigate = useNavigate();
 
@@ -388,11 +388,35 @@ export function CartPage() {
     }
   };
 
-  // ── Razorpay checkout ───────────────────────────────────────────────────────
+  // ── Razorpay checkout / Direct PrepCoins enrollment ─────────────────────────
   const handleCheckout = async () => {
     if (!checkoutData) return;
     setError('');
     setPaying(true);
+
+    // 100% PrepCoins zero-rupee bypass: enroll immediately without payment gateway
+    if (finalPayable <= 0 || checkoutData.is_free) {
+      try {
+        const result = await api.cart.verifyPayment({
+          order_id: checkoutData.order_id,
+          payment_id: `pay_coins_${Date.now()}`,
+          signature: 'coins_redemption',
+          coins_used: checkoutData.coins_applied,
+          course_ids: checkoutData.course_ids,
+        });
+        setSuccess(result);
+        if (result.coins_balance !== undefined) {
+          updateCoins(result.coins_balance);
+        }
+        await refreshProfile?.();
+        await refreshCart();
+      } catch (err) {
+        setError(err.message || 'Direct enrollment with PrepCoins failed.');
+      } finally {
+        setPaying(false);
+      }
+      return;
+    }
 
     const loaded = await loadRazorpayScript();
     if (!loaded) {
@@ -425,6 +449,10 @@ export function CartPage() {
             course_ids: checkoutData.course_ids,
           });
           setSuccess(result);
+          if (result.coins_balance !== undefined) {
+            updateCoins(result.coins_balance);
+          }
+          await refreshProfile?.();
           await refreshCart();
         } catch (err) {
           setError(err.message || 'Payment verification failed.');
@@ -698,12 +726,21 @@ export function CartPage() {
                   id="cart-checkout-btn"
                   onClick={handleCheckout}
                   disabled={paying || !checkoutData || loadingPreview}
-                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-institutional-600 to-institutional-700 hover:from-institutional-500 hover:to-institutional-600 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                  className={`w-full py-3.5 px-4 rounded-xl text-white font-extrabold text-xs sm:text-sm shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] ${
+                    finalPayable <= 0
+                      ? 'bg-gradient-to-r from-amber-600 via-amber-500 to-institutional-600 hover:from-amber-500 hover:to-institutional-500 shadow-amber-500/20'
+                      : 'bg-gradient-to-r from-institutional-600 to-institutional-700 hover:from-institutional-500 hover:to-institutional-600'
+                  }`}
                 >
                   {paying ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Opening Secure Gateway…</span>
+                      <span>{finalPayable <= 0 ? 'Enrolling with PrepCoins…' : 'Opening Secure Gateway…'}</span>
+                    </>
+                  ) : finalPayable <= 0 ? (
+                    <>
+                      <SparklesIcon size={15} className="text-amber-200 animate-pulse" />
+                      <span>Enroll Free with PrepCoins (₹0)</span>
                     </>
                   ) : (
                     <>
@@ -716,7 +753,11 @@ export function CartPage() {
                 <div className="text-center">
                   <p className="text-[10px] text-charcoal-400 dark:text-charcoal-500 flex items-center justify-center gap-1">
                     <ShieldIcon size={11} className="text-emerald-500" />
-                    <span>UPI · RuPay · Cards · NetBanking · 256-bit SSL</span>
+                    <span>
+                      {finalPayable <= 0
+                        ? '100% PrepCoins Covered · Instant Course Activation'
+                        : 'UPI · RuPay · Cards · NetBanking · 256-bit SSL'}
+                    </span>
                   </p>
                 </div>
               </div>

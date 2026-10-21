@@ -58,6 +58,7 @@ class CartCheckoutResponse(BaseModel):
     discount_amount: float
     final_amount: float
     user_coins_available: int
+    is_free: bool = False
 
 
 class CartVerifyRequest(BaseModel):
