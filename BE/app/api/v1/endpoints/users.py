@@ -7,7 +7,7 @@ from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.schemas.common import APIResponse
 from app.schemas.result import UserDashboardStatsOut
-from app.schemas.user import UserProfileUpdate, UserResponse
+from app.schemas.user import ChangePasswordRequest, UserProfileUpdate, UserResponse
 from app.services.auth_service import AuthService
 from app.services.evaluation_service import EvaluationService
 
@@ -49,3 +49,22 @@ async def update_profile(
         message="Profile updated successfully",
         data=updated,
     )
+
+
+@router.post("/change-password", response_model=APIResponse[dict])
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Change the authenticated user's password."""
+    auth_service = AuthService(db)
+    res = await auth_service.change_password(
+        current_user.id, payload.current_password, payload.new_password
+    )
+    return APIResponse(
+        success=True,
+        message=res.get("message", "Password changed successfully"),
+        data=res,
+    )
+

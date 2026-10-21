@@ -387,7 +387,15 @@ export const api = {
         body: JSON.stringify(payload),
       });
     },
+
+    changePassword: async ({ current_password, new_password }) => {
+      return await request('/users/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ current_password, new_password }),
+      });
+    },
   },
+
 
   // Admin Studio
   admin: {

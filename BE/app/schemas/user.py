@@ -28,6 +28,7 @@ class ForgotPasswordResponse(BaseModel):
     message: str
     reset_code: Optional[str] = None
     reset_token: Optional[str] = None
+    otp: Optional[str] = None
 
 
 class VerifyResetCodeRequest(BaseModel):
@@ -80,6 +81,12 @@ class UserProfileUpdate(BaseModel):
     preferred_subjects: Optional[List[str]] = None
     phone_number: Optional[str] = None
     avatar_url: Optional[str] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: Optional[str] = None
+    new_password: str = Field(min_length=6, max_length=100)
+
 
 
 class UserAdminUpdate(BaseModel):

@@ -57,6 +57,8 @@ class AuthService:
                     "subject": "Your PrepMagnet Verification Code",
                     "html": f"<p>Your 6-digit verification code is <strong>{otp}</strong>. This code is valid for 10 minutes.</p>",
                 })
+            else:
+                logger.info(f"[DEV OTP] 6-digit verification OTP for {email} is: {otp}")
         except Exception as e:
             logger.warning(f"Failed to send OTP email to {email} via Resend: {e}")
 
@@ -90,6 +92,8 @@ class AuthService:
                     </div>
                     """,
                 })
+            else:
+                logger.info(f"[DEV PASSWORD RESET OTP] 6-digit reset OTP for {email} is: {reset_code}")
         except Exception as e:
             logger.warning(f"Failed to send password reset email to {email} via Resend: {e}")
 
@@ -117,12 +121,12 @@ class AuthService:
         await self.pending_repo.upsert_pending(email, pending_doc)
         self._send_otp_email(email, otp)
 
-        is_dev = settings.ENVIRONMENT in ("development", "test") or settings.DEBUG
+        is_test = settings.ENVIRONMENT == "test"
         return RegisterInitiateResponse(
             email=email,
             message="A 6-digit verification code has been sent to your email. Please verify to complete registration.",
             expires_in=600,
-            otp=otp if is_dev else None,
+            otp=otp if is_test else None,
         )
 
     async def login(self, req: UserLoginRequest) -> Dict[str, Any]:
@@ -186,14 +190,16 @@ class AuthService:
             expires_at=expires_at,
         )
 
+        self._send_otp_email(email, reset_code)
         self._send_password_reset_email(email, reset_code)
 
-        is_dev = settings.ENVIRONMENT in ("development", "test") or settings.DEBUG
+        is_test = settings.ENVIRONMENT == "test"
         return ForgotPasswordResponse(
             email=email,
             message="A 6-digit verification code has been sent to your email. Please verify the code to reset your password.",
-            reset_code=reset_code if is_dev else None,
-            reset_token=reset_token,
+            reset_code=reset_code if is_test else None,
+            reset_token=reset_token if is_test else None,
+            otp=None,
         )
 
     async def verify_reset_code(self, email: str, reset_code: str) -> Dict[str, Any]:
@@ -237,12 +243,12 @@ class AuthService:
             pending["expires_at"] = expires_at
             await self.pending_repo.upsert_pending(email, pending)
             self._send_otp_email(email, otp)
-            is_dev = settings.ENVIRONMENT in ("development", "test") or settings.DEBUG
+            is_test = settings.ENVIRONMENT == "test"
             return {
                 "email": email,
                 "message": "A new verification code has been sent to your email.",
                 "expires_in": 600,
-                "otp": otp if is_dev else None,
+                "otp": otp if is_test else None,
             }
 
         user = await self.repo.get_by_email(email)
@@ -251,12 +257,12 @@ class AuthService:
             expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
             await self.repo.set_otp(email, otp, expires_at)
             self._send_otp_email(email, otp)
-            is_dev = settings.ENVIRONMENT in ("development", "test") or settings.DEBUG
+            is_test = settings.ENVIRONMENT == "test"
             return {
                 "email": email,
                 "message": "A new verification code has been sent to your email.",
                 "expires_in": 600,
-                "otp": otp if is_dev else None,
+                "otp": otp if is_test else None,
             }
 
         raise NotFoundException(f"No pending registration or account found with email '{email}'")
@@ -393,6 +399,25 @@ class AuthService:
         if not user:
             raise NotFoundException("User not found")
         return self._to_user_response(user)
+
+    async def change_password(
+        self, user_id: str, current_password: Optional[str], new_password: str
+    ) -> Dict[str, Any]:
+        user = await self.repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundException("User not found")
+
+        is_google_user = user.get("auth_provider") == "google"
+        if not is_google_user or current_password:
+            if not current_password or not verify_password(current_password, user.get("hashed_password", "")):
+                raise UnauthorizedException("Current password is incorrect")
+
+        new_hashed = hash_password(new_password)
+        await self.repo.update_password(user_id, new_hashed)
+        return {
+            "message": "Password updated successfully",
+        }
+
 
     # --- Admin Studio User Operations ---
     async def get_users_paginated(

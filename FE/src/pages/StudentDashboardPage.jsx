@@ -30,7 +30,9 @@ import {
   MessageSquareIcon,
   SearchIcon,
   XIcon,
+  EditIcon,
 } from '../components/Icons';
+
 import { AnalyticsDashboardView } from '../components/AnalyticsDashboardView';
 
 /**
@@ -588,7 +590,19 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
                   <ClockIcon size={12} className="text-amber-600" />
                   <span>Daily Practice Active</span>
                 </span>
+
+                {/* Quick Edit Goals & Profile trigger */}
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-edit-profile'))}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-bold text-institutional-700 dark:text-institutional-300 bg-institutional-50 dark:bg-institutional-950/60 hover:bg-institutional-100 dark:hover:bg-institutional-900 border border-institutional-200 dark:border-institutional-800 transition-colors cursor-pointer group"
+                  title="Edit Profile, Target Exams & Password"
+                >
+                  <EditIcon size={12} className="text-institutional-600 dark:text-institutional-400 group-hover:scale-110 transition-transform" />
+                  <span>Edit Goals</span>
+                </button>
               </div>
+
 
               {/* Email & Feedback Toast */}
               <div className="flex flex-wrap items-center gap-2 text-xs text-charcoal-500 dark:text-charcoal-400">
