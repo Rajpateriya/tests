@@ -52,6 +52,29 @@ async def list_tests(
     )
 
 
+@router.get("/filter-options", response_model=APIResponse[dict])
+async def get_test_filter_options(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Distinct exams and subjects actually available in taxonomies, questions, tests, and courses."""
+    tax_subjects = await db.taxonomies.distinct("_id")
+    test_subjects = await db.tests.distinct("subject")
+    q_subjects = await db.questions.distinct("subject")
+    all_subjects = sorted(list(set(str(s).strip() for s in (tax_subjects + test_subjects + q_subjects) if s and str(s).strip())))
+
+    test_exams = await db.tests.distinct("target_exam")
+    course_exams = await db.courses.distinct("target_exam")
+    q_exams = await db.questions.distinct("target_exam")
+    all_exams = sorted(list(set(str(e).strip() for e in (test_exams + course_exams + q_exams) if e and str(e).strip())))
+
+    return APIResponse(
+        success=True,
+        message="Available filter options",
+        data={
+            "exams": all_exams,
+            "subjects": all_subjects,
+        },
+    )
+
+
 @router.get("/{test_id}", response_model=APIResponse[TestDetailOut])
 async def get_test_details(
     test_id: str,

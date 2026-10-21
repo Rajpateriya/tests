@@ -383,8 +383,24 @@ export const DifficultyMix = ({ value, onChange, label = 'Difficulty mix' }) => 
                 min="0"
                 max="100"
                 className={`${INPUT_CLS} pr-7`}
-                value={value[level]}
-                onChange={(e) => onChange({ ...value, [level]: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                value={value[level] ?? ''}
+                onWheel={(e) => e.target.blur()}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === '') {
+                    onChange({ ...value, [level]: '' });
+                    return;
+                  }
+                  const n = parseInt(raw, 10);
+                  if (!isNaN(n)) {
+                    onChange({ ...value, [level]: Math.min(100, Math.max(0, n)) });
+                  }
+                }}
+                onBlur={() => {
+                  if (value[level] === '' || typeof value[level] !== 'number') {
+                    onChange({ ...value, [level]: 0 });
+                  }
+                }}
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-charcoal-400">%</span>
             </div>

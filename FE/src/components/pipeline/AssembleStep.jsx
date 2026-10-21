@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { LayersIcon, RefreshCwIcon } from '../Icons';
+import { CustomSelect } from '../CustomSelect';
 import {
   Alert,
   BTN_OUTLINE,
@@ -31,7 +32,36 @@ function pivot(rows) {
   return [...map.values()];
 }
 
-const intInput = (setter, min = 1) => (e) => setter(Math.max(min, parseInt(e.target.value, 10) || min));
+const intInput = (setter, max = Infinity) => (e) => {
+  const v = e.target.value;
+  if (v === '') {
+    setter('');
+    return;
+  }
+  const n = parseInt(v, 10);
+  if (!isNaN(n)) setter(Math.min(max, Math.max(0, n)));
+};
+
+const intBlur = (setter, fallback = 1) => () => {
+  setter((prev) => (prev === '' || Number(prev) < fallback ? fallback : prev));
+};
+
+const numInput = (setter) => (e) => {
+  const v = e.target.value;
+  if (v === '' || v === '.' || v === '-') {
+    setter(v);
+    return;
+  }
+  const n = parseFloat(v);
+  if (!isNaN(n)) setter(v);
+};
+
+const numBlur = (setter, fallback = 0, min = 0) => () => {
+  setter((prev) => {
+    if (prev === '' || isNaN(Number(prev)) || Number(prev) < min) return fallback;
+    return Number(prev);
+  });
+};
 
 const PILL_CLS =
   'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-charcoal-100 dark:bg-charcoal-800 text-[11px] font-bold text-charcoal-600 dark:text-charcoal-300';
@@ -106,13 +136,13 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
         subject,
         blueprint_name: blueprintName || null,
         sub_subject: subSubject || null,
-        quizzes,
+        quizzes: Number(quizzes) || 1,
         questions_per_quiz: perQuiz ? Number(perQuiz) : null,
-        max_question_reuse: maxReuse,
+        max_question_reuse: Number(maxReuse) || 1,
         title_prefix: titlePrefix || null,
-        duration_minutes: duration,
-        positive_marks: posMarks,
-        negative_marks: negMarks,
+        duration_minutes: Number(duration) || 30,
+        positive_marks: Number(posMarks) || 2,
+        negative_marks: negMarks === '' || isNaN(Number(negMarks)) ? 0 : Math.max(0, Number(negMarks)),
       });
       setResult(res);
       loadBank();
@@ -132,11 +162,11 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
       title="Assemble quizzes"
       tag={`${subject} · ${targetExam}`}
       subtitle="Builds ready-to-take tests from the bank, each following the saved blueprint exactly. Least-used questions go first; only complete quizzes are created."
-      footerNote={`${quizzes} quiz${quizzes === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'} using the "${blueprintName}" blueprint, ${duration} min, +${posMarks} / −${negMarks}.`}
+      footerNote={`${quizzes || 1} quiz${Number(quizzes) === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'} using the "${blueprintName}" blueprint, ${duration || 0} min, +${posMarks || 0} / −${negMarks === '' ? 0 : negMarks}.`}
       footer={
         <>
           <button type="button" className={BTN_PRIMARY} onClick={assemble} disabled={busy}>
-            {busy ? <Busy label="Assembling..." /> : `Assemble ${quizzes} quiz${quizzes === 1 ? '' : 'zes'}`}
+            {busy ? <Busy label="Assembling..." /> : `Assemble ${quizzes || 1} quiz${Number(quizzes) === 1 ? '' : 'zes'}`}
           </button>
           {result?.created > 0 && onGoToMocks && (
             <button type="button" className={BTN_OUTLINE} onClick={onGoToMocks}>View in Mock Tests</button>
@@ -149,7 +179,7 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
       <Section title="What to build">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Field label="Blueprint" hint={blueprintNames.length > 1 ? `${blueprintNames.length} saved for this subject` : 'Which saved blueprint to follow'}>
-            <select
+            <CustomSelect
               className={INPUT_CLS}
               value={blueprintName}
               onChange={(e) => setBlueprintName(e.target.value)}
@@ -158,23 +188,50 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
               {(blueprintNames.length ? blueprintNames : [blueprintName]).map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
-            </select>
+            </CustomSelect>
           </Field>
           <Field label="Sub-subject">
-            <select className={INPUT_CLS} value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
+            <CustomSelect className={INPUT_CLS} value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
               <option value="">Whole subject</option>
               {subSubjects.map((s) => <option key={s} value={s}>{s} only</option>)}
-            </select>
+            </CustomSelect>
           </Field>
           <Field label="Quizzes">
-            <input type="number" min="1" max="200" className={INPUT_CLS} value={quizzes} onChange={intInput(setQuizzes)} />
+            <input
+              type="number"
+              min="1"
+              max="200"
+              className={INPUT_CLS}
+              value={quizzes}
+              onWheel={(e) => e.target.blur()}
+              onChange={intInput(setQuizzes, 200)}
+              onBlur={intBlur(setQuizzes, 1)}
+            />
           </Field>
           <Field label="Questions per quiz" hint="Empty = blueprint size">
-            <input type="number" min="1" className={INPUT_CLS} value={perQuiz} placeholder="Blueprint"
-              onChange={(e) => setPerQuiz(e.target.value)} />
+            <input
+              type="number"
+              min="1"
+              className={INPUT_CLS}
+              value={perQuiz}
+              placeholder="Blueprint"
+              onWheel={(e) => e.target.blur()}
+              onChange={intInput(setPerQuiz)}
+              onBlur={() => {
+                if (perQuiz !== '' && Number(perQuiz) < 1) setPerQuiz(1);
+              }}
+            />
           </Field>
           <Field label="Max tests per question" hint="1 = never repeat a question">
-            <input type="number" min="1" className={INPUT_CLS} value={maxReuse} onChange={intInput(setMaxReuse)} />
+            <input
+              type="number"
+              min="1"
+              className={INPUT_CLS}
+              value={maxReuse}
+              onWheel={(e) => e.target.blur()}
+              onChange={intInput(setMaxReuse)}
+              onBlur={intBlur(setMaxReuse, 1)}
+            />
           </Field>
         </div>
       </Section>
@@ -186,25 +243,49 @@ export const AssembleStep = ({ subject, taxonomyDoc, targetExam, onAssembled, on
               onChange={(e) => setTitlePrefix(e.target.value)} />
           </Field>
           <Field label="Duration (min)">
-            <input type="number" min="1" className={INPUT_CLS} value={duration} onChange={intInput(setDuration)} />
+            <input
+              type="number"
+              min="1"
+              className={INPUT_CLS}
+              value={duration}
+              onWheel={(e) => e.target.blur()}
+              onChange={intInput(setDuration)}
+              onBlur={intBlur(setDuration, 1)}
+            />
           </Field>
           <Field label="Marks per correct">
-            <input type="number" step="0.5" min="0.5" className={INPUT_CLS} value={posMarks}
-              onChange={(e) => setPosMarks(parseFloat(e.target.value) || 2)} />
+            <input
+              type="number"
+              step="0.5"
+              min="0.5"
+              className={INPUT_CLS}
+              value={posMarks}
+              onWheel={(e) => e.target.blur()}
+              onChange={numInput(setPosMarks)}
+              onBlur={numBlur(setPosMarks, 2, 0.5)}
+            />
           </Field>
           <Field label="Negative marks">
-            <input type="number" step="0.25" min="0" className={INPUT_CLS} value={negMarks}
-              onChange={(e) => setNegMarks(Math.max(0, parseFloat(e.target.value) || 0))} />
+            <input
+              type="number"
+              step="0.25"
+              min="0"
+              className={INPUT_CLS}
+              value={negMarks}
+              onWheel={(e) => e.target.blur()}
+              onChange={numInput(setNegMarks)}
+              onBlur={numBlur(setNegMarks, 0, 0)}
+            />
           </Field>
         </div>
       </Section>
 
       <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 rounded-2xl bg-charcoal-50 dark:bg-charcoal-850/60 border border-charcoal-200 dark:border-charcoal-800">
         <span className="text-xs text-charcoal-500 dark:text-charcoal-400">
-          {`${quizzes} quiz${quizzes === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'} using the "${blueprintName}" blueprint, ${duration} min, +${posMarks} / −${negMarks}.`}
+          {`${quizzes || 1} quiz${Number(quizzes) === 1 ? '' : 'zes'} of ${perQuiz || 'blueprint-size'} questions from ${subSubject || 'the whole subject'} using the "${blueprintName}" blueprint, ${duration || 0} min, +${posMarks || 0} / −${negMarks === '' ? 0 : negMarks}.`}
         </span>
         <button type="button" className={BTN_PRIMARY} onClick={assemble} disabled={busy}>
-          {busy ? <Busy label="Assembling..." /> : `Assemble ${quizzes} quiz${quizzes === 1 ? '' : 'zes'}`}
+          {busy ? <Busy label="Assembling..." /> : `Assemble ${quizzes || 1} quiz${Number(quizzes) === 1 ? '' : 'zes'}`}
         </button>
       </div>
 

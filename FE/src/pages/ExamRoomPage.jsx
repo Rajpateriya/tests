@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api, isRealSession } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
+import { CustomSelect } from '../components/CustomSelect';
 import {
   ClockIcon,
   FlagIcon,
@@ -816,14 +817,15 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
             {/* Language Dropdown */}
             <div className="relative">
-              <select
+              <CustomSelect
+                align="right"
                 value={selectedLanguage}
                 onChange={(e) => setSelectedLanguage(e.target.value)}
-                className="bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
+                className="bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer min-w-[9.5rem]"
               >
                 <option value="English">View in: English</option>
                 <option value="Hindi">View in: Hindi (हिंदी)</option>
-              </select>
+              </CustomSelect>
             </div>
 
             {/* Question Paper Button */}

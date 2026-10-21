@@ -476,9 +476,10 @@ export const api = {
     },
 
     // Courses (admin): create a course, tag generated tests to it, edit, archive, see who enrolled
-    listCourses: async ({ search = '', skip = 0, limit = 500 } = {}) => {
+    listCourses: async ({ search = '', target_exam = '', skip = 0, limit = 500 } = {}) => {
       const q = new URLSearchParams({ skip, limit });
       if (search && search.trim()) q.append('search', search.trim());
+      if (target_exam && target_exam.trim()) q.append('target_exam', target_exam.trim());
       return await request(`/courses/admin/all?${q.toString()}`);
     },
 
@@ -515,11 +516,17 @@ export const api = {
     },
 
     // Tests an admin can tag to a course: newest first, one page at a time, optional search
-    // over every test's title and subject (done on the server, not just on what is loaded).
-    listTests: async ({ search = '', skip = 0, limit = 20 } = {}) => {
+    // over every test's title and subject, plus optional target_exam and subject filtering.
+    listTests: async ({ search = '', target_exam = '', subject = '', skip = 0, limit = 20 } = {}) => {
       const q = new URLSearchParams({ skip, limit });
       if (search && search.trim()) q.append('search', search.trim());
+      if (target_exam && target_exam.trim()) q.append('target_exam', target_exam.trim());
+      if (subject && subject.trim()) q.append('subject', subject.trim());
       return await request(`/tests?${q.toString()}`);
+    },
+
+    getTestFilterOptions: async () => {
+      return await request('/tests/filter-options');
     },
 
     // One test in full (inactive too) with the courses it is in; its questions with answers; edit; delete

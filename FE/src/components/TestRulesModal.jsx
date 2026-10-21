@@ -12,6 +12,7 @@ import {
   AlertTriangleIcon,
   SparklesIcon,
 } from './Icons';
+import { CustomSelect } from './CustomSelect';
 
 /**
  * TestRulesModal — Official Pre-Exam Instructions & Candidate Declaration Page
@@ -180,16 +181,17 @@ export const TestRulesModal = ({ test, isOpen, onClose, onStartExam, onOpenAuthM
             </span>
           </div>
 
-          <div className="flex items-center gap-1 text-xs text-charcoal-500 font-medium self-end sm:self-auto">
+          <div className="flex items-center gap-1.5 text-xs text-charcoal-500 font-medium self-end sm:self-auto">
             <span>Language:</span>
-            <select
+            <CustomSelect
+              align="right"
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="text-xs font-bold rounded-lg border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 px-2 py-0.5 outline-none cursor-pointer"
+              className="text-xs font-bold rounded-lg border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 px-2 py-0.5 outline-none cursor-pointer min-w-[7rem]"
             >
               <option value="English">English</option>
               <option value="Hindi">हिंदी (Hindi)</option>
-            </select>
+            </CustomSelect>
           </div>
         </div>
 

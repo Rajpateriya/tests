@@ -35,6 +35,7 @@ import {
 
 import { PassDetailModal } from '../components/PassDetailModal';
 import { GlobalGlobeAnimation } from '../components/GlobalGlobeAnimation';
+import { CustomSelect } from '../components/CustomSelect';
 
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
@@ -970,17 +971,17 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               {/* Search & Subject Bar */}
               <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-2.5 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 md:max-w-md">
-                  <select
+                  <CustomSelect
                     value={selectedSubject}
                     onChange={(e) => setSelectedSubject(e.target.value)}
-                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 shrink-0"
+                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 shrink-0 min-w-[10rem]"
                   >
                     <option value="ALL">All Subjects</option>
                     <option value="Quantitative Aptitude">Quantitative Aptitude</option>
                     <option value="General Intelligence & Reasoning">General Intelligence</option>
                     <option value="English Comprehension">English Comprehension</option>
                     <option value="General Awareness">General Awareness</option>
-                  </select>
+                  </CustomSelect>
 
                   <div className="relative flex-1">
                     <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
@@ -1933,11 +1934,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         >
                           Target Examination
                         </label>
-                        <select
+                        <CustomSelect
                           id="contact-exam"
                           value={contactExam}
                           onChange={(e) => setContactExam(e.target.value)}
-                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all"
+                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all font-semibold"
                         >
                           <option value="SSC CGL (Tier I & II)">SSC CGL (Tier I & II)</option>
                           <option value="IBPS & SBI PO (Banking)">IBPS & SBI PO (Banking)</option>
@@ -1945,7 +1946,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                           <option value="State PSC (General Studies)">State PSC (General Studies)</option>
                           <option value="SSC CHSL / CPO Drills">SSC CHSL / CPO Drills</option>
                           <option value="General Inquiry">Other Government Exam</option>
-                        </select>
+                        </CustomSelect>
                       </div>
 
                       {/* Issue Category */}
@@ -1956,18 +1957,18 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         >
                           Grievance Category
                         </label>
-                        <select
+                        <CustomSelect
                           id="contact-category"
                           value={contactCategory}
                           onChange={(e) => setContactCategory(e.target.value)}
-                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all"
+                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all font-semibold"
                         >
                           <option value="Test Engine & Live Timers">Test Engine & Live Timers</option>
                           <option value="Marking & Answer Key Dispute">Marking & Answer Key Dispute</option>
                           <option value="Pass Activation & Billing">Pass Activation & Billing</option>
                           <option value="Question Quality & Mathematical Proofs">Question Quality & Mathematical Proofs</option>
                           <option value="Account & General Assistance">Account & General Assistance</option>
-                        </select>
+                        </CustomSelect>
                       </div>
                     </div>
 

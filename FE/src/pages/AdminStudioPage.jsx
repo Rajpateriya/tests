@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +32,7 @@ import {
   SaveIcon,
   XIcon,
 } from '../components/Icons';
+import { CustomSelect } from '../components/CustomSelect';
 
 const EXAM_OPTIONS = [
   'SSC CGL',
@@ -43,8 +44,12 @@ const EXAM_OPTIONS = [
   'Defence / CDS',
 ];
 
+
 const INPUT_CLS =
   'w-full px-3 py-2 rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500';
+
+const SEARCH_INPUT_CLS =
+  'w-full pl-10 pr-9 py-2 text-xs font-medium rounded-xl border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 placeholder:text-charcoal-400 dark:placeholder:text-charcoal-500 shadow-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 focus:border-institutional-500 transition-all';
 
 const EMPTY_COURSE_FORM = {
   title: '',
@@ -114,7 +119,7 @@ function useDebouncedValue(value, delay = SEARCH_DEBOUNCE_MS) {
 // Pages through the tests, newest first, 20 at a time. Scrolling near the bottom loads the next page
 // (throttled, one request at a time); typing in the search box searches ALL tests on the server once
 // the typing has paused (debounced). `active` switches it on, e.g. while a tab or page is open.
-function usePagedList(active, onError, fetchPage, noun) {
+function usePagedList(active, onError, fetchPage, noun, extraFilters = {}) {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -125,7 +130,7 @@ function usePagedList(active, onError, fetchPage, noun) {
   const fetching = useRef(false); // a page request is in flight (checked synchronously by the scroll handler)
   const scrollTimer = useRef(null); // pending throttled scroll check
   const latest = useRef({}); // newest values, for timers created in an earlier render
-  latest.current = { count: tests.length, search: debouncedSearch, hasMore, onError };
+  latest.current = { count: tests.length, search: debouncedSearch, extraFilters, hasMore, onError };
 
   // `reset` starts again from the newest test; otherwise the next page is appended.
   const load = async (reset) => {
@@ -134,8 +139,13 @@ function usePagedList(active, onError, fetchPage, noun) {
     if (reset) setLoading(true);
     else setLoadingMore(true);
     try {
-      const { count, search: term } = latest.current;
-      const page = await fetchPage({ search: term, skip: reset ? 0 : count, limit: TEST_PAGE_SIZE });
+      const { count, search: term, extraFilters: filters } = latest.current;
+      const page = await fetchPage({
+        search: term,
+        ...(filters || {}),
+        skip: reset ? 0 : count,
+        limit: TEST_PAGE_SIZE,
+      });
       if (mine !== request.current) return;
       setTests((prev) => {
         if (reset) return page;
@@ -166,14 +176,27 @@ function usePagedList(active, onError, fetchPage, noun) {
     }, SCROLL_THROTTLE_MS);
   };
 
+  const filterKey = JSON.stringify(extraFilters);
   useEffect(() => {
     if (active) load(true);
-  }, [active, debouncedSearch]);
+  }, [active, debouncedSearch, filterKey]);
 
   useEffect(() => () => clearTimeout(scrollTimer.current), []);
 
+  const updateItem = (id, fieldsOrUpdater) => {
+    setTests((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        if (typeof fieldsOrUpdater === 'function') return fieldsOrUpdater(item);
+        return { ...item, ...fieldsOrUpdater };
+      })
+    );
+  };
+
   return {
     tests,
+    setTests,
+    updateItem,
     loading,
     loadingMore,
     hasMore,
@@ -185,8 +208,10 @@ function usePagedList(active, onError, fetchPage, noun) {
   };
 }
 
-const usePagedTests = (active, onError) => usePagedList(active, onError, api.admin.listTests, 'tests');
-const usePagedCourses = (active, onError) => usePagedList(active, onError, api.admin.listCourses, 'courses');
+const usePagedTests = (active, onError, extraFilters = {}) =>
+  usePagedList(active, onError, api.admin.listTests, 'tests', extraFilters);
+const usePagedCourses = (active, onError, extraFilters = {}) =>
+  usePagedList(active, onError, api.admin.listCourses, 'courses', extraFilters);
 
 const formatDate = (value) =>
   value ? new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
@@ -251,11 +276,38 @@ export const AdminStudioPage = () => {
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [courseModal, setCourseModal] = useState(null); // null | { mode: 'create' } | { mode: 'edit', course }
   const [courseForm, setCourseForm] = useState(EMPTY_COURSE_FORM);
+  const [pickerExamFilter, setPickerExamFilter] = useState('');
+  const [pickerSubjectFilter, setPickerSubjectFilter] = useState('');
+  const [dbFilterOptions, setDbFilterOptions] = useState({ exams: [], subjects: [] });
+  const [taxonomySubjects, setTaxonomySubjects] = useState([]);
+  const pickerFilters = useMemo(
+    () => ({
+      target_exam: pickerExamFilter,
+      subject: pickerSubjectFilter,
+    }),
+    [pickerExamFilter, pickerSubjectFilter]
+  );
   // The course test picker and the Mock Tests tab each page through the tests with their own state.
-  const picker = usePagedTests(!!courseModal, (msg) => showToast('error', msg));
-  const testsTab = usePagedTests(activeTab === 'tests', (msg) => showToast('error', msg));
+  const picker = usePagedTests(!!courseModal, (msg) => showToast('error', msg), pickerFilters);
+  const [testTabExamFilter, setTestTabExamFilter] = useState('');
+  const [testTabSubjectFilter, setTestTabSubjectFilter] = useState('');
+  const testTabFilters = useMemo(
+    () => ({
+      target_exam: testTabExamFilter,
+      subject: testTabSubjectFilter,
+    }),
+    [testTabExamFilter, testTabSubjectFilter]
+  );
+  const testsTab = usePagedTests(activeTab === 'tests', (msg) => showToast('error', msg), testTabFilters);
+  const [courseTabExamFilter, setCourseTabExamFilter] = useState('');
+  const courseTabFilters = useMemo(
+    () => ({
+      target_exam: courseTabExamFilter,
+    }),
+    [courseTabExamFilter]
+  );
   // The Courses table pages and searches on the server; `courses` above stays the full list (counts, test tags).
-  const coursesTab = usePagedCourses(activeTab === 'courses' && !courseModal, (msg) => showToast('error', msg));
+  const coursesTab = usePagedCourses(activeTab === 'courses' && !courseModal, (msg) => showToast('error', msg), courseTabFilters);
   const {
     tests: availableTests,
     loading: testsLoading,
@@ -342,6 +394,64 @@ export const AdminStudioPage = () => {
   useEffect(() => {
     loadOverviewData();
   }, []);
+
+  useEffect(() => {
+    // Fetch exact filter options from database (taxonomies + tests + courses + questions)
+    api.admin?.getTestFilterOptions?.()
+      .then((res) => {
+        const data = res?.data || res || {};
+        if (Array.isArray(data.exams) || Array.isArray(data.subjects)) {
+          setDbFilterOptions({
+            exams: Array.isArray(data.exams) ? data.exams : [],
+            subjects: Array.isArray(data.subjects) ? data.subjects : [],
+          });
+        }
+      })
+      .catch(() => {});
+
+    api.generation?.listTaxonomies?.()
+      .then((res) => {
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (Array.isArray(list)) {
+          const subs = list.map((item) => (typeof item === 'string' ? item : item.subject)).filter(Boolean);
+          setTaxonomySubjects(subs);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const pickerSubjectOptions = useMemo(() => {
+    const set = new Set(dbFilterOptions.subjects);
+    taxonomySubjects.forEach((s) => set.add(s));
+    (availableTests || []).forEach((t) => {
+      if (t.subject) set.add(t.subject);
+    });
+    if (courseModal?.course?.quizzes) {
+      courseModal.course.quizzes.forEach((q) => {
+        if (q.subject) set.add(q.subject);
+      });
+    }
+    return Array.from(set).filter(Boolean).sort();
+  }, [dbFilterOptions.subjects, taxonomySubjects, availableTests, courseModal]);
+
+  const pickerExamOptions = useMemo(() => {
+    const set = new Set(dbFilterOptions.exams);
+    (availableTests || []).forEach((t) => {
+      const exam = t.target_exam || t.exam;
+      if (exam) set.add(exam);
+    });
+    if (courseModal?.course?.quizzes) {
+      courseModal.course.quizzes.forEach((q) => {
+        const exam = q.target_exam || q.exam;
+        if (exam) set.add(exam);
+      });
+    }
+    (courses || []).forEach((c) => {
+      const exam = c.target_exam || c.exam;
+      if (exam) set.add(exam);
+    });
+    return Array.from(set).filter(Boolean).sort();
+  }, [dbFilterOptions.exams, availableTests, courseModal, courses]);
 
   useEffect(() => {
     if (activeTab === 'users') fetchUsers(currentPage); // the user list is only needed on its own tab
@@ -483,8 +593,13 @@ export const AdminStudioPage = () => {
   };
 
   const openCreateCourse = () => {
-    setCourseForm(EMPTY_COURSE_FORM);
+    setCourseForm({
+      ...EMPTY_COURSE_FORM,
+      target_exam: pickerExamOptions[0] || 'SSC CGL',
+    });
     setTestSearch('');
+    setPickerExamFilter('');
+    setPickerSubjectFilter('');
     setCourseModal({ mode: 'create' });
   };
 
@@ -504,6 +619,8 @@ export const AdminStudioPage = () => {
   const openEditCourse = async (course) => {
     setCourseForm(formFromCourse(course));
     setTestSearch('');
+    setPickerExamFilter('');
+    setPickerSubjectFilter('');
     setCourseModal({ mode: 'edit', course });
     setCourseDetailLoading(true);
     try {
@@ -561,13 +678,16 @@ export const AdminStudioPage = () => {
       if (courseModal.mode === 'create') {
         await api.admin.createCourse({ ...payload, test_ids: courseForm.test_ids });
         showToast('success', `Course "${payload.title}" created as a draft. Press Publish when it is ready for users.`);
+        coursesLoaded.current = false;
+        coursesTab.reload();
       } else {
-        await api.admin.updateCourse(courseModal.course.id, { ...payload, test_ids: courseForm.test_ids });
+        const updated = await api.admin.updateCourse(courseModal.course.id, { ...payload, test_ids: courseForm.test_ids });
         showToast('success', `Course "${payload.title}" updated.`);
+        const patch = updated || payload;
+        coursesTab.updateItem(courseModal.course.id, patch);
+        setCourses((prev) => prev.map((c) => (c.id === courseModal.course.id ? { ...c, ...patch } : c)));
       }
       setCourseModal(null);
-      coursesLoaded.current = false; // the Mock Tests tab refetches its course tags next time
-      coursesTab.reload();
     } catch (err) {
       showToast('error', err.message);
     } finally {
@@ -583,21 +703,26 @@ export const AdminStudioPage = () => {
         'success',
         publishing ? `"${course.title}" is now published and visible to users.` : `"${course.title}" is back to draft.`
       );
-      // Keep an open details pop-up in step with the new status
-      setCourseModal((m) => (m && m.mode === 'edit' && m.course.id === course.id ? { ...m, course: updated } : m));
-      coursesLoaded.current = false;
-      coursesTab.reload();
+      // In-place local update: updates the course in table & modal without making another GET request
+      const patch = updated || { is_published: publishing };
+      coursesTab.updateItem(course.id, patch);
+      setCourses((prev) => prev.map((c) => (c.id === course.id ? { ...c, ...patch } : c)));
+      setCourseModal((m) => (m && m.mode === 'edit' && m.course.id === course.id ? { ...m, course: { ...m.course, ...patch } } : m));
     } catch (err) {
       showToast('error', err.message);
     }
   };
 
   const handleToggleCourseActive = async (course) => {
+    const nextActive = !course.is_active;
     try {
-      await api.admin.updateCourse(course.id, { is_active: !course.is_active });
+      const updated = await api.admin.updateCourse(course.id, { is_active: nextActive });
       showToast('success', course.is_active ? `"${course.title}" archived.` : `"${course.title}" restored.`);
-      coursesLoaded.current = false;
-      coursesTab.reload();
+      // In-place local update: updates the course in table & modal without making another GET request
+      const patch = updated || { is_active: nextActive };
+      coursesTab.updateItem(course.id, patch);
+      setCourses((prev) => prev.map((c) => (c.id === course.id ? { ...c, ...patch } : c)));
+      setCourseModal((m) => (m && m.mode === 'edit' && m.course.id === course.id ? { ...m, course: { ...m.course, ...patch } } : m));
     } catch (err) {
       showToast('error', err.message);
     }
@@ -645,7 +770,27 @@ export const AdminStudioPage = () => {
   const closeTest = () => {
     setTestDetail(null);
     setConfirmDelete(false);
-    testsTab.reload();
+  };
+
+  const handleToggleTestFree = async (test) => {
+    const nextFree = !test.is_free;
+    try {
+      const updated = await api.admin.updateTest(test.id, { is_free: nextFree });
+      showToast(
+        'success',
+        nextFree
+          ? `"${test.title}" is now Free for all students.`
+          : `"${test.title}" is now Paid.`
+      );
+      const patch = updated || { is_free: nextFree };
+      testsTab.updateItem(test.id, patch);
+      if (testDetail?.test?.id === test.id) {
+        setTestDetail((d) => ({ ...d, test: { ...d.test, ...patch } }));
+        setTestForm((f) => ({ ...f, is_free: nextFree }));
+      }
+    } catch (err) {
+      showToast('error', err.message);
+    }
   };
 
   const handleSaveTest = async (e) => {
@@ -673,8 +818,9 @@ export const AdminStudioPage = () => {
       });
       setTestDetail((d) => ({ ...d, test: updated }));
       setTestForm(formFromTest(updated));
+      // In-place update so Mock Tests table doesn't trigger a full GET request
+      testsTab.updateItem(updated.id, updated);
       showToast('success', `Test "${updated.title}" updated${updated.courses.length ? ' in its courses too' : ''}.`);
-      await loadCourses();
     } catch (err) {
       showToast('error', err.message);
     } finally {
@@ -692,8 +838,8 @@ export const AdminStudioPage = () => {
       showToast('success', `"${r.title}" deleted${r.removed_from_courses.length ? ' and removed from its courses' : ''}.${drafted}`);
       setTestDetail(null);
       setConfirmDelete(false);
-      testsTab.reload();
-      await loadCourses();
+      // Remove deleted item locally without full reload
+      testsTab.setTests((prev) => prev.filter((t) => t.id !== testDetail.test.id));
       loadOverviewData();
     } catch (err) {
       setConfirmDelete(false);
@@ -942,24 +1088,59 @@ export const AdminStudioPage = () => {
   };
 
   // The picker shows the loaded pages, plus the tests already tagged to this course that are not
-  // loaded yet (matching the search), so a tagged test can always be un-ticked.
-  const pickerTests = (() => {
-    const known = new Set(availableTests.map((t) => t.id));
+  // loaded yet (matching the search and filters), so a tagged test can always be un-ticked.
+  const pickerTests = useMemo(() => {
+    const known = new Set((availableTests || []).map((t) => t.id));
     const term = testSearch.trim().toLowerCase();
+    const examFilter = pickerExamFilter.trim().toLowerCase();
+    const subjectFilter = pickerSubjectFilter.trim().toLowerCase();
+
     const tagged = courseModal?.course
       ? taggedQuizzes(courseModal.course)
           .filter((q) => !known.has(q.id))
           .filter((q) => !term || q.title?.toLowerCase().includes(term) || q.subject?.toLowerCase().includes(term))
+          .filter((q) => !examFilter || (q.target_exam || q.exam || '').toLowerCase().includes(examFilter) || examFilter.includes((q.target_exam || q.exam || '').toLowerCase()))
+          .filter((q) => !subjectFilter || (q.subject || '').toLowerCase().includes(subjectFilter) || subjectFilter.includes((q.subject || '').toLowerCase()))
           .map((q) => ({
             id: q.id,
             title: q.title,
             subject: q.subject,
+            target_exam: q.target_exam || q.exam,
             total_questions: q.total_questions,
             duration_minutes: q.duration_minutes,
           }))
       : [];
-    return [...tagged, ...availableTests];
-  })();
+
+    const filteredAvailable = (availableTests || []).filter((t) => {
+      const tExam = (t.target_exam || t.exam || '').toLowerCase();
+      const tSub = (t.subject || '').toLowerCase();
+      if (examFilter && !tExam.includes(examFilter) && !examFilter.includes(tExam)) return false;
+      if (subjectFilter && !tSub.includes(subjectFilter) && !subjectFilter.includes(tSub)) return false;
+      return true;
+    });
+
+    return [...tagged, ...filteredAvailable];
+  }, [availableTests, courseModal, testSearch, pickerExamFilter, pickerSubjectFilter]);
+
+  const allFilteredSelected = pickerTests.length > 0 && pickerTests.every((t) => courseForm.test_ids.includes(t.id));
+  const someFilteredSelected = pickerTests.some((t) => courseForm.test_ids.includes(t.id));
+  const selectedFilteredCount = pickerTests.filter((t) => courseForm.test_ids.includes(t.id)).length;
+
+  const toggleSelectAllFiltered = () => {
+    if (allFilteredSelected) {
+      const displayedIds = new Set(pickerTests.map((t) => t.id));
+      setCourseForm((prev) => ({
+        ...prev,
+        test_ids: prev.test_ids.filter((id) => !displayedIds.has(id)),
+      }));
+    } else {
+      const displayedIds = pickerTests.map((t) => t.id);
+      setCourseForm((prev) => ({
+        ...prev,
+        test_ids: Array.from(new Set([...prev.test_ids, ...displayedIds])),
+      }));
+    }
+  };
 
   // For the Mock Tests tab: which courses each test is tagged to (from the course list already loaded)
   const testCourses = {};
@@ -1197,32 +1378,32 @@ export const AdminStudioPage = () => {
               {/* Filters row: Role & Status stay grouped side-by-side */}
               <div className="flex items-center gap-2 shrink-0">
                 {/* Role filter */}
-                <select
+                <CustomSelect
                   value={roleFilter}
                   onChange={(e) => {
                     setRoleFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer"
+                  className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer min-w-[7rem]"
                 >
                   <option value="">All Roles</option>
                   <option value="user">Regular Users</option>
                   <option value="admin">Administrators</option>
-                </select>
+                </CustomSelect>
 
                 {/* Status filter */}
-                <select
+                <CustomSelect
                   value={statusFilter}
                   onChange={(e) => {
                     setStatusFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer"
+                  className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer min-w-[7.5rem]"
                 >
                   <option value="">All Statuses</option>
                   <option value="active">Active Only</option>
                   <option value="inactive">Suspended Only</option>
-                </select>
+                </CustomSelect>
 
                 {(searchQuery || roleFilter || statusFilter) && (
                   <button
@@ -1576,7 +1757,7 @@ export const AdminStudioPage = () => {
                   <label className="text-charcoal-700 dark:text-charcoal-300 font-bold">
                     System Role ("Make Admin")
                   </label>
-                  <select
+                  <CustomSelect
                     value={editForm.role}
                     onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                     disabled={currentAdmin?.id === selectedUser.id}
@@ -1585,12 +1766,12 @@ export const AdminStudioPage = () => {
                     <option value="user">Regular User</option>
                     <option value="student">Student Aspirant (Legacy)</option>
                     <option value="admin">Administrator (Admin Studio Access)</option>
-                  </select>
+                  </CustomSelect>
                 </div>
 
                 <div className="space-y-1 text-left">
                   <label className="text-charcoal-700 dark:text-charcoal-300 font-bold">Account Status</label>
-                  <select
+                  <CustomSelect
                     value={editForm.is_active ? 'active' : 'inactive'}
                     onChange={(e) => setEditForm({ ...editForm, is_active: e.target.value === 'active' })}
                     disabled={currentAdmin?.id === selectedUser.id}
@@ -1598,7 +1779,7 @@ export const AdminStudioPage = () => {
                   >
                     <option value="active">Active (Access Allowed)</option>
                     <option value="inactive">Suspended (Access Disabled)</option>
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 
@@ -1631,7 +1812,7 @@ export const AdminStudioPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1 text-left">
                   <label className="text-charcoal-700 dark:text-charcoal-300 font-bold">Subscription Plan</label>
-                  <select
+                  <CustomSelect
                     value={editForm.subscription_plan}
                     onChange={(e) => setEditForm({ ...editForm, subscription_plan: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500"
@@ -1640,12 +1821,12 @@ export const AdminStudioPage = () => {
                     <option value="PRO">PRO Pass</option>
                     <option value="ELITE">ELITE Pass</option>
                     <option value="NONE">NONE (Admin)</option>
-                  </select>
+                  </CustomSelect>
                 </div>
 
                 <div className="space-y-1 text-left">
                   <label className="text-charcoal-700 dark:text-charcoal-300 font-bold">Subscription Status</label>
-                  <select
+                  <CustomSelect
                     value={editForm.subscription_status}
                     onChange={(e) => setEditForm({ ...editForm, subscription_status: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500"
@@ -1653,7 +1834,7 @@ export const AdminStudioPage = () => {
                     <option value="ACTIVE">ACTIVE</option>
                     <option value="INACTIVE">INACTIVE</option>
                     <option value="EXPIRED">EXPIRED</option>
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 
@@ -1743,32 +1924,53 @@ export const AdminStudioPage = () => {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-start gap-3 w-full sm:w-auto">
-            <div className="w-full sm:w-72 space-y-1">
-              <div className="relative">
-                <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+              <div className="relative w-full sm:w-72">
+                <SearchIcon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 pointer-events-none" />
                 <input
                   type="text"
                   value={coursesTab.search}
                   onChange={(e) => coursesTab.setSearch(e.target.value)}
-                  placeholder="Search courses by title or exam"
-                  className={`${INPUT_CLS} pl-9`}
+                  placeholder="Search courses by title or exam..."
+                  className={SEARCH_INPUT_CLS}
                 />
+                {coursesTab.pending ? (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className="w-3.5 h-3.5 border-2 border-institutional-600 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : coursesTab.search ? (
+                  <button
+                    type="button"
+                    onClick={() => coursesTab.setSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 rounded-md transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <XIcon size={13} />
+                  </button>
+                ) : null}
               </div>
-              {coursesTab.pending && (
-                <p className="text-[11px] text-charcoal-400 font-medium">
-                  Searching {SEARCH_DEBOUNCE_MS / 1000} second{SEARCH_DEBOUNCE_MS === 1000 ? '' : 's'} after you stop typing...
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={openCreateCourse}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 active:bg-institutional-800 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer shrink-0"
-            >
-              <PlusIcon size={14} />
-              <span>New Course</span>
-            </button>
+
+              <CustomSelect
+                value={courseTabExamFilter}
+                onChange={(e) => setCourseTabExamFilter(e.target.value)}
+                className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer min-w-[7.5rem]"
+              >
+                <option value="">All Exams ({pickerExamOptions.length})</option>
+                {pickerExamOptions.map((exam) => (
+                  <option key={exam} value={exam}>
+                    {exam}
+                  </option>
+                ))}
+              </CustomSelect>
+
+              <button
+                type="button"
+                onClick={openCreateCourse}
+                className="py-2 inline-flex items-center justify-center gap-2 px-3.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 active:bg-institutional-800 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer shrink-0"
+              >
+                <PlusIcon size={14} />
+                <span>New Course</span>
+              </button>
             </div>
           </div>
 
@@ -1802,9 +2004,23 @@ export const AdminStudioPage = () => {
                 ) : coursesTab.tests.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-charcoal-400">
-                      {coursesTab.search.trim()
-                        ? `No course matches "${coursesTab.search.trim()}".`
-                        : 'No courses yet. Click "New Course" to create one and tag your generated mocks to it.'}
+                      {coursesTab.search.trim() || courseTabExamFilter ? (
+                        <div className="space-y-1.5">
+                          <div>No course matches the current filters.</div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              coursesTab.setSearch('');
+                              setCourseTabExamFilter('');
+                            }}
+                            className="text-xs text-institutional-600 dark:text-institutional-400 font-bold hover:underline cursor-pointer"
+                          >
+                            Clear filters
+                          </button>
+                        </div>
+                      ) : (
+                        'No courses yet. Click "New Course" to create one and tag your generated mocks to it.'
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -2022,15 +2238,15 @@ export const AdminStudioPage = () => {
 
               <div className="space-y-1 text-left">
                 <label className="text-charcoal-700 dark:text-charcoal-300 font-bold">Target Exam</label>
-                <select
+                <CustomSelect
                   value={courseForm.target_exam}
                   onChange={(e) => setCourseForm({ ...courseForm, target_exam: e.target.value })}
                   className={INPUT_CLS}
                 >
-                  {EXAM_OPTIONS.map((exam) => (
+                  {(pickerExamOptions.length > 0 ? pickerExamOptions : [courseForm.target_exam || 'SSC CGL']).map((exam) => (
                     <option key={exam} value={exam}>{exam}</option>
                   ))}
-                </select>
+                </CustomSelect>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -2094,20 +2310,148 @@ export const AdminStudioPage = () => {
               )}
 
               <div className="relative">
-                <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
+                <SearchIcon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 pointer-events-none" />
                 <input
                   type="text"
                   value={testSearch}
                   onChange={(e) => setTestSearch(e.target.value)}
-                  placeholder="Search tests by title or subject"
-                  className={`${INPUT_CLS} pl-9`}
+                  placeholder="Search tests by title or subject..."
+                  className={SEARCH_INPUT_CLS}
                 />
+                {testSearchPending ? (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className="w-3.5 h-3.5 border-2 border-institutional-600 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : testSearch ? (
+                  <button
+                    type="button"
+                    onClick={() => setTestSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 rounded-md transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <XIcon size={13} />
+                  </button>
+                ) : null}
               </div>
-              {testSearchPending && (
-                <p className="text-[11px] text-charcoal-400 font-medium -mt-1.5">
-                  Searching {SEARCH_DEBOUNCE_MS / 1000} second{SEARCH_DEBOUNCE_MS === 1000 ? '' : 's'} after you stop typing...
-                </p>
-              )}
+
+              {/* Target Exam and Subject Dropdowns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400">
+                      Target Exam
+                    </label>
+                    {pickerExamFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setPickerExamFilter('')}
+                        className="text-[10px] text-institutional-600 dark:text-institutional-400 font-bold hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <CustomSelect
+                    value={pickerExamFilter}
+                    onChange={(e) => setPickerExamFilter(e.target.value)}
+                    className={`${INPUT_CLS} py-2 text-xs font-semibold`}
+                  >
+                    <option value="">All Exams ({pickerExamOptions.length})</option>
+                    {pickerExamOptions.map((exam) => (
+                      <option key={exam} value={exam}>
+                        {exam}
+                      </option>
+                    ))}
+                  </CustomSelect>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400">
+                      Subject
+                    </label>
+                    {pickerSubjectFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setPickerSubjectFilter('')}
+                        className="text-[10px] text-institutional-600 dark:text-institutional-400 font-bold hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <CustomSelect
+                    value={pickerSubjectFilter}
+                    onChange={(e) => setPickerSubjectFilter(e.target.value)}
+                    className={`${INPUT_CLS} py-2 text-xs font-semibold`}
+                  >
+                    <option value="">All Subjects ({pickerSubjectOptions.length})</option>
+                    {pickerSubjectOptions.map((subj) => (
+                      <option key={subj} value={subj}>
+                        {subj}
+                      </option>
+                    ))}
+                  </CustomSelect>
+                </div>
+              </div>
+
+              {/* Select All & Summary Action Bar */}
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800/80 border border-charcoal-200 dark:border-charcoal-700/80 text-xs">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someFilteredSelected && !allFilteredSelected;
+                    }}
+                    onChange={toggleSelectAllFiltered}
+                    disabled={pickerTests.length === 0}
+                    className="w-4 h-4 accent-institutional-600 rounded cursor-pointer disabled:opacity-40"
+                  />
+                  <span className="font-extrabold text-charcoal-800 dark:text-charcoal-200">
+                    Select All
+                  </span>
+                  <span className="text-[11px] text-charcoal-400 font-medium">
+                    ({pickerTests.length})
+                  </span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-charcoal-500 dark:text-charcoal-400 font-semibold">
+                    {selectedFilteredCount}/{pickerTests.length} selected
+                  </span>
+                  {selectedFilteredCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const displayedIds = new Set(pickerTests.map((t) => t.id));
+                        setCourseForm((prev) => ({
+                          ...prev,
+                          test_ids: prev.test_ids.filter((id) => !displayedIds.has(id)),
+                        }));
+                      }}
+                      className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md border border-charcoal-300 dark:border-charcoal-600 text-charcoal-600 dark:text-charcoal-300 hover:bg-charcoal-200 dark:hover:bg-charcoal-700 transition-colors cursor-pointer"
+                    >
+                      Deselect
+                    </button>
+                  )}
+                  {selectedFilteredCount < pickerTests.length && pickerTests.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const displayedIds = pickerTests.map((t) => t.id);
+                        setCourseForm((prev) => ({
+                          ...prev,
+                          test_ids: Array.from(new Set([...prev.test_ids, ...displayedIds])),
+                        }));
+                      }}
+                      className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md bg-institutional-600 text-white hover:bg-institutional-700 transition-colors cursor-pointer"
+                    >
+                      Select All
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <div
                 onScroll={handleTestListScroll}
@@ -2115,11 +2459,28 @@ export const AdminStudioPage = () => {
               >
                 {testsLoading ? (
                   <div className="py-10 text-center text-charcoal-400 font-medium">
-                    {testSearch.trim() ? 'Searching all tests...' : 'Loading tests...'}
+                    {testSearch.trim() || pickerExamFilter || pickerSubjectFilter ? 'Searching tests...' : 'Loading tests...'}
                   </div>
                 ) : pickerTests.length === 0 ? (
-                  <div className="py-10 text-center text-charcoal-400 font-medium">
-                    {testSearch.trim() ? `No test matches "${testSearch.trim()}".` : 'No generated tests yet. Assemble some in the AI Pipeline first.'}
+                  <div className="py-10 px-4 text-center text-charcoal-400 font-medium">
+                    {testSearch.trim() || pickerExamFilter || pickerSubjectFilter ? (
+                      <div className="space-y-1.5">
+                        <div>No test matches the selected filters.</div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTestSearch('');
+                            setPickerExamFilter('');
+                            setPickerSubjectFilter('');
+                          }}
+                          className="text-xs text-institutional-600 dark:text-institutional-400 font-bold hover:underline cursor-pointer"
+                        >
+                          Clear all filters
+                        </button>
+                      </div>
+                    ) : (
+                      'No generated tests yet. Assemble some in the AI Pipeline first.'
+                    )}
                   </div>
                 ) : (
                   pickerTests.map((t) => {
@@ -2135,12 +2496,21 @@ export const AdminStudioPage = () => {
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleCourseTest(t.id)}
-                          className="w-4 h-4 accent-institutional-600 shrink-0"
+                          className="w-4 h-4 accent-institutional-600 shrink-0 cursor-pointer"
                         />
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-charcoal-900 dark:text-white truncate">{t.title}</div>
-                          <div className="text-[11px] text-charcoal-400 font-medium">
-                            {t.subject || 'All subjects'} • {t.total_questions} Qs • {t.duration_minutes} min
+                          <div className="text-[11px] text-charcoal-400 font-medium flex items-center gap-1.5 flex-wrap mt-0.5">
+                            {(t.target_exam || t.exam) && (
+                              <span className="px-1.5 py-0.2 rounded bg-charcoal-200/70 dark:bg-charcoal-700 text-charcoal-700 dark:text-charcoal-300 text-[10px] font-bold">
+                                {t.target_exam || t.exam}
+                              </span>
+                            )}
+                            <span className="text-charcoal-600 dark:text-charcoal-300 font-semibold">{t.subject || 'All subjects'}</span>
+                            <span>•</span>
+                            <span>{t.total_questions} Qs</span>
+                            <span>•</span>
+                            <span>{t.duration_minutes} min</span>
                           </div>
                         </div>
                       </label>
@@ -2264,47 +2634,81 @@ export const AdminStudioPage = () => {
               </p>
             </div>
 
-            <div className="w-full lg:w-80 space-y-1">
-              <div className="relative">
-                <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+              <div className="relative w-full sm:w-72">
+                <SearchIcon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 pointer-events-none" />
                 <input
                   type="text"
                   value={testsTab.search}
                   onChange={(e) => testsTab.setSearch(e.target.value)}
-                  placeholder="Search tests by title or subject"
-                  className={`${INPUT_CLS} pl-9`}
+                  placeholder="Search tests by title or subject..."
+                  className={SEARCH_INPUT_CLS}
                 />
+                {testsTab.pending ? (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className="w-3.5 h-3.5 border-2 border-institutional-600 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : testsTab.search ? (
+                  <button
+                    type="button"
+                    onClick={() => testsTab.setSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 rounded-md transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <XIcon size={13} />
+                  </button>
+                ) : null}
               </div>
-              {testsTab.pending && (
-                <p className="text-[11px] text-charcoal-400 font-medium">
-                  Searching {SEARCH_DEBOUNCE_MS / 1000} second{SEARCH_DEBOUNCE_MS === 1000 ? '' : 's'} after you stop typing...
-                </p>
-              )}
+
+              <CustomSelect
+                value={testTabExamFilter}
+                onChange={(e) => setTestTabExamFilter(e.target.value)}
+                className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer min-w-[7.5rem]"
+              >
+                <option value="">All Exams ({pickerExamOptions.length})</option>
+                {pickerExamOptions.map((exam) => (
+                  <option key={exam} value={exam}>
+                    {exam}
+                  </option>
+                ))}
+              </CustomSelect>
+
+              <CustomSelect
+                value={testTabSubjectFilter}
+                onChange={(e) => setTestTabSubjectFilter(e.target.value)}
+                className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer min-w-[7.5rem]"
+              >
+                <option value="">All Subjects ({pickerSubjectOptions.length})</option>
+                {pickerSubjectOptions.map((subj) => (
+                  <option key={subj} value={subj}>
+                    {subj}
+                  </option>
+                ))}
+              </CustomSelect>
             </div>
           </div>
 
           <div
             onScroll={testsTab.onScroll}
-            className="max-h-[34rem] overflow-auto rounded-2xl border border-charcoal-200 dark:border-charcoal-800 scrollbar-thin"
+            className="max-h-[34rem] overflow-y-auto overflow-x-hidden rounded-2xl border border-charcoal-200 dark:border-charcoal-800 scrollbar-thin"
           >
-            <table className="w-full min-w-[760px] text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-xs">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-charcoal-50 dark:bg-charcoal-800 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">Test</th>
-                  <th className="py-3 px-3">Type</th>
-                  <th className="py-3 px-3">Subject</th>
                   <th className="py-3 px-3">Exam</th>
+                  <th className="py-3 px-3">Subject</th>
                   <th className="py-3 px-3">Questions</th>
                   <th className="py-3 px-3">Duration</th>
                   <th className="py-3 px-3">Marks</th>
-                  <th className="py-3 px-3">Created</th>
-                  <th className="py-3 px-4">In Courses</th>
+                  <th className="py-3 px-3">In Courses</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800 font-semibold">
                 {testsTab.loading ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-charcoal-400">
+                    <td colSpan={8} className="py-12 text-center text-charcoal-400">
                       <div className="inline-flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-institutional-600 border-t-transparent rounded-full animate-spin" />
                         <span>{testsTab.search.trim() ? 'Searching all tests...' : 'Loading tests...'}</span>
@@ -2313,10 +2717,25 @@ export const AdminStudioPage = () => {
                   </tr>
                 ) : testsTab.tests.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-charcoal-400">
-                      {testsTab.search.trim()
-                        ? `No test matches "${testsTab.search.trim()}".`
-                        : 'No tests yet. Assemble some in the AI Pipeline.'}
+                    <td colSpan={8} className="py-12 text-center text-charcoal-400">
+                      {testsTab.search.trim() || testTabExamFilter || testTabSubjectFilter ? (
+                        <div className="space-y-1.5">
+                          <div>No test matches the current filters.</div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              testsTab.setSearch('');
+                              setTestTabExamFilter('');
+                              setTestTabSubjectFilter('');
+                            }}
+                            className="text-xs text-institutional-600 dark:text-institutional-400 font-bold hover:underline cursor-pointer"
+                          >
+                            Clear filters
+                          </button>
+                        </div>
+                      ) : (
+                        'No tests yet. Assemble some in the AI Pipeline.'
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -2326,9 +2745,11 @@ export const AdminStudioPage = () => {
                       onClick={() => openTest(t)}
                       className="hover:bg-institutional-50/60 dark:hover:bg-charcoal-800/50 transition-colors cursor-pointer"
                     >
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <div className="font-extrabold text-charcoal-900 dark:text-white truncate max-w-[16rem]">{t.title}</div>
+                      <td className="py-3 px-4 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className="font-extrabold text-charcoal-900 dark:text-white truncate max-w-[13rem] sm:max-w-[16rem]" title={t.title}>
+                            {t.title}
+                          </div>
                           <span className={`shrink-0 inline-flex px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase ${
                             t.is_free
                               ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
@@ -2337,15 +2758,20 @@ export const AdminStudioPage = () => {
                             {t.is_free ? 'Free' : 'Paid'}
                           </span>
                         </div>
-                        <div className="text-[11px] text-charcoal-400 font-mono truncate max-w-[18rem]">{t.id}</div>
+                        <div className="text-[11px] text-charcoal-400 font-mono truncate max-w-[16rem] flex items-center gap-1.5 mt-0.5">
+                          <span>{t.id.slice(0, 10)}...</span>
+                          <span>•</span>
+                          <span className="uppercase text-[9px] font-bold px-1 py-0.2 rounded bg-institutional-50 dark:bg-institutional-950/60 text-institutional-600 dark:text-institutional-400">
+                            {t.test_type}
+                          </span>
+                          <span>•</span>
+                          <span>{formatDate(t.created_at)}</span>
+                        </div>
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-institutional-100 dark:bg-institutional-950/60 text-institutional-700 dark:text-institutional-300">
-                          {t.test_type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-charcoal-700 dark:text-charcoal-300 whitespace-nowrap">{t.subject || 'All subjects'}</td>
                       <td className="py-3 px-3 text-charcoal-700 dark:text-charcoal-300 whitespace-nowrap">{t.target_exam}</td>
+                      <td className="py-3 px-3 text-charcoal-700 dark:text-charcoal-300 truncate max-w-[9rem]" title={t.subject || 'All subjects'}>
+                        {t.subject || 'All subjects'}
+                      </td>
                       <td className="py-3 px-3 font-mono text-charcoal-800 dark:text-charcoal-200">{t.total_questions}</td>
                       <td className="py-3 px-3 font-mono text-charcoal-800 dark:text-charcoal-200 whitespace-nowrap">{t.duration_minutes} min</td>
                       <td className="py-3 px-3 font-mono whitespace-nowrap">
@@ -2353,14 +2779,13 @@ export const AdminStudioPage = () => {
                         <span className="text-charcoal-300 dark:text-charcoal-600"> / </span>
                         <span className="text-rose-600 dark:text-rose-400">-{t.negative_marks_per_q}</span>
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap text-charcoal-600 dark:text-charcoal-400">{formatDate(t.created_at)}</td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3">
                         {testCourses[t.id] ? (
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1 max-w-[8.5rem]">
                             {testCourses[t.id].map((title) => (
                               <span
                                 key={title}
-                                className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 truncate max-w-[10rem]"
+                                className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 truncate max-w-[8rem]"
                                 title={title}
                               >
                                 {title}
@@ -2368,8 +2793,39 @@ export const AdminStudioPage = () => {
                             ))}
                           </div>
                         ) : (
-                          <span className="text-charcoal-300 dark:text-charcoal-600">Not in a course</span>
+                          <span className="text-charcoal-300 dark:text-charcoal-600 text-[11px]">None</span>
                         )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openTest(t);
+                            }}
+                            title="Open test details"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-institutional-300 dark:border-institutional-800 bg-institutional-50 dark:bg-institutional-950/50 text-institutional-700 dark:text-institutional-300 hover:bg-institutional-100 dark:hover:bg-institutional-900 transition-colors cursor-pointer"
+                          >
+                            <EditIcon size={12} />
+                            <span>Open</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleTestFree(t);
+                            }}
+                            title={t.is_free ? 'Convert this test to Paid' : 'Convert this test to Free'}
+                            className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                              t.is_free
+                                ? 'border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-100 dark:hover:bg-charcoal-700'
+                                : 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900'
+                            }`}
+                          >
+                            {t.is_free ? 'Make Paid' : 'Make Free'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

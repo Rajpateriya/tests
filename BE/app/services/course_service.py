@@ -524,12 +524,14 @@ class CourseService:
         return await self._admin_out(course)
 
     async def list_all_for_admin(
-        self, search: Optional[str] = None, skip: int = 0, limit: int = 500
+        self, search: Optional[str] = None, target_exam: Optional[str] = None, skip: int = 0, limit: int = 500
     ) -> List[CourseAdminOut]:
         query: Dict[str, Any] = {}
         if search and search.strip():
             rx = {"$regex": re.escape(search.strip()), "$options": "i"}
             query["$or"] = [{"title": rx}, {"target_exam": rx}]
+        if target_exam and target_exam.strip():
+            query["target_exam"] = {"$regex": f"^{re.escape(target_exam.strip())}$", "$options": "i"}
         docs = (
             await self.db.courses.find(query).sort([("created_at", -1), ("_id", 1)]).skip(skip).to_list(length=limit)
         )

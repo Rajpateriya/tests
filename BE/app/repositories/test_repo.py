@@ -28,11 +28,11 @@ class TestRepository(BaseRepository):
         if test_type:
             query["test_type"] = test_type
         if subject:
-            query["subject"] = {"$regex": f"^{subject}$", "$options": "i"}
+            query["subject"] = {"$regex": f"^{re.escape(subject.strip())}$", "$options": "i"}
         if topic:
-            query["topic"] = {"$regex": f"^{topic}$", "$options": "i"}
+            query["topic"] = {"$regex": f"^{re.escape(topic.strip())}$", "$options": "i"}
         if target_exam:
-            query["target_exam"] = {"$regex": f"^{target_exam}$", "$options": "i"}
+            query["target_exam"] = {"$regex": f"^{re.escape(target_exam.strip())}$", "$options": "i"}
         if search and search.strip():
             term = {"$regex": re.escape(search.strip()), "$options": "i"}
             query["$or"] = [{"title": term}, {"subject": term}]

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../../services/api';
 import { UploadIcon } from '../Icons';
+import { CustomSelect } from '../CustomSelect';
 import { Alert, BTN_PRIMARY, Busy, Dropzone, Field, INPUT_CLS, Section, Segmented, Stats, StepCard } from './PipelineUI';
 import { errorText } from './pipelineUtils';
 
@@ -87,10 +88,10 @@ export const UploadStep = ({ subject, taxonomyDoc, targetExam, onUploaded }) => 
                   : 'Leave on Auto for mixed papers: each question is tagged from the list.'
             }
           >
-            <select className={INPUT_CLS} value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
+            <CustomSelect className={INPUT_CLS} value={subSubject} onChange={(e) => setSubSubject(e.target.value)} disabled={!subSubjects.length}>
               <option value="">{subSubjects.length ? 'Auto — LLM picks from the list' : '—'}</option>
               {subSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </CustomSelect>
           </Field>
         </div>
       </Section>

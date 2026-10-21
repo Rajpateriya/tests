@@ -10,7 +10,7 @@ import {
   LockIcon,
   KeyIcon,
   EyeIcon,
-  EyeOffIcon,
+  EyeOffIcon, 
   CameraIcon,
   CheckIcon,
   PlusIcon,
