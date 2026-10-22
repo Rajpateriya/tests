@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { RazorpayModal } from '../components/RazorpayModal';
 import { ROUTES } from '../routes';
+import { useSEO } from '../hooks/useSEO';
 import {
   ChevronRightIcon,
   CheckCircleIcon,
@@ -45,6 +46,10 @@ const PAGE_MAIN = 'relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5
 
 export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backLabel = 'Courses' }) => {
   const navigate = useNavigate();
+  useSEO({
+    title: course?.title ? `${course.title} — Test Series & Quizzes` : 'Exam Test Series Details',
+    description: course?.description || 'Access official mock exams, subject-wise quizzes, and performance analytics calibrated for government job examinations.',
+  });
   const { user } = useAuth();
   const { addToCart, isInCart, refreshCart } = useCart();
   const [addingToCart, setAddingToCart] = useState(false);

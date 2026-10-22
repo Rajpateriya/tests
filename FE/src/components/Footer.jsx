@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate, useLocation, Link } from 'react-router';
 import { ROUTES } from '../routes';
 import {
   SparklesIcon,
@@ -19,6 +19,7 @@ import {
   ArrowRightIcon,
   InstagramIcon,
   LinkedinIcon,
+  TelegramIcon,
   KeyboardIcon,
 } from './Icons';
 
@@ -299,14 +300,12 @@ export const Footer = () => {
                     </button>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.courses })}
+                    <Link to={ROUTES.courses}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
-                      <span>Practice Packs</span>
-                    </button>
+                      <span>Practice Packs & Courses</span>
+                    </Link>
                   </li>
                 </ul>
               </div>
@@ -349,15 +348,13 @@ export const Footer = () => {
                     </button>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.typing })}
+                    <Link to={ROUTES.typing}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer font-medium leading-tight sm:leading-normal"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <KeyboardIcon size={12} className="shrink-0 text-institutional-600 dark:text-institutional-400" />
                       <span>Typing Master</span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
                     <button
@@ -380,48 +377,40 @@ export const Footer = () => {
                 </h4>
                 <ul className="space-y-2 sm:space-y-2.5 text-[11px] sm:text-xs">
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.terms })}
+                    <Link to={ROUTES.terms}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                       title="View Terms & Conditions"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <span>Terms <span className="hidden md:inline">& Conditions</span></span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.privacy })}
+                    <Link to={ROUTES.privacy}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                       title="View Privacy Policy"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <span>Privacy <span className="hidden md:inline">Policy</span></span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.about })}
+                    <Link to={ROUTES.about}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                       title="About PrepMagnet"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <span>About Us</span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.refund })}
+                    <Link to={ROUTES.refund}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                       title="Cancellation & Refund Policy"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <span>Refund <span className="hidden md:inline">Policy</span></span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
                     <button
@@ -478,30 +467,40 @@ export const Footer = () => {
                   <ArrowRightIcon size={13} className="group-hover:translate-x-1 transition-transform" />
                 </button>
 
-                {/* Social Media Community */}
+                {/* Social Media Community & Communication Channels */}
                 <div className="pt-2 border-t border-charcoal-200/60 dark:border-charcoal-800/60 space-y-1.5">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500">
-                    Official Social Community
+                    Official Channels & Community
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                    <a
+                      href="https://t.me/Prepmagnet"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-[#229ED9] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
+                      title="Join PrepMagnet on Telegram"
+                    >
+                      <TelegramIcon size={13} className="text-[#229ED9] group-hover:text-white transition-colors shrink-0" />
+                      <span>Telegram</span>
+                    </a>
                     <a
                       href="https://www.instagram.com/prepmagnet.official/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-500 text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-500 text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
                       title="Follow PrepMagnet on Instagram"
                     >
-                      <InstagramIcon size={13} className="text-pink-600 dark:text-pink-400 group-hover:text-white transition-colors" />
+                      <InstagramIcon size={13} className="text-pink-600 dark:text-pink-400 group-hover:text-white transition-colors shrink-0" />
                       <span>Instagram</span>
                     </a>
                     <a
-                      href="https://www.linkedin.com/company/simplbyte/"
+                      href="https://www.linkedin.com/company/prep-magnet/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-[#0077b5] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
-                      title="Follow SimplByte on LinkedIn"
+                      className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-[#0077b5] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
+                      title="Follow PrepMagnet on LinkedIn"
                     >
-                      <LinkedinIcon size={13} className="text-[#0077b5] dark:text-[#38bdf8] group-hover:text-white transition-colors" />
+                      <LinkedinIcon size={13} className="text-[#0077b5] dark:text-[#38bdf8] group-hover:text-white transition-colors shrink-0" />
                       <span>LinkedIn</span>
                     </a>
                   </div>
@@ -543,33 +542,29 @@ export const Footer = () => {
 
               {/* Dedicated Legal Links */}
               <div className="flex flex-wrap items-center justify-center gap-4 text-charcoal-500 dark:text-charcoal-400 font-medium">
-                <button
-                  onClick={() => handleNav({ to: ROUTES.terms })}
+                <Link to={ROUTES.terms}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   Terms & Conditions
-                </button>
+                </Link>
                 <span>•</span>
-                <button
-                  onClick={() => handleNav({ to: ROUTES.privacy })}
+                <Link to={ROUTES.privacy}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   Privacy Policy
-                </button>
+                </Link>
                 <span>•</span>
-                <button
-                  onClick={() => handleNav({ to: ROUTES.about })}
+                <Link to={ROUTES.about}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   About Us
-                </button>
+                </Link>
                 <span>•</span>
-                <button
-                  onClick={() => handleNav({ to: ROUTES.refund })}
+                <Link to={ROUTES.refund}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   Refund Policy
-                </button>
+                </Link>
                 <span>•</span>
                 <button
                   onClick={() => setActiveLegalModal('honor')}

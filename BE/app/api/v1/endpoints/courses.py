@@ -92,6 +92,7 @@ async def get_my_enrolled_courses(
 @router.get("/admin/all", response_model=APIResponse[List[CourseAdminOut]])
 async def list_all_courses_admin(
     search: Optional[str] = Query(None, description="Matches the title or exam, ignoring case"),
+    target_exam: Optional[str] = Query(None, description="Filter by exact target exam"),
     skip: int = Query(0, ge=0),
     limit: int = Query(500, ge=1, le=500),
     admin: UserResponse = Depends(require_admin),
@@ -102,7 +103,7 @@ async def list_all_courses_admin(
     Without `skip`/`limit` this is every course; Admin Studio pages through it and searches all of them.
 
     Declared before `/{course_id}` so "admin" is not read as a course id."""
-    courses = await CourseService(db).list_all_for_admin(search=search, skip=skip, limit=limit)
+    courses = await CourseService(db).list_all_for_admin(search=search, target_exam=target_exam, skip=skip, limit=limit)
     return APIResponse(success=True, message=f"{len(courses)} courses", data=courses)
 
 

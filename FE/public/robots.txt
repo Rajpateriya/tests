@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Allow: /courses
+Allow: /courses/*
+Allow: /typing
+Allow: /about-us
+Allow: /legal/
+Allow: /legal/*
+
+# Disallow private user sessions, exams, and administration studios
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /ai-pipeline
+Disallow: /ai-pipeline/*
+Disallow: /exam
+Disallow: /results
+Disallow: /cart
+Disallow: /api/
+
+Sitemap: https://prepmagnet.in/sitemap.xml

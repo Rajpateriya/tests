@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { SparklesIcon } from '../Icons';
+import { CustomSelect } from '../CustomSelect';
 import { Alert, BTN_PRIMARY, Busy, DifficultyMix, Field, INPUT_CLS, Section, Segmented, Stats, StepCard } from './PipelineUI';
 import { DEFAULT_MIX, LEVELS, errorText, mixTotal, topicsFor } from './pipelineUtils';
 
@@ -46,7 +47,7 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
         subject,
         sub_subject: subSubject || null,
         topic: topic || null,
-        per_subtopic: perSubtopic,
+        per_subtopic: Number(perSubtopic) || 10,
         difficulty: mix,
         allow_ai_knowledge: allowAi,
         style_notes: styleNotes.trim() || null,
@@ -80,20 +81,40 @@ export const GenerateStep = ({ subject, taxonomyDoc, targetExam, onGenerated }) 
       <Section title="Scope">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="Sub-subject">
-            <select className={INPUT_CLS} value={subSubject} onChange={(e) => { setSubSubject(e.target.value); setTopic(''); }} disabled={!subSubjects.length}>
+            <CustomSelect className={INPUT_CLS} value={subSubject} onChange={(e) => { setSubSubject(e.target.value); setTopic(''); }} disabled={!subSubjects.length}>
               <option value="">{subSubjects.length ? 'All sub-subjects' : 'Whole subject'}</option>
               {subSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </CustomSelect>
           </Field>
           <Field label="Topic">
-            <select className={INPUT_CLS} value={topic} onChange={(e) => setTopic(e.target.value)}>
+            <CustomSelect className={INPUT_CLS} value={topic} onChange={(e) => setTopic(e.target.value)}>
               <option value="">All topics</option>
               {topics.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            </CustomSelect>
           </Field>
           <Field label="Target per subtopic" hint="Questions to have in the bank for each subtopic">
-            <input type="number" min="1" max="200" className={INPUT_CLS} value={perSubtopic}
-              onChange={(e) => setPerSubtopic(Math.min(200, Math.max(1, parseInt(e.target.value, 10) || 1)))} />
+            <input
+              type="number"
+              min="1"
+              max="200"
+              className={INPUT_CLS}
+              value={perSubtopic}
+              onWheel={(e) => e.target.blur()}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === '') {
+                  setPerSubtopic('');
+                  return;
+                }
+                const n = parseInt(v, 10);
+                if (!isNaN(n)) setPerSubtopic(Math.min(200, Math.max(0, n)));
+              }}
+              onBlur={() => {
+                if (perSubtopic === '' || Number(perSubtopic) < 1) {
+                  setPerSubtopic(1);
+                }
+              }}
+            />
           </Field>
         </div>
       </Section>

@@ -3,7 +3,7 @@ import { api, isRealSession } from '../services/api';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useNavigate, useLocation, matchPath } from 'react-router';
+import { useNavigate, useLocation, matchPath, Link } from 'react-router';
 import { ROUTES } from '../routes';
 import {
   SunIcon,
@@ -324,33 +324,33 @@ export const Navbar = ({ activeAttempt, onOpenAuthModal }) => {
           {/* --- GUEST VIEW (Before Login) --- */}
           {!user && (
             <>
-              <button
-                onClick={() => handleNavClick(ROUTES.home)}
+              <Link
+                to={ROUTES.home}
                 className={`px-3 py-1.5 rounded-full transition-colors ${isOn(ROUTES.home, true)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 Mock Tests
-              </button>
-              <button
-                onClick={() => handleNavClick(ROUTES.courses)}
+              </Link>
+              <Link
+                to={ROUTES.courses}
                 className={`px-3 py-1.5 rounded-full transition-colors ${isOn(ROUTES.courses)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 Courses & Quizzes
-              </button>
-              <button
-                onClick={() => handleNavClick(ROUTES.typing)}
+              </Link>
+              <Link
+                to={ROUTES.typing}
                 className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors ${isOn(ROUTES.typing)
                   ? 'bg-charcoal-900 text-white dark:bg-charcoal-100 dark:text-charcoal-900 font-bold shadow-sm'
                   : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60'
                   }`}
               >
                 <span>⌨️ Typing Master</span>
-              </button>
+              </Link>
               <button
                 onClick={handleContactClick}
                 className="px-3 py-1.5 rounded-full text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-charcoal-200 hover:bg-charcoal-100/60 dark:hover:bg-charcoal-800/60 transition-colors"

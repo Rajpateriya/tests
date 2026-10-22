@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { EyeIcon, TargetIcon, TrashIcon } from '../Icons';
+import { CustomSelect } from '../CustomSelect';
 import {
   Alert, BTN_OUTLINE, BTN_OUTLINE_SM, BTN_PRIMARY, Busy, CollapseButton, Dialog,
   DifficultyBadge, DifficultyMix, Empty, Field, INPUT_CLS, Picker, Section, Segmented, Stats, StepCard,
@@ -65,7 +66,21 @@ const NumberCell = ({ value, onChange, min = 1, step = 1, placeholder = '1' }) =
     className={`${INPUT_CLS} w-24 py-1.5`}
     value={value ?? ''}
     placeholder={placeholder}
-    onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
+    onWheel={(e) => e.target.blur()}
+    onChange={(e) => {
+      const v = e.target.value;
+      if (v === '') {
+        onChange('');
+        return;
+      }
+      const n = parseFloat(v);
+      if (!isNaN(n)) onChange(Math.max(0, n));
+    }}
+    onBlur={() => {
+      if (value === '' || value === null || (min != null && Number(value) < min)) {
+        onChange(min);
+      }
+    }}
   />
 );
 
@@ -195,14 +210,15 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
   const buildStarter = async () => {
     setError('');
     try {
-      const built = await api.generation.starterBlueprint(subject, defaultCount);
+      const count = Number(defaultCount) || 1;
+      const built = await api.generation.starterBlueprint(subject, count);
       edit(built);
       setMode('counts');
       setPlan(null);
       setCollapsedTopics(new Set(
         built.sections.flatMap((s, si) => s.topics.map((t) => `${si}-${t.topic}`))
       ));
-      setMessage(`Draft built from the structure with ${defaultCount} per subtopic — adjust, then Save.`);
+      setMessage(`Draft built from the structure with ${count} per subtopic — adjust, then Save.`);
     } catch (err) {
       setError(errorText(err));
     }
@@ -263,7 +279,7 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
 
   const addSubtopic = (si, ti, subtopic) => {
     if (!subtopic) return;
-    const base = mode === 'weights' ? { subtopic } : { subtopic, count: defaultCount };
+    const base = mode === 'weights' ? { subtopic } : { subtopic, count: Number(defaultCount) || 1 };
     patchTopic(si, ti, { subtopics: [base, ...blueprint.sections[si].topics[ti].subtopics] });
   };
 
@@ -308,7 +324,7 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
         sub_subject: planSub || null,
         questions_per_quiz: planTotal ? Number(planTotal) : null,
         blueprint_name: activeName,
-        quizzes: planQuizzes,
+        quizzes: Number(planQuizzes) || 1,
       });
       setPlan(result);
       setPlanShownQuiz(1);
@@ -336,7 +352,7 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
         actions={
           <>
             <div className="flex items-center gap-2 flex-wrap">
-              <select
+              <CustomSelect
                 className={`${INPUT_CLS} w-auto max-w-[200px] py-1.5`}
                 title="Which blueprint of this subject to edit"
                 value={activeName}
@@ -345,7 +361,7 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                 {(names.includes(activeName) ? names : [...names, activeName]).map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
-              </select>
+              </CustomSelect>
               <button type="button" className={BTN_OUTLINE_SM} onClick={() => setDialog({ kind: 'new' })}>New</button>
               <button
                 type="button"
@@ -359,8 +375,28 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button type="button" className={BTN_OUTLINE_SM} onClick={buildStarter}>Build from structure</button>
-              <input type="number" min="1" className={`${INPUT_CLS} w-16 py-1.5`} title="Questions per subtopic in the draft"
-                value={defaultCount} onChange={(e) => setDefaultCount(Math.max(1, parseInt(e.target.value, 10) || 1))} />
+              <input
+                type="number"
+                min="1"
+                className={`${INPUT_CLS} w-16 py-1.5`}
+                title="Questions per subtopic in the draft"
+                value={defaultCount}
+                onWheel={(e) => e.target.blur()}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') {
+                    setDefaultCount('');
+                    return;
+                  }
+                  const n = parseInt(v, 10);
+                  if (!isNaN(n)) setDefaultCount(Math.max(0, n));
+                }}
+                onBlur={() => {
+                  if (defaultCount === '' || Number(defaultCount) < 1) {
+                    setDefaultCount(1);
+                  }
+                }}
+              />
               <span className="text-[11px] text-charcoal-400 dark:text-charcoal-500">per subtopic</span>
             </div>
             <JsonPanel
@@ -447,7 +483,21 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
                       className={`${INPUT_CLS} max-w-[200px]`}
                       value={perQuiz ?? ''}
                       disabled={!weights}
-                      onChange={(e) => edit({ ...blueprint, total_questions: e.target.value === '' ? null : Number(e.target.value) })}
+                      onWheel={(e) => e.target.blur()}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === '') {
+                          edit({ ...blueprint, total_questions: '' });
+                          return;
+                        }
+                        const n = parseInt(v, 10);
+                        if (!isNaN(n)) edit({ ...blueprint, total_questions: Math.max(0, n) });
+                      }}
+                      onBlur={() => {
+                        if (blueprint.total_questions === '' || (blueprint.total_questions != null && Number(blueprint.total_questions) < 1)) {
+                          edit({ ...blueprint, total_questions: 10 });
+                        }
+                      }}
                     />
                   </Field>
                 </div>
@@ -601,21 +651,61 @@ export const BlueprintStep = ({ subject, taxonomyDoc }) => {
           <Alert type="error">{planError}</Alert>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Sub-subject">
-              <select className={INPUT_CLS} value={planSub} onChange={(e) => setPlanSub(e.target.value)}>
+              <CustomSelect className={INPUT_CLS} value={planSub} onChange={(e) => setPlanSub(e.target.value)}>
                 <option value="">Whole blueprint</option>
                 {blueprint.sections.filter((s) => s.sub_subject).map((s) => <option key={s.sub_subject} value={s.sub_subject}>{s.sub_subject} only</option>)}
-              </select>
+              </CustomSelect>
             </Field>
             <Field label="Questions per quiz" hint="Empty = blueprint size">
-              <input type="number" min="1" className={INPUT_CLS} value={planTotal} placeholder={String(perQuiz || '')}
-                onChange={(e) => setPlanTotal(e.target.value)} />
+              <input
+                type="number"
+                min="1"
+                className={INPUT_CLS}
+                value={planTotal}
+                placeholder={String(perQuiz || '')}
+                onWheel={(e) => e.target.blur()}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') {
+                    setPlanTotal('');
+                    return;
+                  }
+                  const n = parseInt(v, 10);
+                  if (!isNaN(n)) setPlanTotal(Math.max(0, n));
+                }}
+                onBlur={() => {
+                  if (planTotal !== '' && Number(planTotal) < 1) {
+                    setPlanTotal(1);
+                  }
+                }}
+              />
             </Field>
             <Field
               label="Quizzes to preview"
               hint="Each quiz rotates onto a different set of subtopics — plan the whole batch to see real coverage"
             >
-              <input type="number" min="1" max="200" className={INPUT_CLS} value={planQuizzes}
-                onChange={(e) => setPlanQuizzes(Math.max(1, parseInt(e.target.value, 10) || 1))} />
+              <input
+                type="number"
+                min="1"
+                max="200"
+                className={INPUT_CLS}
+                value={planQuizzes}
+                onWheel={(e) => e.target.blur()}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') {
+                    setPlanQuizzes('');
+                    return;
+                  }
+                  const n = parseInt(v, 10);
+                  if (!isNaN(n)) setPlanQuizzes(Math.min(200, Math.max(0, n)));
+                }}
+                onBlur={() => {
+                  if (planQuizzes === '' || Number(planQuizzes) < 1) {
+                    setPlanQuizzes(1);
+                  }
+                }}
+              />
             </Field>
           </div>
 

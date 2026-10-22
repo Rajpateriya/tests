@@ -7,6 +7,7 @@ import { CpuIcon, RefreshCwIcon, ShieldIcon } from '../components/Icons';
 import { Alert, Busy, Field, INPUT_CLS, BTN_PRIMARY } from '../components/pipeline/PipelineUI';
 import { EXAMS, errorText } from '../components/pipeline/pipelineUtils';
 import { TaxonomyStep } from '../components/pipeline/TaxonomyStep';
+import { CustomSelect } from '../components/CustomSelect';
 import { UploadStep } from '../components/pipeline/UploadStep';
 import { GenerateStep } from '../components/pipeline/GenerateStep';
 import { QuestionsStep } from '../components/pipeline/QuestionsStep';
@@ -195,7 +196,7 @@ export const AiPipelinePage = () => {
         <div className="flex items-end gap-3 flex-wrap">
           <div className="w-48">
             <Field label="Subject">
-              <select
+              <CustomSelect
                 className={INPUT_CLS}
                 value={subject}
                 onChange={(e) => {
@@ -211,14 +212,14 @@ export const AiPipelinePage = () => {
                 {!subject && <option value="">{subjects.length ? 'New subject' : 'No subjects yet'}</option>}
                 {subjects.map((s) => <option key={s.subject} value={s.subject}>{s.subject}</option>)}
                 <option value="__new__">+ New subject…</option>
-              </select>
+              </CustomSelect>
             </Field>
           </div>
           <div className="w-44">
             <Field label="Exam">
-              <select className={INPUT_CLS} value={targetExam} onChange={(e) => setTargetExam(e.target.value)}>
+              <CustomSelect className={INPUT_CLS} value={targetExam} onChange={(e) => setTargetExam(e.target.value)}>
                 {EXAMS.map((x) => <option key={x} value={x}>{x}</option>)}
-              </select>
+              </CustomSelect>
             </Field>
           </div>
           <div className="flex items-center gap-2 flex-wrap ml-auto">

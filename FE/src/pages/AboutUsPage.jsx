@@ -16,8 +16,14 @@ import {
   BarChartIcon,
 } from '../components/Icons';
 import { ROUTES } from '../routes';
+import { useSEO } from '../hooks/useSEO';
 
 export const AboutUsPage = () => {
+  useSEO({
+    title: 'About PrepMagnet — Mission, Technology & Vision',
+    description: "Learn how PrepMagnet is revolutionizing government competitive exam preparation with realistic Computer Based Test simulations, official scoring algorithms, and diagnostic percentiles.",
+  });
+
   const navigate = useNavigate();
 
   useEffect(() => {

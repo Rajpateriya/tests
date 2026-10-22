@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../services/api';
 import { DatabaseIcon, RefreshCwIcon, SearchIcon } from '../Icons';
+import { CustomSelect } from '../CustomSelect';
 import { Alert, BTN_OUTLINE_SM, Busy, DifficultyBadge, Empty, Field, INPUT_CLS, StepCard } from './PipelineUI';
 import { EXAMS, errorText, topicsFor } from './pipelineUtils';
 
@@ -142,51 +143,51 @@ export const QuestionsStep = ({ subject, taxonomyDoc, targetExam }) => {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {subSubjects.length > 0 && (
-          <Field label="Sub-subject">
-            <select className={INPUT_CLS} value={subSubject} onChange={(e) => { setTopic(''); setSubtopic(''); change(setSubSubject)(e.target.value); }}>
-              <option value="">All</option>
-              {subSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </Field>
-        )}
-        <Field label="Topic">
-          <select className={INPUT_CLS} value={topic} onChange={(e) => { setSubtopic(''); change(setTopic)(e.target.value); }}>
-            <option value="">All</option>
-            {topics.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </Field>
-        <Field label="Subtopic">
-          <select className={INPUT_CLS} value={subtopic} onChange={(e) => change(setSubtopic)(e.target.value)}>
-            <option value="">All</option>
-            {subtopics.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </Field>
-        <Field label="Difficulty">
-          <select className={INPUT_CLS} value={difficulty} onChange={(e) => change(setDifficulty)(e.target.value)}>
-            <option value="">All</option>
-            <option value="Easy">Easy</option>
-            <option value="Medium">Medium</option>
-            <option value="Hard">Hard</option>
-          </select>
-        </Field>
-        <Field label="Exam">
-          <select className={INPUT_CLS} value={exam} onChange={(e) => change(setExam)(e.target.value)}>
-            <option value="">All exams</option>
-            {EXAMS.map((x) => <option key={x} value={x}>{x}</option>)}
-          </select>
-        </Field>
-        <Field label="Source">
-          <select className={INPUT_CLS} value={source} onChange={(e) => change(setSource)(e.target.value)}>
-            <option value="">All</option>
-            <option value="theory">From theory</option>
-            <option value="ai_knowledge">AI knowledge</option>
-          </select>
-        </Field>
-        <Field label="Per page">
-          <select className={INPUT_CLS} value={pageSize} onChange={(e) => change(setPageSize)(Number(e.target.value))}>
-            {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </Field>
+           <Field label="Sub-subject">
+             <CustomSelect className={INPUT_CLS} value={subSubject} onChange={(e) => { setTopic(''); setSubtopic(''); change(setSubSubject)(e.target.value); }}>
+               <option value="">All</option>
+               {subSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
+             </CustomSelect>
+           </Field>
+         )}
+         <Field label="Topic">
+           <CustomSelect className={INPUT_CLS} value={topic} onChange={(e) => { setSubtopic(''); change(setTopic)(e.target.value); }}>
+             <option value="">All</option>
+             {topics.map((t) => <option key={t} value={t}>{t}</option>)}
+           </CustomSelect>
+         </Field>
+         <Field label="Subtopic">
+           <CustomSelect className={INPUT_CLS} value={subtopic} onChange={(e) => change(setSubtopic)(e.target.value)}>
+             <option value="">All</option>
+             {subtopics.map((s) => <option key={s} value={s}>{s}</option>)}
+           </CustomSelect>
+         </Field>
+         <Field label="Difficulty">
+           <CustomSelect className={INPUT_CLS} value={difficulty} onChange={(e) => change(setDifficulty)(e.target.value)}>
+             <option value="">All</option>
+             <option value="Easy">Easy</option>
+             <option value="Medium">Medium</option>
+             <option value="Hard">Hard</option>
+           </CustomSelect>
+         </Field>
+         <Field label="Exam">
+           <CustomSelect className={INPUT_CLS} value={exam} onChange={(e) => change(setExam)(e.target.value)}>
+             <option value="">All exams</option>
+             {EXAMS.map((x) => <option key={x} value={x}>{x}</option>)}
+           </CustomSelect>
+         </Field>
+         <Field label="Source">
+           <CustomSelect className={INPUT_CLS} value={source} onChange={(e) => change(setSource)(e.target.value)}>
+             <option value="">All</option>
+             <option value="theory">From theory</option>
+             <option value="ai_knowledge">AI knowledge</option>
+           </CustomSelect>
+         </Field>
+         <Field label="Per page">
+           <CustomSelect className={INPUT_CLS} value={pageSize} onChange={(e) => change(setPageSize)(Number(e.target.value))}>
+             {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+           </CustomSelect>
+         </Field>
         <Field label="Search question text">
           <form className="flex items-center gap-2" onSubmit={submitSearch}>
             <input className={INPUT_CLS} placeholder="Type, then press Enter" value={searchText} onChange={(e) => setSearchText(e.target.value)} />

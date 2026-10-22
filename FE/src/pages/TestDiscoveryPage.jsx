@@ -29,12 +29,15 @@ import {
   MessageSquareIcon,
   InstagramIcon,
   LinkedinIcon,
+  TelegramIcon,
   MonitorIcon,
   LightbulbIcon,
 } from '../components/Icons';
 
 import { PassDetailModal } from '../components/PassDetailModal';
 import { GlobalGlobeAnimation } from '../components/GlobalGlobeAnimation';
+import { CustomSelect } from '../components/CustomSelect';
+import { useSEO } from '../hooks/useSEO';
 
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
@@ -42,6 +45,12 @@ import { GlobalGlobeAnimation } from '../components/GlobalGlobeAnimation';
  * interactive hero test-drive sandbox, syllabus blueprint explorer, and percentile predictor.
  */
 export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal }) => {
+  useSEO({
+    title: 'PrepMagnet — #1 Mock Test Platform for SSC CGL, Banking & Railway Exams',
+    description: "India's most advanced CBT mock test platform for SSC CGL, IBPS PO, SBI PO, RRB NTPC & State PSC with official exam simulation and real-time All-India percentile.",
+    canonical: 'https://prepmagnet.in',
+  });
+
   const navigate = useNavigate();
   const { user } = useAuth();
   const [catalogTab, setCatalogTab] = useState('courses'); // 'courses' | 'mocks' (free mocks only)
@@ -198,10 +207,13 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
     }
   };
 
-  const loadCourses = async () => {
+  const [courseExamCategories, setCourseExamCategories] = useState([{ id: 'All', label: 'All Exams' }]);
+  const [selectedCourseExam, setSelectedCourseExam] = useState('All');
+
+  const loadCourses = async (exam = selectedCourseExam) => {
     setCoursesLoading(true);
     try {
-      setCourses(await api.courses.list());
+      setCourses(await api.courses.list(exam));
     } catch (err) {
       console.warn('Failed to load courses:', err);
       setCourses([]);
@@ -214,9 +226,27 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
   const [passesLoading, setPassesLoading] = useState(false);
 
   useEffect(() => {
-    loadCourses();
+    const loadFilterOptions = async () => {
+      try {
+        const res = await api.tests.getFilterOptions();
+        const exams = res?.exams || [];
+        if (exams.length > 0) {
+          setCourseExamCategories([
+            { id: 'All', label: 'All Exams' },
+            ...exams.map((e) => ({ id: e, label: e })),
+          ]);
+        }
+      } catch (err) {
+        console.warn('Failed to load filter options:', err);
+      }
+    };
+    loadFilterOptions();
     loadPasses();
   }, []);
+
+  useEffect(() => {
+    loadCourses(selectedCourseExam);
+  }, [selectedCourseExam]);
 
   const loadPasses = async () => {
     setPassesLoading(true);
@@ -910,7 +940,25 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           </div>
 
           {catalogTab === 'courses' ? (
-            coursesLoading ? (
+            <>
+              {courseExamCategories.length > 1 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-wrap">
+                  {courseExamCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCourseExam(cat.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        selectedCourseExam === cat.id
+                          ? 'bg-institutional-600 text-white shadow-sm'
+                          : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {coursesLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 animate-pulse">
                 {[1, 2, 3].map((n) => (
                   <div key={n} className="h-64 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl sm:rounded-2xl" />
@@ -964,23 +1012,24 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   </article>
                 ))}
               </div>
-            )
-          ) : (
+            )}
+          </>
+        ) : (
             <>
               {/* Search & Subject Bar */}
               <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-2.5 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 md:max-w-md">
-                  <select
+                  <CustomSelect
                     value={selectedSubject}
                     onChange={(e) => setSelectedSubject(e.target.value)}
-                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 shrink-0"
+                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-bold rounded-lg border border-charcoal-200 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 shrink-0 min-w-[10rem]"
                   >
                     <option value="ALL">All Subjects</option>
                     <option value="Quantitative Aptitude">Quantitative Aptitude</option>
                     <option value="General Intelligence & Reasoning">General Intelligence</option>
                     <option value="English Comprehension">English Comprehension</option>
                     <option value="General Awareness">General Awareness</option>
-                  </select>
+                  </CustomSelect>
 
                   <div className="relative flex-1">
                     <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
@@ -1775,6 +1824,16 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <a
+                          href="https://t.me/Prepmagnet"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-charcoal-100/90 dark:bg-charcoal-800/90 hover:bg-[#229ED9] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700/80 transition-all duration-200 shadow-2xs font-semibold group cursor-pointer"
+                          title="Join PrepMagnet on Telegram"
+                        >
+                          <TelegramIcon size={13} className="text-[#229ED9] group-hover:text-white transition-colors" />
+                          <span>Telegram</span>
+                        </a>
+                        <a
                           href="https://www.instagram.com/prepmagnet.official/"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -1785,11 +1844,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                           <span>Instagram</span>
                         </a>
                         <a
-                          href="https://www.linkedin.com/company/simplbyte/"
+                          href="https://www.linkedin.com/company/prep-magnet/"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-charcoal-100/90 dark:bg-charcoal-800/90 hover:bg-[#0077b5] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700/80 transition-all duration-200 shadow-2xs font-semibold group cursor-pointer"
-                          title="Follow SimplByte on LinkedIn"
+                          title="Follow PrepMagnet on LinkedIn"
                         >
                           <LinkedinIcon size={13} className="text-[#0077b5] dark:text-[#38bdf8] group-hover:text-white transition-colors" />
                           <span>LinkedIn</span>
@@ -1933,11 +1992,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         >
                           Target Examination
                         </label>
-                        <select
+                        <CustomSelect
                           id="contact-exam"
                           value={contactExam}
                           onChange={(e) => setContactExam(e.target.value)}
-                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all"
+                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all font-semibold"
                         >
                           <option value="SSC CGL (Tier I & II)">SSC CGL (Tier I & II)</option>
                           <option value="IBPS & SBI PO (Banking)">IBPS & SBI PO (Banking)</option>
@@ -1945,7 +2004,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                           <option value="State PSC (General Studies)">State PSC (General Studies)</option>
                           <option value="SSC CHSL / CPO Drills">SSC CHSL / CPO Drills</option>
                           <option value="General Inquiry">Other Government Exam</option>
-                        </select>
+                        </CustomSelect>
                       </div>
 
                       {/* Issue Category */}
@@ -1956,18 +2015,18 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                         >
                           Grievance Category
                         </label>
-                        <select
+                        <CustomSelect
                           id="contact-category"
                           value={contactCategory}
                           onChange={(e) => setContactCategory(e.target.value)}
-                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all"
+                          className="w-full px-3.5 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 border border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-charcoal-100 text-xs focus:outline-none focus:ring-2 focus:ring-institutional-500 transition-all font-semibold"
                         >
                           <option value="Test Engine & Live Timers">Test Engine & Live Timers</option>
                           <option value="Marking & Answer Key Dispute">Marking & Answer Key Dispute</option>
                           <option value="Pass Activation & Billing">Pass Activation & Billing</option>
                           <option value="Question Quality & Mathematical Proofs">Question Quality & Mathematical Proofs</option>
                           <option value="Account & General Assistance">Account & General Assistance</option>
-                        </select>
+                        </CustomSelect>
                       </div>
                     </div>
 
