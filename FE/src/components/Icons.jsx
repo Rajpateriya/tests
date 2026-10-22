@@ -416,6 +416,13 @@ export const LinkedinIcon = ({ size = 20, className = "" }) => (
   </svg>
 );
 
+export const TelegramIcon = ({ size = 20, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M21.5 2 2 11.5l7 3 2 7 3.5-4.5 5 4L21.5 2z" />
+    <path d="M9 14.5 17.5 6" />
+  </svg>
+);
+
 export const KeyboardIcon = ({ size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <rect width="20" height="16" x="2" y="4" rx="2" ry="2"/>

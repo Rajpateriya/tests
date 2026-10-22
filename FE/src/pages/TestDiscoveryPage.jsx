@@ -29,6 +29,7 @@ import {
   MessageSquareIcon,
   InstagramIcon,
   LinkedinIcon,
+  TelegramIcon,
   MonitorIcon,
   LightbulbIcon,
 } from '../components/Icons';
@@ -1823,6 +1824,16 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <a
+                          href="https://t.me/Prepmagnet"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-charcoal-100/90 dark:bg-charcoal-800/90 hover:bg-[#229ED9] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700/80 transition-all duration-200 shadow-2xs font-semibold group cursor-pointer"
+                          title="Join PrepMagnet on Telegram"
+                        >
+                          <TelegramIcon size={13} className="text-[#229ED9] group-hover:text-white transition-colors" />
+                          <span>Telegram</span>
+                        </a>
+                        <a
                           href="https://www.instagram.com/prepmagnet.official/"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -1833,11 +1844,11 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                           <span>Instagram</span>
                         </a>
                         <a
-                          href="https://www.linkedin.com/company/simplbyte/"
+                          href="https://www.linkedin.com/company/prep-magnet/"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-charcoal-100/90 dark:bg-charcoal-800/90 hover:bg-[#0077b5] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700/80 transition-all duration-200 shadow-2xs font-semibold group cursor-pointer"
-                          title="Follow SimplByte on LinkedIn"
+                          title="Follow PrepMagnet on LinkedIn"
                         >
                           <LinkedinIcon size={13} className="text-[#0077b5] dark:text-[#38bdf8] group-hover:text-white transition-colors" />
                           <span>LinkedIn</span>

@@ -19,6 +19,7 @@ import {
   ArrowRightIcon,
   InstagramIcon,
   LinkedinIcon,
+  TelegramIcon,
   KeyboardIcon,
 } from './Icons';
 
@@ -466,30 +467,40 @@ export const Footer = () => {
                   <ArrowRightIcon size={13} className="group-hover:translate-x-1 transition-transform" />
                 </button>
 
-                {/* Social Media Community */}
+                {/* Social Media Community & Communication Channels */}
                 <div className="pt-2 border-t border-charcoal-200/60 dark:border-charcoal-800/60 space-y-1.5">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500">
-                    Official Social Community
+                    Official Channels & Community
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                    <a
+                      href="https://t.me/Prepmagnet"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-[#229ED9] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
+                      title="Join PrepMagnet on Telegram"
+                    >
+                      <TelegramIcon size={13} className="text-[#229ED9] group-hover:text-white transition-colors shrink-0" />
+                      <span>Telegram</span>
+                    </a>
                     <a
                       href="https://www.instagram.com/prepmagnet.official/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-500 text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-500 text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
                       title="Follow PrepMagnet on Instagram"
                     >
-                      <InstagramIcon size={13} className="text-pink-600 dark:text-pink-400 group-hover:text-white transition-colors" />
+                      <InstagramIcon size={13} className="text-pink-600 dark:text-pink-400 group-hover:text-white transition-colors shrink-0" />
                       <span>Instagram</span>
                     </a>
                     <a
-                      href="https://www.linkedin.com/company/simplbyte/"
+                      href="https://www.linkedin.com/company/prep-magnet/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-[#0077b5] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
-                      title="Follow SimplByte on LinkedIn"
+                      className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-charcoal-800 hover:bg-[#0077b5] text-charcoal-700 dark:text-charcoal-200 hover:text-white border border-charcoal-200 dark:border-charcoal-700 transition-all duration-200 shadow-2xs text-[11px] font-bold group cursor-pointer"
+                      title="Follow PrepMagnet on LinkedIn"
                     >
-                      <LinkedinIcon size={13} className="text-[#0077b5] dark:text-[#38bdf8] group-hover:text-white transition-colors" />
+                      <LinkedinIcon size={13} className="text-[#0077b5] dark:text-[#38bdf8] group-hover:text-white transition-colors shrink-0" />
                       <span>LinkedIn</span>
                     </a>
                   </div>
