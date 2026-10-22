@@ -13,8 +13,14 @@ import {
   FileTextIcon,
 } from '../components/Icons';
 import { ROUTES } from '../routes';
+import { useSEO } from '../hooks/useSEO';
 
 export const PrivacyPolicyPage = () => {
+  useSEO({
+    title: 'Privacy Policy & Data Security',
+    description: 'Candidate privacy safeguards, TLS 1.3 encryption, exam telemetry policies, and data protection commitments at PrepMagnet.',
+  });
+
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('scope');
 

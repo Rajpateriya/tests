@@ -36,6 +36,7 @@ import {
 import { PassDetailModal } from '../components/PassDetailModal';
 import { GlobalGlobeAnimation } from '../components/GlobalGlobeAnimation';
 import { CustomSelect } from '../components/CustomSelect';
+import { useSEO } from '../hooks/useSEO';
 
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
@@ -43,6 +44,12 @@ import { CustomSelect } from '../components/CustomSelect';
  * interactive hero test-drive sandbox, syllabus blueprint explorer, and percentile predictor.
  */
 export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal }) => {
+  useSEO({
+    title: 'PrepMagnet — #1 Mock Test Platform for SSC CGL, Banking & Railway Exams',
+    description: "India's most advanced CBT mock test platform for SSC CGL, IBPS PO, SBI PO, RRB NTPC & State PSC with official exam simulation and real-time All-India percentile.",
+    canonical: 'https://prepmagnet.in',
+  });
+
   const navigate = useNavigate();
   const { user } = useAuth();
   const [catalogTab, setCatalogTab] = useState('courses'); // 'courses' | 'mocks' (free mocks only)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate, useLocation, Link } from 'react-router';
 import { ROUTES } from '../routes';
 import {
   SparklesIcon,
@@ -299,14 +299,12 @@ export const Footer = () => {
                     </button>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.courses })}
+                    <Link to={ROUTES.courses}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
-                      <span>Practice Packs</span>
-                    </button>
+                      <span>Practice Packs & Courses</span>
+                    </Link>
                   </li>
                 </ul>
               </div>
@@ -349,15 +347,13 @@ export const Footer = () => {
                     </button>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.typing })}
+                    <Link to={ROUTES.typing}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer font-medium leading-tight sm:leading-normal"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <KeyboardIcon size={12} className="shrink-0 text-institutional-600 dark:text-institutional-400" />
                       <span>Typing Master</span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
                     <button
@@ -380,48 +376,40 @@ export const Footer = () => {
                 </h4>
                 <ul className="space-y-2 sm:space-y-2.5 text-[11px] sm:text-xs">
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.terms })}
+                    <Link to={ROUTES.terms}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                       title="View Terms & Conditions"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <span>Terms <span className="hidden md:inline">& Conditions</span></span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.privacy })}
+                    <Link to={ROUTES.privacy}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                       title="View Privacy Policy"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <span>Privacy <span className="hidden md:inline">Policy</span></span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.about })}
+                    <Link to={ROUTES.about}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                       title="About PrepMagnet"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <span>About Us</span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => handleNav({ to: ROUTES.refund })}
+                    <Link to={ROUTES.refund}
                       className="group flex items-center gap-1 text-charcoal-600 dark:text-charcoal-400 hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors text-left cursor-pointer leading-tight sm:leading-normal"
                       title="Cancellation & Refund Policy"
                     >
                       <ChevronRightIcon size={12} className="hidden sm:inline-block opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-institutional-600 dark:text-institutional-400 shrink-0" />
                       <span>Refund <span className="hidden md:inline">Policy</span></span>
-                    </button>
+                    </Link>
                   </li>
                   <li>
                     <button
@@ -543,33 +531,29 @@ export const Footer = () => {
 
               {/* Dedicated Legal Links */}
               <div className="flex flex-wrap items-center justify-center gap-4 text-charcoal-500 dark:text-charcoal-400 font-medium">
-                <button
-                  onClick={() => handleNav({ to: ROUTES.terms })}
+                <Link to={ROUTES.terms}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   Terms & Conditions
-                </button>
+                </Link>
                 <span>•</span>
-                <button
-                  onClick={() => handleNav({ to: ROUTES.privacy })}
+                <Link to={ROUTES.privacy}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   Privacy Policy
-                </button>
+                </Link>
                 <span>•</span>
-                <button
-                  onClick={() => handleNav({ to: ROUTES.about })}
+                <Link to={ROUTES.about}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   About Us
-                </button>
+                </Link>
                 <span>•</span>
-                <button
-                  onClick={() => handleNav({ to: ROUTES.refund })}
+                <Link to={ROUTES.refund}
                   className="hover:text-institutional-600 dark:hover:text-institutional-300 transition-colors underline-offset-4 hover:underline"
                 >
                   Refund Policy
-                </button>
+                </Link>
                 <span>•</span>
                 <button
                   onClick={() => setActiveLegalModal('honor')}

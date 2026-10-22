@@ -14,8 +14,14 @@ import {
   FileTextIcon,
 } from '../components/Icons';
 import { ROUTES } from '../routes';
+import { useSEO } from '../hooks/useSEO';
 
 export const TermsPage = () => {
+  useSEO({
+    title: 'Terms of Use & Candidate Agreement',
+    description: 'Official terms of service, platform rules, pass subscriptions, cancellation policies, and candidate user agreement for PrepMagnet.',
+  });
+
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('acceptance');
 

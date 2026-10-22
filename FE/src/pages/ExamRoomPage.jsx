@@ -714,11 +714,23 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
           {/* Right: Quick Tools & Candidate Roll */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Mobile Time Left Clock (Prominent in Top Bar on mobile) */}
+            <div className={`sm:hidden flex items-center gap-1 px-2 py-1 rounded-lg border font-mono font-bold text-xs ${
+              isTimerDanger
+                ? 'bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 animate-pulse'
+                : 'bg-charcoal-100 dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200'
+            }`}>
+              <ClockIcon size={12} className={isTimerDanger ? 'text-rose-600 shrink-0' : 'text-amber-500 shrink-0'} />
+              <span className="text-rose-600 dark:text-rose-400 font-black">
+                {formatTime(remainingSeconds)}
+              </span>
+            </div>
+
             {/* Submit Exam Button (Primary CTA - always visible across all viewports) */}
             <button
               type="button"
               onClick={() => setShowSubmitModal(true)}
-              className="px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-xs cursor-pointer flex items-center gap-1"
+              className="px-2 sm:px-3 py-1 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-xs cursor-pointer flex items-center gap-1 shrink-0"
             >
               <CheckIcon size={13} className="shrink-0" />
               <span>Submit</span>
@@ -737,14 +749,14 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-1.5 rounded-lg text-charcoal-600 dark:text-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 cursor-pointer"
+              className="p-1 sm:p-1.5 rounded-lg text-charcoal-600 dark:text-charcoal-400 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 cursor-pointer"
               title="Toggle Theme"
             >
-              {theme === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+              {theme === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />}
             </button>
 
-            {/* Candidate Metadata Block */}
-            <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-charcoal-200 dark:border-charcoal-700">
+            {/* Candidate Metadata Block (Desktop only - mobile candidate info lives in palette drawer) */}
+            <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-charcoal-200 dark:border-charcoal-700">
               <div className="text-right leading-tight hidden md:block">
                 <div className="text-xs font-bold text-charcoal-900 dark:text-white truncate max-w-[100px]">
                   {user?.full_name || 'Candidate'}
@@ -765,10 +777,10 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
       {/* =========================================================================
           2. SECONDARY SUB-HEADER TOOLBAR (Sections + Time Left + Meta Strip)
           ========================================================================= */}
-      <nav className="bg-charcoal-100/70 dark:bg-charcoal-900/90 border-b border-charcoal-200 dark:border-charcoal-800 px-2.5 sm:px-5 py-1.5 shadow-2xs shrink-0 z-20">
+      <nav className="bg-charcoal-100/70 dark:bg-charcoal-900/90 border-b border-charcoal-200 dark:border-charcoal-800 px-2 sm:px-5 py-1.5 shadow-2xs shrink-0 z-20">
         <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-          {/* Section Selection Tabs */}
-          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none min-w-0 shrink">
+          {/* Section Selection Tabs - Expanded flex container with smooth scrolling */}
+          <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-0.5">
             {sections.map((sec) => {
               const isActive = sec.name === currentSection?.name;
               return (
@@ -782,11 +794,11 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
                       : 'bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700 hover:bg-charcoal-50 dark:hover:bg-charcoal-750'
                   }`}
                 >
-                  <span className="truncate max-w-[110px] sm:max-w-none">{sec.name}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  <span className="truncate max-w-[125px] xs:max-w-[170px] sm:max-w-none">{sec.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
                     isActive ? 'bg-white/20 text-white' : 'bg-charcoal-150 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300'
                   }`}>
-                    {sec.count} Qs
+                    {sec.count}Q
                   </span>
                 </button>
               );
@@ -795,8 +807,8 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
 
           {/* Meta & Utility Strip (Time Left, Question Paper, Instructions, Font Zoom) */}
           <div className="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
-            {/* Time Left Clock */}
-            <div className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border font-mono font-bold text-xs ${
+            {/* Time Left Clock (Desktop only - on mobile it lives in top header) */}
+            <div className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border font-mono font-bold text-xs ${
               isTimerDanger
                 ? 'bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 animate-pulse'
                 : 'bg-white dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-800 dark:text-charcoal-200'
@@ -873,11 +885,14 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
             <button
               type="button"
               onClick={() => setShowMobileDrawer(true)}
-              className="sm:hidden flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white font-bold text-xs shadow-xs transition-colors shrink-0 cursor-pointer"
+              className="sm:hidden flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg bg-institutional-600 hover:bg-institutional-700 text-white font-bold text-xs shadow-xs transition-colors shrink-0 cursor-pointer"
               aria-label="Open Question Palette"
             >
               <LayersIcon size={12} />
-              <span>Palette ({counts.answered}/{questions.length})</span>
+              <span>Palette</span>
+              <span className="bg-white/20 text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+                {counts.answered}/{questions.length}
+              </span>
             </button>
           </div>
         </div>
@@ -912,35 +927,36 @@ export const ExamRoomPage = ({ attemptSession, onTestCompleted, onExit }) => {
         {/* LEFT COLUMN: QUESTION PANE */}
         <section className="flex-1 min-w-0 min-h-0 flex flex-col justify-between bg-white dark:bg-charcoal-900 rounded-xl sm:rounded-2xl border border-charcoal-200 dark:border-charcoal-800 shadow-xs overflow-hidden">
           {/* Question Header Bar */}
-          <div className="shrink-0 px-4 sm:px-5 pt-3 pb-2 flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-charcoal-900">
-            <div className="flex items-center gap-2.5">
-              <span className="text-base sm:text-lg font-black text-charcoal-900 dark:text-white tracking-tight">
+          <div className="shrink-0 px-3 sm:px-5 pt-2.5 sm:pt-3 pb-2 flex flex-wrap items-center justify-between gap-2 sm:gap-2.5 bg-white dark:bg-charcoal-900 border-b border-charcoal-100 dark:border-charcoal-800">
+            <div className="flex items-center gap-1.5 sm:gap-2.5">
+              <span className="text-sm sm:text-lg font-black text-charcoal-900 dark:text-white tracking-tight">
                 Question {currentIndex + 1}
               </span>
               <span className="text-xs sm:text-sm font-semibold text-charcoal-400 dark:text-charcoal-500">
                 of {questions.length}
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 whitespace-nowrap">
-                Single Choice Objective
+              <span className="hidden xs:inline-block px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 whitespace-nowrap">
+                Single Choice
               </span>
             </div>
 
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-2 sm:gap-3 text-xs">
               <button
                 type="button"
                 onClick={handleToggleMarkForReview}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold transition-all cursor-pointer text-xs ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border font-bold transition-all cursor-pointer text-xs ${
                   isCurrentMarkedForReview
                     ? 'bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
                     : 'bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 border-charcoal-200 dark:border-charcoal-700 hover:bg-charcoal-50'
                 }`}
               >
                 <FlagIcon size={12} className={isCurrentMarkedForReview ? 'text-purple-600' : 'text-charcoal-400'} />
-                <span>{isCurrentMarkedForReview ? 'Flagged for Review' : 'Flag Question'}</span>
+                <span>{isCurrentMarkedForReview ? 'Flagged' : 'Flag'}</span>
+                <span className="hidden sm:inline">{isCurrentMarkedForReview ? ' for Review' : ' Question'}</span>
               </button>
 
-              <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-xs">
-                Section Mark: +1.00 / -0.25
+              <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-xs whitespace-nowrap">
+                <span className="hidden sm:inline">Section Mark: </span>+1.00 / -0.25
               </div>
             </div>
           </div>

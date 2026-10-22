@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { RazorpayModal } from '../components/RazorpayModal';
 import { ROUTES, useOpenCourse } from '../routes';
+import { useSEO } from '../hooks/useSEO';
 import {
   SparklesIcon,
   CheckCircleIcon,
@@ -33,6 +34,11 @@ const COVER_GLOW = {
 };
 
 export const CoursesPage = ({ onStartTest }) => {
+  useSEO({
+    title: 'Government Exam Courses, Test Series & Topic Quizzes',
+    description: 'Browse comprehensive full-length mock test series and subject quizzes for SSC CGL, Banking (IBPS/SBI PO), and Railways (RRB NTPC). With detailed solutions and All-India ranks.',
+  });
+
   const navigate = useNavigate();
   const openCourse = useOpenCourse();
   const { user } = useAuth();

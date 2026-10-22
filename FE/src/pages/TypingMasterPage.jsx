@@ -8,6 +8,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from '../components/Icons';
+import { useSEO } from '../hooks/useSEO';
 
 const fmtDate = (value) => new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
@@ -209,6 +210,11 @@ const TrendChart = ({ points, colorClass, name, unit, zeroBase, maxCap, refValue
 };
 
 export const TypingMasterPage = () => {
+  useSEO({
+    title: 'Typing Master — Realistic SSC & Railway Exam Typing Test Simulator',
+    description: 'Free online typing test simulator calibrated for SSC CGL, CHSL, RRB NTPC & State Exams. Instant WPM, net speed, accuracy percentage, and mistake breakdown.',
+  });
+
   const [passages, setPassages] = useState([]);
   const [selectedPassage, setSelectedPassage] = useState(null);
   const [loading, setLoading] = useState(true);
