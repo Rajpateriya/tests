@@ -46,10 +46,6 @@ const PAGE_MAIN = 'relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5
 
 export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backLabel = 'Courses' }) => {
   const navigate = useNavigate();
-  useSEO({
-    title: course?.title ? `${course.title} — Test Series & Quizzes` : 'Exam Test Series Details',
-    description: course?.description || 'Access official mock exams, subject-wise quizzes, and performance analytics calibrated for government job examinations.',
-  });
   const { user } = useAuth();
   const { addToCart, isInCart, refreshCart } = useCart();
   const [addingToCart, setAddingToCart] = useState(false);
@@ -57,6 +53,11 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useSEO({
+    title: course?.title ? `${course.title} — Test Series & Quizzes` : 'Exam Test Series Details',
+    description: course?.description || 'Access official mock exams, subject-wise quizzes, and performance analytics calibrated for government job examinations.',
+  });
 
   const [userCoins, setUserCoins] = useState(0);
   const [useCoins, setUseCoins] = useState(true);
