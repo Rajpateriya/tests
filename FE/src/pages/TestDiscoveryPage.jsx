@@ -1093,7 +1093,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                 </div>
               ) : (
                 <div
-                  className="max-h-[580px] sm:max-h-[660px] xl:max-h-[720px] overflow-y-auto pr-1 sm:pr-2 overscroll-contain"
+                  className="max-h-[520px] sm:max-h-[540px] overflow-y-auto pr-1 sm:pr-2 overscroll-contain"
                   style={{ scrollbarGutter: 'stable' }}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 pt-1 pb-2 px-1">
