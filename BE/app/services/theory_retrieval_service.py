@@ -38,16 +38,37 @@ async def search_theory(
     if subtopic:
         query_embedding = embedding_service.embed(subtopic)
         pool_size = max(settings.THEORY_CANDIDATE_POOL, top_k)
+        # 1. Primary: exact match on subject + sub_subject + topic
         candidates = await repo.vector_search(
             subject, query_embedding, pool_size, sub_subject=sub_subject, topic=topic
         )
+        # 2. Resilient fallback: if sub_subject had null in DB or mismatched, search by topic
+        if not candidates and sub_subject:
+            candidates = await repo.vector_search(
+                subject, query_embedding, pool_size, sub_subject=None, topic=topic
+            )
+        # 3. Resilient fallback: if topic had slight variation, search within sub_subject
+        if not candidates and topic:
+            candidates = await repo.vector_search(
+                subject, query_embedding, pool_size, sub_subject=sub_subject, topic=None
+            )
+        # 4. Global subject fallback: search across the subject by subtopic vector similarity
+        if not candidates:
+            candidates = await repo.vector_search(
+                subject, query_embedding, pool_size, sub_subject=None, topic=None
+            )
         if candidates:
             return _least_used_first(candidates, top_k)
 
-    # No subtopic given, or nothing matched within the exact filters:
+    # No subtopic given, or vector search matched nothing within exact filters:
     # spread across whatever topics/subtopics exist in that filtered set
-    # instead of collapsing onto whichever chunks happen to sort first.
     filtered_chunks = await repo.find_filtered(subject, sub_subject, topic)
+    if not filtered_chunks and sub_subject:
+        filtered_chunks = await repo.find_filtered(subject, None, topic)
+    if not filtered_chunks and topic:
+        filtered_chunks = await repo.find_filtered(subject, sub_subject, None)
+    if not filtered_chunks:
+        filtered_chunks = await repo.find_filtered(subject, None, None)
     if not filtered_chunks:
         return []
     return _diverse_sample(filtered_chunks, top_k)

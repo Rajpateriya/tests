@@ -38,6 +38,8 @@ import { PassDetailModal } from '../components/PassDetailModal';
 import { GlobalGlobeAnimation } from '../components/GlobalGlobeAnimation';
 import { CustomSelect } from '../components/CustomSelect';
 import { useSEO } from '../hooks/useSEO';
+import { FAQSection } from '../components/FAQSection';
+import { HOME_FAQS } from '../data/faqs';
 
 /**
  * TestDiscoveryPage — High-Conversion Academic Landing Page & Mock Test Catalog
@@ -2133,6 +2135,18 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
             </div>
           </div>
         </section>
+
+        {/* ========================================================================= */}
+        {/* 13. FREQUENTLY ASKED QUESTIONS (Just Above Footer, Responsive, SEO-Rich)   */}
+        {/* ========================================================================= */}
+        <FAQSection
+          id="home-faq"
+          title="Have any questions?"
+          subtitle="Here are answers to the most commonly asked ones"
+          tag="FAQ"
+          faqs={HOME_FAQS}
+          className="mt-8 sm:mt-12"
+        />
       </main>
 
       {/* Top-Down Interactive Pass Details & Courses Modal */}

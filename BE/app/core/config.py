@@ -9,6 +9,14 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
 
+    @field_validator("DEBUG", mode="before")
+    def assemble_debug(cls, v: Union[bool, str]) -> bool:
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "dev", "development")
+        return bool(v)
+
     # MongoDB Configuration
     MONGODB_URI: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "mock_exam_db"

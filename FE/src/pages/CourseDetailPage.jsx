@@ -6,6 +6,8 @@ import { useCart } from '../context/CartContext';
 import { RazorpayModal } from '../components/RazorpayModal';
 import { ROUTES } from '../routes';
 import { useSEO } from '../hooks/useSEO';
+import { FAQSection } from '../components/FAQSection';
+import { getCourseDetailFaqs } from '../data/faqs';
 import {
   ChevronRightIcon,
   CheckCircleIcon,
@@ -549,6 +551,18 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
               </div>
             )}
           </section>
+
+          {/* Dynamic Course Detail FAQ Section */}
+          {course && (
+            <FAQSection
+              id="course-detail-faq"
+              title={`Questions about ${course.title || 'this course'}?`}
+              subtitle={`Here are answers to the most commonly asked ones regarding this test series and ${course.target_exam || 'this examination'}.`}
+              tag="Course FAQ"
+              faqs={getCourseDetailFaqs(course)}
+              className="mt-8 sm:mt-12"
+            />
+          )}
         </div>
       </main>
 

@@ -1,3 +1,4 @@
+import re
 """Per-subject taxonomy: subject -> (optional) sub-subject -> topic -> subtopics.
 
 Stored as one document per subject in the `taxonomies` collection:
@@ -24,12 +25,29 @@ def _same(a: Optional[str], b: Optional[str]) -> bool:
 
 
 def canonical_sub_subject(value: Optional[str], allowed: List[str]) -> Optional[str]:
-    """The list's own spelling of `value` (case-insensitive), or None if it isn't in the list."""
-    if not value:
+    """Match `value` to the canonical name in `allowed` (resilient to numbering, case, '&' vs 'and')."""
+    if not value or not allowed:
         return None
+    val_clean = value.strip().lower()
+    val_norm = re.sub(r"^\d+[\.\)]\s*", "", val_clean).replace("&", "and").strip()
+
+    # 1. Exact case-insensitive match
     for name in allowed:
         if _same(name, value):
             return name
+
+    # 2. Match without leading numbers (e.g. "Banking..." matching "2. Banking...")
+    for name in allowed:
+        name_norm = re.sub(r"^\d+[\.\)]\s*", "", name.strip().lower()).replace("&", "and").strip()
+        if val_norm == name_norm:
+            return name
+
+    # 3. Substring containment match
+    for name in allowed:
+        name_norm = re.sub(r"^\d+[\.\)]\s*", "", name.strip().lower()).replace("&", "and").strip()
+        if (val_norm and val_norm in name_norm) or (name_norm and name_norm in val_norm):
+            return name
+
     return None
 
 
