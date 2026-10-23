@@ -970,8 +970,12 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                 <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">No courses published yet</h3>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
-                {courses.map((course) => (
+              <div
+                className="max-h-[580px] sm:max-h-[660px] xl:max-h-[720px] overflow-y-auto pr-1 sm:pr-2 overscroll-contain"
+                style={{ scrollbarGutter: 'stable' }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 pt-1 pb-2 px-1">
+                  {courses.map((course) => (
                   <article
                     key={course.id}
                     className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
@@ -1011,6 +1015,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                     </div>
                   </article>
                 ))}
+              </div>
               </div>
             )}
           </>
@@ -1087,8 +1092,12 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
-                  {filteredTests.map((test) => (
+                <div
+                  className="max-h-[580px] sm:max-h-[660px] xl:max-h-[720px] overflow-y-auto pr-1 sm:pr-2 overscroll-contain"
+                  style={{ scrollbarGutter: 'stable' }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 pt-1 pb-2 px-1">
+                    {filteredTests.map((test) => (
                     <article
                       key={test.id}
                       className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
@@ -1155,7 +1164,8 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                     </article>
                   ))}
                 </div>
-              )}
+              </div>
+            )}
             </>
           )}
         </section>
