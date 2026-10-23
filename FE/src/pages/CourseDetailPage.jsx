@@ -6,6 +6,8 @@ import { useCart } from '../context/CartContext';
 import { RazorpayModal } from '../components/RazorpayModal';
 import { ROUTES } from '../routes';
 import { useSEO } from '../hooks/useSEO';
+import { FAQSection } from '../components/FAQSection';
+import { getCourseDetailFaqs } from '../data/faqs';
 import {
   ChevronRightIcon,
   CheckCircleIcon,
@@ -46,10 +48,6 @@ const PAGE_MAIN = 'relative w-full max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5
 
 export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backLabel = 'Courses' }) => {
   const navigate = useNavigate();
-  useSEO({
-    title: course?.title ? `${course.title} — Test Series & Quizzes` : 'Exam Test Series Details',
-    description: course?.description || 'Access official mock exams, subject-wise quizzes, and performance analytics calibrated for government job examinations.',
-  });
   const { user } = useAuth();
   const { addToCart, isInCart, refreshCart } = useCart();
   const [addingToCart, setAddingToCart] = useState(false);
@@ -57,6 +55,11 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useSEO({
+    title: course?.title ? `${course.title} — Test Series & Quizzes` : 'Exam Test Series Details',
+    description: course?.description || 'Access official mock exams, subject-wise quizzes, and performance analytics calibrated for government job examinations.',
+  });
 
   const [userCoins, setUserCoins] = useState(0);
   const [useCoins, setUseCoins] = useState(true);
@@ -548,6 +551,18 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
               </div>
             )}
           </section>
+
+          {/* Dynamic Course Detail FAQ Section */}
+          {course && (
+            <FAQSection
+              id="course-detail-faq"
+              title={`Questions about ${course.title || 'this course'}?`}
+              subtitle={`Here are answers to the most commonly asked ones regarding this test series and ${course.target_exam || 'this examination'}.`}
+              tag="Course FAQ"
+              faqs={getCourseDetailFaqs(course)}
+              className="mt-8 sm:mt-12"
+            />
+          )}
         </div>
       </main>
 

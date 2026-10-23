@@ -9,6 +9,8 @@ import {
   XCircleIcon,
 } from '../components/Icons';
 import { useSEO } from '../hooks/useSEO';
+import { FAQSection } from '../components/FAQSection';
+import { TYPING_PAGE_FAQS } from '../data/faqs';
 
 const fmtDate = (value) => new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
@@ -1252,6 +1254,16 @@ export const TypingMasterPage = () => {
             </section>
           </div>
         )}
+
+        {/* Typing Simulator FAQs */}
+        <FAQSection
+          id="typing-faq"
+          title="Have questions about typing tests?"
+          subtitle="Here are answers to the most commonly asked ones regarding official SSC/Railway speed formulas and accuracy rules."
+          tag="Typing FAQ"
+          faqs={TYPING_PAGE_FAQS}
+          className="mt-8 sm:mt-12"
+        />
       </main>
     </div>
   );

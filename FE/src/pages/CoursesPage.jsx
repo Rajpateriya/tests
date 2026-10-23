@@ -6,6 +6,8 @@ import { useCart } from '../context/CartContext';
 import { RazorpayModal } from '../components/RazorpayModal';
 import { ROUTES, useOpenCourse } from '../routes';
 import { useSEO } from '../hooks/useSEO';
+import { FAQSection } from '../components/FAQSection';
+import { COURSES_PAGE_FAQS } from '../data/faqs';
 import {
   SparklesIcon,
   CheckCircleIcon,
@@ -641,6 +643,16 @@ export const CoursesPage = ({ onStartTest }) => {
             })}
           </div>
         )}
+
+        {/* Courses & Test Series FAQ Section */}
+        <FAQSection
+          id="courses-faq"
+          title="Have questions about courses?"
+          subtitle="Here are answers to the most commonly asked ones about test series packages, attempts, and derivations."
+          tag="Courses FAQ"
+          faqs={COURSES_PAGE_FAQS}
+          className="mt-12 sm:mt-16"
+        />
       </main>
 
       {/* Answer preview modal */}

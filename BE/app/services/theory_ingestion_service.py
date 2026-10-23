@@ -9,6 +9,7 @@ otherwise, when the subject has sub-subjects, the LLM picks one per chunk
 from the taxonomy's list, and an invalid pick is stored as null.
 """
 import hashlib
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -97,6 +98,28 @@ def _existing_topic_names(tree: List[Dict[str, Any]], sub_subject: Optional[str]
     return names
 
 
+def canonical_topic_name(topic: str, existing_topics: List[str]) -> str:
+    """Return the exact spelling from existing_topics if same or nearly identical."""
+    if not topic or not existing_topics:
+        return topic.strip() if topic else "General"
+    clean = " ".join(topic.strip().lower().replace("&", "and").split())
+    for t in existing_topics:
+        t_clean = " ".join(t.strip().lower().replace("&", "and").split())
+        if clean == t_clean:
+            return t
+    return topic.strip()
+
+
+def sub_subject_for_topic(tree: List[Dict[str, Any]], topic: str) -> Optional[str]:
+    """Find the parent sub_subject for a topic in the taxonomy tree."""
+    if not topic:
+        return None
+    for entry in tree:
+        if entry.get("topic", "").strip().lower() == topic.strip().lower() and entry.get("sub_subject"):
+            return entry["sub_subject"]
+    return None
+
+
 async def _resolve_pdf_topic(
     chunks: List[Dict[str, str]],
     tree: List[Dict[str, Any]],
@@ -119,24 +142,41 @@ async def _resolve_pdf_topic(
             headings.append(heading)
         if len(headings) >= 40:
             break
+    # If headings clearly span multiple distinct topics in the taxonomy, this is a multi-topic compilation.
+    if len(headings) >= 5 and known:
+        matched_topics = set()
+        for h in headings:
+            for t in known:
+                words = [w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", t)]
+                if words and any(w in h.lower() for w in words):
+                    matched_topics.add(t)
+        if len(matched_topics) >= 2:
+            logger.info(
+                f"'{source_pdf}' spans multiple topics ({len(matched_topics)} detected: {matched_topics}) "
+                "— tagging per chunk instead of locking entire PDF."
+            )
+            return None
+
     opening = " ".join(chunk["text"][:500] for chunk in chunks[:2])
     existing_line = (
         "EXISTING TOPICS: " + ", ".join(known) + "\n"
         "If this document is about one of them, copy that topic EXACTLY.\n"
         if known else ""
     )
-    prompt = f"""This is one study document (usually a single chapter): "{source_pdf}".
-Decide the ONE topic the whole document belongs to.
-
+    prompt = f"""This is one study document: "{source_pdf}".
 SECTION HEADINGS: {'; '.join(headings) or '(none)'}
 
 OPENING TEXT: {opening}
 
-{existing_line}A topic is the chapter-level or unit-level area of the subject — not the subject's own
-name, not a single small concept, and not a generic word like "Introduction"."""
+{existing_line}Task:
+- If this entire document is dedicated to ONE single topic (e.g. a single chapter on one subject area), return that exact topic name from EXISTING TOPICS.
+- If this document is a compilation, monthly capsule, multi-chapter book, or covers MULTIPLE different topics from the list above, return topic as "MULTI_TOPIC"."""
     try:
         response: PdfTopic = await llm_client.generate(prompt, PdfTopic, light=True)
-        return canonical(response.topic) if response.topic.strip() else None
+        topic_val = response.topic.strip()
+        if not topic_val or topic_val.upper() in ("MULTI_TOPIC", "MULTIPLE_TOPICS", "NONE", "GENERAL"):
+            return None
+        return canonical(topic_val) if topic_val else None
     except Exception as e:
         logger.error(f"Could not decide a topic for '{source_pdf}': {e} — falling back to per-chunk topics")
         return None
@@ -250,10 +290,16 @@ async def ingest_theory_pdf(
         docs_to_insert: List[Dict[str, Any]] = []
         for raw, tag, embedding in zip(batch, tags, embeddings):
             try:
+                tag_topic = pdf_topic or tag.topic
+                tag_topic = canonical_topic_name(tag_topic, _existing_topic_names(tree, None))
+
                 if sub_subject:
                     final_sub_subject = sub_subject
                 elif allowed:
                     final_sub_subject = canonical_sub_subject(tag.sub_subject, allowed)
+                    if final_sub_subject is None:
+                        # Auto-derive from taxonomy tree if tag_topic is a known topic under a sub_subject:
+                        final_sub_subject = sub_subject_for_topic(tree, tag_topic)
                     if final_sub_subject is None:
                         unresolved += 1
                         logger.warning(
