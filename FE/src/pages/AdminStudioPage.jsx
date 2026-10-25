@@ -1234,15 +1234,17 @@ export const AdminStudioPage = () => {
                 <Icon size={18} className="sm:hidden" />
                 <Icon size={24} className="hidden sm:block" />
               </div>
-              <div className="text-left min-w-0">
-                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-charcoal-400 truncate">{label}</div>
-                <div className={`text-lg sm:text-2xl font-extrabold font-mono truncate ${green ? 'text-emerald-600 dark:text-emerald-400' : 'text-charcoal-900 dark:text-charcoal-100'}`}>
+              <div className="text-left min-w-0 flex-1">
+                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-400 leading-tight break-words" title={label}>
+                  {label}
+                </div>
+                <div className={`text-lg sm:text-2xl font-extrabold font-mono mt-0.5 ${green ? 'text-emerald-600 dark:text-emerald-400' : 'text-charcoal-900 dark:text-charcoal-100'}`}>
                   {value ?? (loadingOverview ? '...' : 0)}
                 </div>
               </div>
             </>
           );
-          const base = 'bg-white dark:bg-charcoal-900 border rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-subtle flex items-center gap-2.5 sm:gap-4 w-full';
+          const base = 'bg-white dark:bg-charcoal-900 border rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-5 shadow-subtle flex items-center gap-2.5 sm:gap-3.5 w-full';
           return tab ? (
             <button
               key={key}

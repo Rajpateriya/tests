@@ -14,6 +14,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { ShieldIcon, CheckCircleIcon, SparklesIcon } from './Icons';
 import { useAuth } from '../context/AuthContext';
@@ -216,9 +217,9 @@ export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess 
   if (!isOpen || !item) return null;
 
   // ── When Razorpay popup is open we show a minimal backdrop with status ──
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-md animate-fade-in"
       onClick={(e) => {
         // Allow clicking backdrop to close only if not in critical state
         if (state !== 'PROCESSING' && state !== 'SUCCESS') onClose();
@@ -336,6 +337,7 @@ export const RazorpayModal = ({ isOpen, course, plan, order, onClose, onSuccess 
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

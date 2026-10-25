@@ -17,6 +17,13 @@ else
     source .venv/bin/activate
 fi
 
+# Free port 8000 if already occupied by an old process
+if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "Port 8000 is currently in use. Terminating stale process on port 8000..."
+    lsof -ti :8000 | xargs kill -9 2>/dev/null || true
+    sleep 1
+fi
+
 echo "Starting Uvicorn server on http://localhost:8000..."
 echo "Interactive Swagger Docs: http://localhost:8000/docs"
 echo "ReDoc Documentation:    http://localhost:8000/redoc"
