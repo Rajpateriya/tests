@@ -50,7 +50,7 @@ jobs:
             echo "Configured API URL: ${BE_URL}/api/v1"
           else
             echo "LIVE_API_BASE_URL=https://mock-exam-backend-1029614513378.asia-south1.run.app/api/v1" >> $GITHUB_ENV
-            echo "Backend service not yet found; using known fallback"
+            echo "Backend service not yet found; using known fallback https://mock-exam-backend-1029614513378.asia-south1.run.app/api/v1"
           fi
 
       # 5. Generate .env.production file dynamically from GitHub Secrets
@@ -63,28 +63,23 @@ jobs:
           EOF
           echo "Generated .env.production successfully"
 
-      # 6. Build and push to Docker Hub, then resolve the immutable digest
+      # 6. Build and Push Frontend Docker image
       - name: Build and Push Frontend to Docker Hub
         run: |
-          REPO="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend"
-          SHA_TAG="$REPO:${{ github.sha }}"
-          LATEST_TAG="$REPO:latest"
+          IMAGE_TAG="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend:${{ github.sha }}"
+          LATEST_TAG="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend:latest"
 
-          docker build -t "$SHA_TAG" -t "$LATEST_TAG" ./FE
-          docker push "$SHA_TAG"
-          docker push "$LATEST_TAG"
+          docker build -t $IMAGE_TAG -t $LATEST_TAG ./FE
+          docker push $IMAGE_TAG
+          docker push $LATEST_TAG
 
-          # Deploy by digest to avoid mirror.gcr.io tag caching / "not found" errors
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$SHA_TAG")
-          DIGEST="docker.io/${DIGEST#docker.io/}"
-          echo "Deploying image: $DIGEST"
-          echo "IMAGE_REF=$DIGEST" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       # 7. Deploy to Google Cloud Run
       - name: Deploy Frontend to Cloud Run
         run: |
           gcloud run deploy ${{ env.FE_SERVICE_NAME }} \
-            --image "${{ env.IMAGE_REF }}" \
+            --image ${{ env.IMAGE_TAG }} \
             --region ${{ env.GCP_REGION }} \
             --port 80 \
             --platform managed \
