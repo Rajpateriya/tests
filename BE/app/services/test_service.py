@@ -38,6 +38,7 @@ class TestService:
             search=params.search,
             is_active=params.is_active,
             is_free=params.is_free,
+            admin_id=params.admin_id,
             skip=skip,
             limit=limit,
         )
@@ -49,7 +50,7 @@ class TestService:
             raise NotFoundException(f"Test with id '{test_id}' not found")
         return self._to_detail(test)
 
-    async def create_test(self, req: TestCreate) -> TestDetailOut:
+    async def create_test(self, req: TestCreate, admin_id: Optional[str] = None) -> TestDetailOut:
         # Validate that questions actually exist
         existing_questions = await self.question_repo.get_by_ids(req.question_ids)
         if len(existing_questions) != len(req.question_ids):
@@ -79,6 +80,7 @@ class TestService:
             "total_questions": total_questions,
             "is_active": req.is_active,
             "is_free": req.is_free,
+            "admin_id": admin_id,
             "created_at": now,
             "updated_at": now,
         }
@@ -96,6 +98,7 @@ class TestService:
         duration_minutes: int = 30,
         positive_marks: float = 2.0,
         negative_marks: float = 0.5,
+        admin_id: Optional[str] = None,
     ) -> TestDetailOut:
         """Dynamic automated test compilation from the external question database."""
         sampled_questions = await self.question_repo.sample_questions(
@@ -120,7 +123,7 @@ class TestService:
             question_ids=question_ids,
             is_active=True,
         )
-        return await self.create_test(req)
+        return await self.create_test(req, admin_id=admin_id)
 
     # ── Admin: see, edit and delete a test ──
 
@@ -181,45 +184,47 @@ class TestService:
             return await self._admin_detail(doc)
 
         changes["updated_at"] = datetime.now(timezone.utc)
-        updated = await self.test_repo.update(test_id, changes)
+        await self.test_repo.update(test_id, changes)
 
-        # Courses keep a small copy of the test's title, duration and marks for display: keep it in step.
-        copies = {
-            "title": updated.get("title"),
-            "duration_minutes": updated.get("duration_minutes"),
-            "positive_marks": updated.get("positive_marks_per_q"),
-            "negative_marks": updated.get("negative_marks_per_q"),
-        }
-        async for course in self.db.courses.find({"quizzes.id": test_id}):
-            quizzes = [{**q, **copies} if q.get("id") == test_id else q for q in course.get("quizzes", [])]
-            await self.db.courses.update_one({"_id": course["_id"]}, {"$set": {"quizzes": quizzes}})
+        # Sync course-side copies of this quiz
+        course_fields: Dict[str, Any] = {}
+        for k in ("title", "duration_minutes", "positive_marks_per_q", "negative_marks_per_q", "topic"):
+            if k in changes:
+                alias = "positive_marks" if k == "positive_marks_per_q" else "negative_marks" if k == "negative_marks_per_q" else k
+                course_fields[f"quizzes.$[q].{alias}"] = changes[k]
 
+        if course_fields:
+            await self.db.courses.update_many(
+                {"quizzes.id": test_id},
+                {"$set": course_fields},
+                array_filters=[{"q.id": test_id}],
+            )
+
+        updated = await self.test_repo.get_by_id(test_id)
         return await self._admin_detail(updated)
 
     async def delete_test(self, test_id: str) -> Dict[str, Any]:
-        """Delete a test and take it out of every course that had it. Students' finished results
-        are kept; a test someone is taking right now cannot be deleted under them."""
+        """Delete a test. Refused (409) if an attempt is currently in progress."""
         doc = await self.test_repo.get_by_id(test_id)
         if not doc:
             raise NotFoundException(f"Test with id '{test_id}' not found")
 
-        taking_now = await self.db.attempts.count_documents(
-            {"test_id": test_id, "status": {"$in": ["IN_PROGRESS", "PAUSED"]}}
-        )
-        if taking_now:
+        in_progress = await self.db.attempts.find_one({"test_id": test_id, "status": "IN_PROGRESS"})
+        if in_progress:
             raise ConflictException(
-                f"{taking_now} student(s) are taking this test right now. Delete it once they have finished."
+                "Cannot delete this test: a student is in the middle of taking it right now. Try again once they finish."
             )
 
-        removed_from, unpublished = [], []
+        removed_from: List[str] = []
+        unpublished: List[str] = []
         now = datetime.now(timezone.utc)
         async for course in self.db.courses.find({"quizzes.id": test_id}):
             quizzes = [q for q in course.get("quizzes", []) if q.get("id") != test_id]
             changes: Dict[str, Any] = {"quizzes": quizzes, "updated_at": now}
-            if course.get("created_by"):  # admin-made course: its subjects follow the tests that remain
+            if course.get("created_by"):
                 changes["subjects"] = list(dict.fromkeys(q["subject"] for q in quizzes if q.get("subject")))
             if not quizzes and course.get("is_published") is not False:
-                changes["is_published"] = False  # a course with nothing in it must not stay published
+                changes["is_published"] = False
                 unpublished.append(course.get("title", ""))
             await self.db.courses.update_one({"_id": course["_id"]}, {"$set": changes})
             removed_from.append(course.get("title", ""))
@@ -251,6 +256,7 @@ class TestService:
             total_questions=doc.get("total_questions", len(doc.get("question_ids", []))),
             is_active=doc.get("is_active", True),
             is_free=doc.get("is_free", False),
+            admin_id=doc.get("admin_id"),
             created_at=doc["created_at"],
         )
 

@@ -17,7 +17,8 @@ class TestCreate(BaseModel):
     negative_marks_per_q: float = Field(default=0.5, ge=0)
     question_ids: List[str] = Field(min_length=1)
     is_active: bool = True
-    is_free: bool = False  # paid by default; only explicitly-tagged tests are free
+    is_free: bool = False
+    admin_id: Optional[str] = None
 
 
 class TestUpdate(BaseModel):
@@ -29,6 +30,7 @@ class TestUpdate(BaseModel):
     negative_marks_per_q: Optional[float] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
     is_free: Optional[bool] = None
+    admin_id: Optional[str] = None
 
 
 class TestSummaryOut(BaseModel):
@@ -48,8 +50,8 @@ class TestSummaryOut(BaseModel):
     total_questions: int
     is_active: bool
     is_free: bool = False
+    admin_id: Optional[str] = None
     created_at: datetime
-
 
 
 class TestDetailOut(TestSummaryOut):
@@ -86,6 +88,7 @@ class TestFilterParams(BaseModel):
     subject: Optional[str] = None
     topic: Optional[str] = None
     target_exam: Optional[str] = None
-    search: Optional[str] = None  # matches the title or subject, ignoring case
+    search: Optional[str] = None
     is_active: Optional[bool] = True
-    is_free: Optional[bool] = None  # true = only free tests; omit for both
+    is_free: Optional[bool] = None
+    admin_id: Optional[str] = None

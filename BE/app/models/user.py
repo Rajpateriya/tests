@@ -5,9 +5,10 @@ from pydantic import BaseModel, Field
 
 
 class UserRole(str, Enum):
-    USER = "user"
-    STUDENT = "student"
+    SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
+    STUDENT = "student"
+    USER = "user"
 
 
 class EnrolledCourseItem(BaseModel):
@@ -58,6 +59,9 @@ class UserInDB(BaseModel):
     profile: UserProfile = Field(default_factory=UserProfile)
     otp: Optional[str] = None
     otp_expires_at: Optional[datetime] = None
+    admin_id: Optional[str] = None
+    subdomain: Optional[str] = None
+    organization_name: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

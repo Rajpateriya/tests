@@ -17,6 +17,7 @@ class TestRepository(BaseRepository):
         search: Optional[str] = None,
         is_active: Optional[bool] = True,
         is_free: Optional[bool] = None,
+        admin_id: Optional[str] = None,
         skip: int = 0,
         limit: int = 20,
     ) -> List[Dict[str, Any]]:
@@ -37,9 +38,16 @@ class TestRepository(BaseRepository):
             term = {"$regex": re.escape(search.strip()), "$options": "i"}
             query["$or"] = [{"title": term}, {"subject": term}]
 
+        if admin_id:
+            tenant_cond = {"$or": [{"admin_id": admin_id}, {"admin_id": None}, {"admin_id": {"$exists": False}}]}
+            if "$or" in query:
+                query["$and"] = [{"$or": query.pop("$or")}, tenant_cond]
+            else:
+                query.update(tenant_cond)
+
         return await self.find_many(
             query,
             skip=skip,
             limit=limit,
-            sort=[("created_at", -1), ("_id", 1)],  # stable order so pages never overlap
+            sort=[("created_at", -1), ("_id", 1)],
         )

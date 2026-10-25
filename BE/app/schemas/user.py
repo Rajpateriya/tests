@@ -11,12 +11,14 @@ class UserRegisterRequest(BaseModel):
     role: Optional[UserRole] = None
     target_exams: Optional[List[str]] = Field(default_factory=list)
     preferred_subjects: Optional[List[str]] = Field(default_factory=list)
+    subdomain: Optional[str] = None
 
 
 class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str
     remember_me: bool = False
+    subdomain: Optional[str] = None
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -56,16 +58,21 @@ class UserResponse(BaseModel):
     role: UserRole
     is_active: bool
     profile: UserProfile
+    admin_id: Optional[str] = None
+    subdomain: Optional[str] = None
+    organization_name: Optional[str] = None
     created_at: datetime
 
 
 class SendOtpRequest(BaseModel):
     email: EmailStr
+    subdomain: Optional[str] = None
 
 
 class VerifyOtpRequest(BaseModel):
     email: EmailStr
     otp: str
+    subdomain: Optional[str] = None
 
 
 class RegisterInitiateResponse(BaseModel):
@@ -88,7 +95,6 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=6, max_length=100)
 
 
-
 class UserAdminUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -102,6 +108,49 @@ class UserAdminUpdate(BaseModel):
     subscription_plan: Optional[str] = None
     subscription_status: Optional[str] = None
     password: Optional[str] = Field(None, min_length=6, max_length=100)
+    admin_id: Optional[str] = None
+    subdomain: Optional[str] = None
+    organization_name: Optional[str] = None
+
+
+class StudentCreateRequest(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=2, max_length=100)
+    password: str = Field(min_length=6, max_length=100)
+    target_exams: Optional[List[str]] = Field(default_factory=list)
+    preferred_subjects: Optional[List[str]] = Field(default_factory=list)
+    phone_number: Optional[str] = None
+
+
+class TenantAdminCreateRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=100)
+    full_name: str = Field(min_length=2, max_length=100)
+    subdomain: str = Field(min_length=2, max_length=50)
+    organization_name: str = Field(min_length=2, max_length=100)
+    phone_number: Optional[str] = None
+
+
+class TenantAdminUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    subdomain: Optional[str] = None
+    organization_name: Optional[str] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = Field(None, min_length=6, max_length=100)
+
+
+class TenantAdminResponse(BaseModel):
+    id: str
+    email: EmailStr
+    full_name: str
+    subdomain: Optional[str] = None
+    organization_name: Optional[str] = None
+    is_active: bool
+    student_count: int = 0
+    test_count: int = 0
+    course_count: int = 0
+    created_at: datetime
 
 
 class PaginatedUsersResponse(BaseModel):

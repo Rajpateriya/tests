@@ -26,6 +26,7 @@ class TestInDB(BaseModel):
     question_ids: List[str] = Field(default_factory=list)
     total_questions: int = 0
     is_active: bool = True
+    admin_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

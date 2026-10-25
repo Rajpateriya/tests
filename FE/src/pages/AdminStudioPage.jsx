@@ -236,7 +236,44 @@ export const AdminStudioPage = () => {
   const lastWritten = useRef(null); // the address this page itself just navigated to
   const seenAddress = useRef(location.pathname + location.search);
   const bootPath = useRef(parseAdminPath(location.pathname)); // where the page was opened (a refresh or shared link)
-  const [activeTab, setActiveTab] = useState(bootPath.current.tab); // 'users' | 'courses' | 'tests' | 'health'
+  const isSuperAdmin = currentAdmin?.role === 'super_admin';
+  const [activeTab, setActiveTab] = useState(bootPath.current.tab); // 'users' | 'courses' | 'tests' | 'health' | 'tenants'
+
+  // Multi-Tenant States
+  const [tenants, setTenants] = useState([]);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
+  const [tenantFilter, setTenantFilter] = useState('');
+  const [tenantModal, setTenantModal] = useState(null); // { mode: 'create' | 'edit', tenant: null }
+  const [savingTenant, setSavingTenant] = useState(false);
+  const [tenantForm, setTenantForm] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    subdomain: '',
+    organization_name: '',
+    phone_number: '',
+    is_active: true,
+  });
+
+
+
+  const loadTenants = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    setTenantsLoading(true);
+    try {
+      const res = await api.admin.getTenants();
+      const list = Array.isArray(res) ? res : res?.data || [];
+      setTenants(list);
+    } catch (err) {
+      console.warn('Could not load tenants:', err);
+    } finally {
+      setTenantsLoading(false);
+    }
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    if (isSuperAdmin) loadTenants();
+  }, [isSuperAdmin, loadTenants]);
 
   // Admin stats & health
   const [stats, setStats] = useState(null);
@@ -379,6 +416,7 @@ export const AdminStudioPage = () => {
         search: debouncedUserSearch,
         role: roleFilter,
         is_active,
+        tenant_admin_id: tenantFilter,
       });
       setUsers(res.items || []);
       setTotalUsers(res.total || 0);
@@ -389,7 +427,7 @@ export const AdminStudioPage = () => {
     } finally {
       setUsersLoading(false);
     }
-  }, [debouncedUserSearch, roleFilter, statusFilter]);
+  }, [debouncedUserSearch, roleFilter, statusFilter, tenantFilter]);
 
   useEffect(() => {
     loadOverviewData();
@@ -509,6 +547,10 @@ export const AdminStudioPage = () => {
 
   // Quick toggle role between user and admin
   const handleToggleRole = async (user) => {
+    if (!isSuperAdmin) {
+      showToast('error', 'Only Super Administrators can assign or modify Administrator privileges.');
+      return;
+    }
     const isSelf = currentAdmin?.id === user.id || currentAdmin?.email === user.email;
     if (isSelf) {
       showToast('error', 'You cannot alter your own administrator role.');
@@ -944,6 +986,81 @@ export const AdminStudioPage = () => {
     }
   }, [activeTab]);
 
+
+
+  // Super Admin: Tenant Admin Management Handlers
+  const handleOpenCreateTenant = () => {
+    setTenantForm({
+      full_name: '',
+      email: '',
+      password: '',
+      subdomain: '',
+      organization_name: '',
+      phone_number: '',
+      is_active: true,
+    });
+    setTenantModal({ mode: 'create', tenant: null });
+  };
+
+  const handleOpenEditTenant = (tenant) => {
+    setTenantForm({
+      full_name: tenant.full_name || '',
+      email: tenant.email || '',
+      password: '',
+      subdomain: tenant.subdomain || '',
+      organization_name: tenant.organization_name || '',
+      phone_number: tenant.phone_number || '',
+      is_active: tenant.is_active !== false,
+    });
+    setTenantModal({ mode: 'edit', tenant });
+  };
+
+  const handleSaveTenant = async (e) => {
+    e.preventDefault();
+    if (!tenantForm.subdomain?.trim() || !tenantForm.organization_name?.trim() || !tenantForm.email?.trim()) {
+      showToast('error', 'Subdomain, Organization Name, and Email are required.');
+      return;
+    }
+    setSavingTenant(true);
+    try {
+      if (tenantModal.mode === 'create') {
+        if (!tenantForm.password || tenantForm.password.length < 6) {
+          showToast('error', 'Password must be at least 6 characters.');
+          setSavingTenant(false);
+          return;
+        }
+        await api.admin.createTenant(tenantForm);
+        showToast('success', `Tenant Admin "${tenantForm.organization_name}" created successfully!`);
+      } else {
+        const payload = { ...tenantForm };
+        if (!payload.password) delete payload.password;
+        await api.admin.updateTenant(tenantModal.tenant.id, payload);
+        showToast('success', `Tenant Admin "${tenantForm.organization_name}" updated!`);
+      }
+      setTenantModal(null);
+      loadTenants();
+      loadOverviewData();
+    } catch (err) {
+      showToast('error', `Operation failed: ${err.message}`);
+    } finally {
+      setSavingTenant(false);
+    }
+  };
+
+  const handleDeleteTenant = async (tenant) => {
+    if (!window.confirm(`Are you sure you want to remove Tenant Admin "${tenant.organization_name || tenant.full_name}"?`)) {
+      return;
+    }
+    try {
+      await api.admin.deleteTenant(tenant.id);
+      showToast('success', `Tenant "${tenant.organization_name || tenant.full_name}" deleted.`);
+      loadTenants();
+      loadOverviewData();
+    } catch (err) {
+      showToast('error', `Failed to delete tenant: ${err.message}`);
+    }
+  };
+
   // Targeted Passes: admin CRUD operations
   const loadPasses = async () => {
     setPassesLoading(true);
@@ -1219,6 +1336,36 @@ export const AdminStudioPage = () => {
         </div>
       </div>
 
+      {/* Tenant Banner (for Tenant Admins) */}
+      {!isSuperAdmin && (currentAdmin?.organization_name || currentAdmin?.subdomain) && (
+        <div className="bg-gradient-to-r from-institutional-500/10 via-sky-500/10 to-indigo-500/10 border border-institutional-200 dark:border-institutional-800/60 rounded-3xl p-5 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-institutional-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
+              {(currentAdmin.organization_name || currentAdmin.full_name || 'A')[0].toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-extrabold text-charcoal-900 dark:text-white">
+                  {currentAdmin.organization_name || currentAdmin.full_name}
+                </h3>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
+                  Subdomain: {currentAdmin.subdomain || 'Root Platform'}
+                </span>
+              </div>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-0.5">
+                Isolated Tenant Admin Workspace • Only students and tests assigned to your institution are managed here.
+              </p>
+            </div>
+          </div>
+          <div className="text-xs text-charcoal-500 dark:text-charcoal-400 flex items-center gap-2 shrink-0">
+            <span>Student Portal:</span>
+            <code className="px-2.5 py-1 rounded-xl bg-charcoal-100 dark:bg-charcoal-800 font-mono text-institutional-600 dark:text-institutional-400 font-bold border border-charcoal-200 dark:border-charcoal-700">
+              {currentAdmin.subdomain ? `${currentAdmin.subdomain}.prepmagnet.in` : 'prepmagnet.in'}
+            </code>
+          </div>
+        </div>
+      )}
+
       {/* 5 Live Stats Cards (all numbers from the backend); each opens its tab */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
         {[
@@ -1342,6 +1489,23 @@ export const AdminStudioPage = () => {
           <CpuIcon size={15} />
           <span>Infrastructure & Telemetry</span>
         </button>
+
+        {isSuperAdmin && (
+          <button
+            onClick={() => {
+              setActiveTab('tenants');
+              loadTenants();
+            }}
+            className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              activeTab === 'tenants'
+                ? 'bg-institutional-600 text-white shadow-sm font-extrabold'
+                : 'text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white hover:bg-charcoal-100 dark:hover:bg-charcoal-800'
+            }`}
+          >
+            <ShieldIcon size={15} />
+            <span>Tenant Admins & Subdomains ({tenants.length})</span>
+          </button>
+        )}
       </div>
 
       {/* TAB 1: USER PROFILES & GOVERNANCE (Tabulate Dashboard Paginated 10 per page) */}
@@ -1407,13 +1571,14 @@ export const AdminStudioPage = () => {
                   <option value="inactive">Suspended Only</option>
                 </CustomSelect>
 
-                {(searchQuery || roleFilter || statusFilter) && (
+                {(searchQuery || roleFilter || statusFilter || tenantFilter) && (
                   <button
                     type="button"
                     onClick={() => {
                       setSearchQuery('');
                       setRoleFilter('');
                       setStatusFilter('');
+                      setTenantFilter('');
                       setCurrentPage(1);
                     }}
                     title="Reset filters"
@@ -1422,6 +1587,29 @@ export const AdminStudioPage = () => {
                     Reset
                   </button>
                 )}
+
+                {/* Super Admin: Tenant Filter */}
+                {isSuperAdmin && tenants.length > 0 && (
+                  <CustomSelect
+                    value={tenantFilter}
+                    onChange={(e) => {
+                      setTenantFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="px-3 py-2 text-xs font-bold rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-800 dark:text-charcoal-200 focus:outline-none focus:ring-2 focus:ring-institutional-500 cursor-pointer max-w-[9.5rem]"
+                  >
+                    <option value="">All Tenants</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.subdomain}: {t.organization_name || t.full_name}
+                      </option>
+                    ))}
+                  </CustomSelect>
+                )}
+
+                
+
+                
               </div>
             </div>
           </div>
@@ -1506,7 +1694,7 @@ export const AdminStudioPage = () => {
                               <span>{u.role}</span>
                             </span>
 
-                            {!isSelf && (
+                            {isSuperAdmin && !isSelf && (
                               <button
                                 onClick={() => handleToggleRole(u)}
                                 title={u.role === 'admin' ? 'Demote to User' : 'Make Administrator'}
@@ -1762,7 +1950,7 @@ export const AdminStudioPage = () => {
                   <CustomSelect
                     value={editForm.role}
                     onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    disabled={currentAdmin?.id === selectedUser.id}
+                    disabled={!isSuperAdmin || currentAdmin?.id === selectedUser.id}
                     className="w-full px-3 py-2 rounded-xl border border-charcoal-300 dark:border-charcoal-700 bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-900 dark:text-charcoal-100 focus:outline-none focus:ring-2 focus:ring-institutional-500 font-bold"
                   >
                     <option value="user">Regular User</option>
@@ -3814,6 +4002,250 @@ export const AdminStudioPage = () => {
                 >
                   {savingPass ? <RefreshCwIcon size={14} className="animate-spin" /> : <SaveIcon size={14} />}
                   <span>{passModal.mode === 'create' ? 'Create Pass' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* TAB 7: TENANT ORGANIZATIONS & SUBDOMAINS (Super Admin Only) */}
+      {activeTab === 'tenants' && isSuperAdmin && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 p-6 rounded-3xl shadow-card">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldIcon size={20} className="text-institutional-600" />
+                <h2 className="text-lg font-black text-charcoal-950 dark:text-white">
+                  Multi-Tenant Institutes & Subdomain Directory
+                </h2>
+              </div>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-1 max-w-2xl">
+                Super Admin Studio: Provision and manage white-labeled tenant administrator accounts. Each Admin owns their assigned subdomain (e.g. <code>allen.prepmagnet.in</code>) and operates strictly on their enrolled students and mock tests.
+              </p>
+            </div>
+            <button
+              onClick={handleOpenCreateTenant}
+              className="px-5 py-2.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+            >
+              <PlusCircleIcon size={16} />
+              <span>Create Tenant Admin</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto rounded-3xl border border-charcoal-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 shadow-card">
+            <table className="w-full min-w-[760px] text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-charcoal-50 dark:bg-charcoal-850/80 border-b border-charcoal-200 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 font-extrabold uppercase tracking-wider text-[10px]">
+                  <th className="py-3.5 px-4">Organization & Subdomain</th>
+                  <th className="py-3.5 px-3">Admin Profile</th>
+                  <th className="py-3.5 px-3">Students Enrolled</th>
+                  <th className="py-3.5 px-3">Configured Tests</th>
+                  <th className="py-3.5 px-3">Courses Tagged</th>
+                  <th className="py-3.5 px-3">Status</th>
+                  <th className="py-3.5 px-3">Created</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-charcoal-150 dark:divide-charcoal-800 font-semibold">
+                {tenantsLoading ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-charcoal-400">
+                      <div className="inline-flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-institutional-600 border-t-transparent rounded-full animate-spin" />
+                        <span>Loading tenant organizations...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : tenants.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-charcoal-400">
+                      No tenant organizations configured yet. Click "Create Tenant Admin" to provision your first institute.
+                    </td>
+                  </tr>
+                ) : (
+                  tenants.map((t) => (
+                    <tr key={t.id} className="hover:bg-charcoal-50/60 dark:hover:bg-charcoal-850/50 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="font-extrabold text-charcoal-900 dark:text-white flex items-center gap-2">
+                          <span>{t.organization_name || t.full_name}</span>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-institutional-100 dark:bg-institutional-950 text-institutional-700 dark:text-institutional-300 border border-institutional-200 dark:border-institutional-800">
+                            {t.subdomain}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-mono text-institutional-600 dark:text-institutional-400 mt-0.5">
+                          https://{t.subdomain}.prepmagnet.in
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <div className="text-charcoal-900 dark:text-white font-bold">{t.full_name}</div>
+                        <div className="text-charcoal-400 font-mono text-[11px]">{t.email}</div>
+                      </td>
+                      <td className="py-3.5 px-3 font-mono font-bold text-institutional-600 dark:text-institutional-400">
+                        {t.student_count}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono font-bold text-charcoal-700 dark:text-charcoal-300">
+                        {t.test_count}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono font-bold text-charcoal-700 dark:text-charcoal-300">
+                        {t.course_count}
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                          t.is_active !== false
+                            ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                            : 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                        }`}>
+                          {t.is_active !== false ? 'ACTIVE' : 'SUSPENDED'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-charcoal-400 text-[11px] font-mono">
+                        {t.created_at ? new Date(t.created_at).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditTenant(t)}
+                            className="p-1.5 rounded-lg border border-charcoal-200 dark:border-charcoal-700 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 cursor-pointer"
+                            title="Edit Tenant Admin"
+                          >
+                            <EditIcon size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTenant(t)}
+                            className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950 text-rose-600 cursor-pointer"
+                            title="Delete Tenant Admin"
+                          >
+                            <TrashIcon size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TENANT ADMIN CREATION / EDIT MODAL (Super Admin Only) */}
+      {tenantModal && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-charcoal-950/80 backdrop-blur-md animate-fade-in font-sans"
+          onClick={() => setTenantModal(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-charcoal-150 dark:border-charcoal-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-institutional-100 dark:bg-institutional-950 text-institutional-600 flex items-center justify-center font-bold">
+                  <ShieldIcon size={16} />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-charcoal-950 dark:text-white">
+                    {tenantModal.mode === 'create' ? 'Provision Tenant Admin' : 'Edit Tenant Organization'}
+                  </h3>
+                  <p className="text-[11px] text-charcoal-500">
+                    Creates an isolated institute admin locked to their custom subdomain.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTenantModal(null)}
+                className="p-1 rounded-lg text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 cursor-pointer"
+              >
+                <XIcon size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTenant} className="space-y-4 text-xs font-semibold">
+              <div>
+                <label className="block text-charcoal-700 dark:text-charcoal-300 font-bold mb-1">Organization / Brand Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Allen Career Institute"
+                  value={tenantForm.organization_name}
+                  onChange={(e) => setTenantForm({ ...tenantForm, organization_name: e.target.value })}
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <label className="block text-charcoal-700 dark:text-charcoal-300 font-bold mb-1">
+                  Assigned Subdomain Slug
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. allen"
+                    value={tenantForm.subdomain}
+                    onChange={(e) => setTenantForm({ ...tenantForm, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                    className={INPUT_CLS}
+                  />
+                  <span className="text-charcoal-400 font-mono text-[11px] shrink-0">.prepmagnet.in</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-charcoal-700 dark:text-charcoal-300 font-bold mb-1">Admin Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rajesh Kumar"
+                    value={tenantForm.full_name}
+                    onChange={(e) => setTenantForm({ ...tenantForm, full_name: e.target.value })}
+                    className={INPUT_CLS}
+                  />
+                </div>
+                <div>
+                  <label className="block text-charcoal-700 dark:text-charcoal-300 font-bold mb-1">Admin Email</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="admin@allen.in"
+                    value={tenantForm.email}
+                    onChange={(e) => setTenantForm({ ...tenantForm, email: e.target.value })}
+                    className={INPUT_CLS}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-charcoal-700 dark:text-charcoal-300 font-bold mb-1">
+                  {tenantModal.mode === 'create' ? 'Admin Password' : 'New Password (Leave blank to keep unchanged)'}
+                </label>
+                <input
+                  type="password"
+                  placeholder={tenantModal.mode === 'create' ? 'Min 6 characters' : 'Unchanged'}
+                  value={tenantForm.password}
+                  onChange={(e) => setTenantForm({ ...tenantForm, password: e.target.value })}
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div className="pt-3 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTenantModal(null)}
+                  className="px-4 py-2 rounded-xl bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-charcoal-300 font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingTenant}
+                  className="px-5 py-2 rounded-xl bg-institutional-600 text-white font-extrabold hover:bg-institutional-700 transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {savingTenant ? <RefreshCwIcon size={14} className="animate-spin" /> : <SaveIcon size={14} />}
+                  <span>{tenantModal.mode === 'create' ? 'Provision Tenant' : 'Save Changes'}</span>
                 </button>
               </div>
             </form>

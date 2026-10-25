@@ -49,6 +49,7 @@ class CourseInDB(BaseModel):
     quizzes: List[CourseSubjectQuiz] = Field(default_factory=list)
     features: List[str] = Field(default_factory=list)
     created_by: Optional[str] = None  # admin user id; None for seeded courses
+    admin_id: Optional[str] = None    # tenant admin id
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

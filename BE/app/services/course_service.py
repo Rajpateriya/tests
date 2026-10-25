@@ -475,6 +475,7 @@ class CourseService:
             "is_active": True,
             "is_published": False,  # starts as a draft; invisible to users until published
             "created_by": admin_id,
+            "admin_id": admin_id,
             "created_at": now,
             "updated_at": now,
         }
@@ -524,7 +525,7 @@ class CourseService:
         return await self._admin_out(course)
 
     async def list_all_for_admin(
-        self, search: Optional[str] = None, target_exam: Optional[str] = None, skip: int = 0, limit: int = 500
+        self, search: Optional[str] = None, target_exam: Optional[str] = None, skip: int = 0, limit: int = 500, admin_user: Optional[Any] = None
     ) -> List[CourseAdminOut]:
         query: Dict[str, Any] = {}
         if search and search.strip():
@@ -532,6 +533,12 @@ class CourseService:
             query["$or"] = [{"title": rx}, {"target_exam": rx}]
         if target_exam and target_exam.strip():
             query["target_exam"] = {"$regex": f"^{re.escape(target_exam.strip())}$", "$options": "i"}
+        if admin_user and getattr(admin_user, "role", None) == UserRole.ADMIN:
+            tenant_cond = {"$or": [{"created_by": admin_user.id}, {"admin_id": admin_user.id}]}
+            if "$or" in query:
+                query["$and"] = [{"$or": query.pop("$or")}, tenant_cond]
+            else:
+                query.update(tenant_cond)
         docs = (
             await self.db.courses.find(query).sort([("created_at", -1), ("_id", 1)]).skip(skip).to_list(length=limit)
         )

@@ -17,8 +17,11 @@ class PassRepository(BaseRepository):
         cursor = self.collection.find({"is_active": True}).sort([("base_price", 1)])
         return await cursor.to_list(length=100)
 
-    async def get_all_passes(self) -> List[Dict[str, Any]]:
-        cursor = self.collection.find().sort([("created_at", -1)])
+    async def get_all_passes(self, admin_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        query = {}
+        if admin_id:
+            query["admin_id"] = admin_id
+        cursor = self.collection.find(query).sort([("created_at", -1)])
         return await cursor.to_list(length=100)
 
     async def create_pass(self, pass_dict: Dict[str, Any]) -> Dict[str, Any]:

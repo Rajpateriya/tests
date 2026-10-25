@@ -17,7 +17,7 @@ async def seed_test_database(db: AsyncIOMotorDatabase) -> None:
             "email": "admin@gmail.com",
             "hashed_password": hash_password("admin123"),
             "full_name": "Admin Test User",
-            "role": "admin",
+            "role": "super_admin",
             "is_active": True,
             "is_verified": True,
             "coins_balance": 1000,
