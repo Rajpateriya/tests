@@ -66,8 +66,8 @@ jobs:
       # 6. Build and Push Frontend Docker image
       - name: Build and Push Frontend to Docker Hub
         run: |
-          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend:${{ github.sha }}"
-          LATEST_TAG="${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend:latest"
+          IMAGE_TAG="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend:${{ github.sha }}"
+          LATEST_TAG="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mock-exam-frontend:latest"
 
           docker build -t $IMAGE_TAG -t $LATEST_TAG ./FE
           docker push $IMAGE_TAG
@@ -93,3 +93,11 @@ jobs:
           echo "=========================================="
           echo "Frontend successfully deployed to: ${URL}"
           echo "=========================================="
+
+      - name: Fetch Cloud Run Diagnostic Logs
+        if: failure()
+        run: |
+          echo "=== Cloud Run Diagnostic Logs for ${{ env.FE_SERVICE_NAME }} ==="
+          gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=${{ env.FE_SERVICE_NAME }}" \
+            --limit 100 \
+            --format="value(timestamp,severity,textPayload,jsonPayload.message)" || true
