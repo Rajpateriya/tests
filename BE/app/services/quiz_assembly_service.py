@@ -185,6 +185,7 @@ class QuizAssemblyService:
         positive_marks: float = 2.0,
         negative_marks: float = 0.5,
         blueprint_name: Optional[str] = None,
+        admin_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         blueprint = await self.blueprint_service.require_blueprint(subject, blueprint_name)
 
@@ -274,7 +275,8 @@ class QuizAssemblyService:
                     positive_marks_per_q=positive_marks,
                     negative_marks_per_q=negative_marks,
                     question_ids=picked,
-                )
+                ),
+                admin_id=admin_id,
             )
             await self.db.questions.update_many({"_id": {"$in": picked}}, {"$inc": {"used_in_tests": 1}})
             for question_id in picked:

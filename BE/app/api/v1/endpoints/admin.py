@@ -1,16 +1,25 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.api.v1.deps import require_admin
+from app.api.v1.deps import require_admin, require_super_admin
 from app.core.config import settings
 from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import db_manager, get_db
 from app.db.redis import redis_manager
 from app.models.test import TestType
+from app.models.user import UserRole
 from app.schemas.common import APIResponse
 from app.schemas.pass_schema import PassCreateRequest, PassResponse, PassUpdateRequest
 from app.schemas.test import AdminTestDetailOut, TestCreate, TestDetailOut, TestQuestionOut, TestUpdate
-from app.schemas.user import PaginatedUsersResponse, UserAdminUpdate, UserResponse
+from app.schemas.user import (
+    PaginatedUsersResponse,
+    StudentCreateRequest,
+    TenantAdminCreateRequest,
+    TenantAdminResponse,
+    TenantAdminUpdateRequest,
+    UserAdminUpdate,
+    UserResponse,
+)
 from app.services.auth_service import AuthService
 from app.services.pass_service import PassService
 from app.services.test_service import TestService
@@ -26,7 +35,8 @@ async def create_test_config(
 ):
     """Admin: Manually configure a mock test specifying exact question IDs and marking scheme."""
     service = TestService(db)
-    test = await service.create_test(req)
+    admin_id = admin.id if admin.role == UserRole.ADMIN else None
+    test = await service.create_test(req, admin_id=admin_id)
     return APIResponse(
         success=True,
         message="Mock test configured successfully",
@@ -48,11 +58,9 @@ async def auto_generate_mock(
     admin: UserResponse = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """
-    Admin: Dynamically generate a test by randomly sampling questions
-    from the automated data pipeline question repository.
-    """
+    """Admin: Dynamically generate a test by randomly sampling questions."""
     service = TestService(db)
+    admin_id = admin.id if admin.role == UserRole.ADMIN else None
     test = await service.auto_generate_mock(
         title=title,
         test_type=test_type,
@@ -63,6 +71,7 @@ async def auto_generate_mock(
         duration_minutes=duration_minutes,
         positive_marks=positive_marks,
         negative_marks=negative_marks,
+        admin_id=admin_id,
     )
     return APIResponse(
         success=True,
@@ -100,9 +109,13 @@ async def update_test_admin(
     admin: UserResponse = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Admin: change a test's title, description, duration, marking or on/off state.
-
-    Courses that include the test are updated to match."""
+    """Admin: change a test's title, description, duration, marking or on/off state."""
+    if admin.role == UserRole.ADMIN:
+        test_doc = await db.tests.find_one({"_id": test_id}, {"admin_id": 1})
+        if not test_doc:
+            raise NotFoundException(f"Test '{test_id}' not found")
+        if test_doc.get("admin_id") and test_doc.get("admin_id") != admin.id:
+            raise ForbiddenException("You can only modify tests belonging to your organization")
     test = await TestService(db).update_test(test_id, req)
     return APIResponse(success=True, message="Test updated", data=test)
 
@@ -113,10 +126,13 @@ async def delete_test_admin(
     admin: UserResponse = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Admin: delete a test and remove it from every course that included it.
-
-    A course left with no tests is switched back to draft. Students' finished results are kept.
-    Refused (409) while a student is in the middle of taking the test."""
+    """Admin: delete a test and remove it from every course that included it."""
+    if admin.role == UserRole.ADMIN:
+        test_doc = await db.tests.find_one({"_id": test_id}, {"admin_id": 1})
+        if not test_doc:
+            raise NotFoundException(f"Test '{test_id}' not found")
+        if test_doc.get("admin_id") and test_doc.get("admin_id") != admin.id:
+            raise ForbiddenException("You can only delete tests belonging to your organization")
     result = await TestService(db).delete_test(test_id)
     return APIResponse(success=True, message=f"Test '{result['title']}' deleted", data=result)
 
@@ -126,14 +142,33 @@ async def get_platform_stats(
     admin: UserResponse = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Admin: Overview metrics of platform usage."""
-    users_count = await db.users.count_documents({})
-    questions_count = await db.questions.count_documents({})
-    tests_count = await db.tests.count_documents({})
-    courses_count = await db.courses.count_documents({})
-    attempts_count = await db.attempts.count_documents({})
-    completed_attempts = await db.attempts.count_documents({"status": "COMPLETED"})
-    open_tickets = await db.support_tickets.count_documents({"status": "OPEN"})
+    """Admin: Overview metrics of platform usage (scoped to tenant if not super_admin)."""
+    if admin.role == UserRole.SUPER_ADMIN:
+        users_count = await db.users.count_documents({})
+        questions_count = await db.questions.count_documents({})
+        tests_count = await db.tests.count_documents({})
+        courses_count = await db.courses.count_documents({})
+        attempts_count = await db.attempts.count_documents({})
+        completed_attempts = await db.attempts.count_documents({"status": "COMPLETED"})
+        open_tickets = await db.support_tickets.count_documents({"status": "OPEN"})
+        tenants_count = await db.users.count_documents({"role": UserRole.ADMIN.value})
+    else:
+        tenant_id = admin.id
+        users_count = await db.users.count_documents({"admin_id": tenant_id})
+        questions_count = await db.questions.count_documents({})
+        tests_count = await db.tests.count_documents({"$or": [{"admin_id": tenant_id}, {"admin_id": None}]})
+        courses_count = await db.courses.count_documents({"$or": [{"admin_id": tenant_id}, {"created_by": tenant_id}, {"admin_id": None}]})
+        student_docs = await db.users.find({"admin_id": tenant_id}, {"_id": 1}).to_list(length=10000)
+        student_ids = [u["_id"] for u in student_docs]
+        if student_ids:
+            attempts_count = await db.attempts.count_documents({"user_id": {"$in": student_ids}})
+            completed_attempts = await db.attempts.count_documents({"user_id": {"$in": student_ids}, "status": "COMPLETED"})
+            open_tickets = await db.support_tickets.count_documents({"user_id": {"$in": student_ids}, "status": "OPEN"})
+        else:
+            attempts_count = 0
+            completed_attempts = 0
+            open_tickets = 0
+        tenants_count = 1
 
     return APIResponse(
         success=True,
@@ -146,6 +181,7 @@ async def get_platform_stats(
             "total_attempts": attempts_count,
             "completed_attempts": completed_attempts,
             "open_support_tickets": open_tickets,
+            "total_tenants": tenants_count,
         },
     )
 
@@ -181,7 +217,7 @@ async def check_health(
     )
 
 
-# --- User Management Operations ---
+# --- User Management Operations (Scoped with Tenant Isolation) ---
 @router.get("/users", response_model=APIResponse[PaginatedUsersResponse])
 async def list_users(
     page: int = Query(1, ge=1, description="Page number"),
@@ -189,6 +225,7 @@ async def list_users(
     search: Optional[str] = Query(None, description="Search by email or full name"),
     role: Optional[str] = Query(None, description="Filter by role: student | admin"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    tenant_admin_id: Optional[str] = Query(None, description="Super Admin: filter by tenant admin ID"),
     admin: UserResponse = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
@@ -200,11 +237,29 @@ async def list_users(
         search=search,
         role=role,
         is_active=is_active,
+        tenant_admin_id=tenant_admin_id,
+        requesting_admin=admin,
     )
     return APIResponse(
         success=True,
         message=f"Retrieved {len(result.items)} users (Page {result.page} of {result.total_pages})",
         data=result,
+    )
+
+
+@router.post("/users/student", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
+async def create_student(
+    req: StudentCreateRequest,
+    admin: UserResponse = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin: Directly enroll / create a new Student under this admin's organization."""
+    auth_service = AuthService(db)
+    student = await auth_service.admin_create_student(req, admin)
+    return APIResponse(
+        success=True,
+        message=f"Student '{student.full_name}' created successfully",
+        data=student,
     )
 
 
@@ -216,7 +271,7 @@ async def get_user_detail(
 ):
     """Admin: Get detailed profile of a specific user."""
     auth_service = AuthService(db)
-    user = await auth_service.admin_get_user(user_id)
+    user = await auth_service.admin_get_user(user_id, admin_user=admin)
     return APIResponse(
         success=True,
         message="User profile retrieved",
@@ -231,7 +286,7 @@ async def update_user_profile(
     admin: UserResponse = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Admin: Edit user's profile, promote to admin, modify role/coins/subscription/status."""
+    """Admin: Edit user's profile, modify coins/subscription/status."""
     auth_service = AuthService(db)
     updated = await auth_service.admin_update_user(user_id, req, admin)
     return APIResponse(
@@ -257,6 +312,68 @@ async def delete_user(
     )
 
 
+# ─── Super Admin: Tenant / Admin Management ──────────────────────────────────
+
+@router.get("/tenants", response_model=APIResponse[List[TenantAdminResponse]])
+async def list_tenants(
+    super_admin: UserResponse = Depends(require_super_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Super Admin: List all Tenant Admins with their subdomains and metrics."""
+    auth_service = AuthService(db)
+    tenants = await auth_service.list_tenant_admins(super_admin)
+    return APIResponse(
+        success=True,
+        message=f"Retrieved {len(tenants)} tenant organizations",
+        data=tenants,
+    )
+
+
+@router.post("/tenants", response_model=APIResponse[TenantAdminResponse], status_code=status.HTTP_201_CREATED)
+async def create_tenant(
+    req: TenantAdminCreateRequest,
+    super_admin: UserResponse = Depends(require_super_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Super Admin: Create a new Tenant Admin with custom subdomain."""
+    auth_service = AuthService(db)
+    created = await auth_service.create_tenant_admin(req, super_admin)
+    return APIResponse(
+        success=True,
+        message=f"Tenant Admin '{created.full_name}' for subdomain '{created.subdomain}' created successfully",
+        data=created,
+    )
+
+
+@router.put("/tenants/{admin_id}", response_model=APIResponse[TenantAdminResponse])
+async def update_tenant(
+    admin_id: str,
+    req: TenantAdminUpdateRequest,
+    super_admin: UserResponse = Depends(require_super_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Super Admin: Update a Tenant Admin's organization or subdomain."""
+    auth_service = AuthService(db)
+    updated = await auth_service.update_tenant_admin(admin_id, req, super_admin)
+    return APIResponse(
+        success=True,
+        message=f"Tenant Admin '{updated.full_name}' updated successfully",
+        data=updated,
+    )
+
+
+@router.delete("/tenants/{admin_id}", response_model=APIResponse[dict])
+async def delete_tenant(
+    admin_id: str,
+    super_admin: UserResponse = Depends(require_super_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Super Admin: Delete or revoke a Tenant Admin."""
+    auth_service = AuthService(db)
+    await auth_service.delete_tenant_admin(admin_id, super_admin)
+    return APIResponse(success=True, message="Tenant Admin deleted successfully", data={"admin_id": admin_id})
+
+
 # ─── Admin Pass Management Routes ────────────────────────────────────────────
 
 @router.get("/passes", response_model=APIResponse[List[PassResponse]])
@@ -264,9 +381,10 @@ async def list_passes_admin(
     admin: UserResponse = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Admin: List all targeted passes with covered courses and subscriber statistics."""
+    """Admin: List passes (scoped to admin_id if tenant admin; all passes if super_admin)."""
     service = PassService(db)
-    passes = await service.list_all_passes_admin()
+    admin_filter = admin.id if admin.role == UserRole.ADMIN else None
+    passes = await service.list_all_passes_admin(admin_id=admin_filter)
     return APIResponse(
         success=True,
         message="Passes retrieved successfully",
@@ -280,12 +398,10 @@ async def create_pass_admin(
     admin: UserResponse = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """
-    Admin: Create a new targeted exam pass dynamically selecting which courses
-    are covered under it.
-    """
+    """Admin: Create a new targeted exam pass dynamically selecting which courses are covered."""
     service = PassService(db)
-    created = await service.create_pass(req)
+    admin_id = admin.id if admin.role == UserRole.ADMIN else None
+    created = await service.create_pass(req, admin_id=admin_id)
     return APIResponse(
         success=True,
         message=f"Pass '{created.title}' created successfully",
@@ -302,6 +418,12 @@ async def update_pass_admin(
 ):
     """Admin: Update an existing pass (price, duration, covered courses, active status)."""
     service = PassService(db)
+    if admin.role == UserRole.ADMIN:
+        existing = await service.pass_repo.get_by_id(pass_id)
+        if not existing:
+            raise NotFoundException(f"Pass '{pass_id}' not found")
+        if existing.get("admin_id") and existing.get("admin_id") != admin.id:
+            raise ForbiddenException("You can only modify passes belonging to your organization")
     updated = await service.update_pass(pass_id, req)
     return APIResponse(
         success=True,
@@ -318,11 +440,15 @@ async def delete_pass_admin(
 ):
     """Admin: Delete or remove a pass from the system."""
     service = PassService(db)
+    if admin.role == UserRole.ADMIN:
+        existing = await service.pass_repo.get_by_id(pass_id)
+        if not existing:
+            raise NotFoundException(f"Pass '{pass_id}' not found")
+        if existing.get("admin_id") and existing.get("admin_id") != admin.id:
+            raise ForbiddenException("You can only delete passes belonging to your organization")
     await service.delete_pass(pass_id)
     return APIResponse(
         success=True,
         message="Pass deleted successfully",
         data={"pass_id": pass_id},
     )
-
-

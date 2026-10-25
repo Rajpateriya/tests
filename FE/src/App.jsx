@@ -39,7 +39,7 @@ import { ROUTES, DASHBOARD_TABS, homePathFor } from './routes';
 const RequireRole = ({ role, children }) => {
   const { user } = useAuth();
   if (!user) return <Navigate to={ROUTES.home} replace />;
-  const isAdmin = user.role === 'admin';
+  const isAdmin = ['admin', 'super_admin'].includes(user.role);
   if (role === 'admin' && !isAdmin) return <Navigate to={ROUTES.dashboard} replace />;
   if ((role === 'student' || role === 'user') && isAdmin) return <Navigate to={ROUTES.admin} replace />;
   return children;

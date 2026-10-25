@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.api.v1.deps import get_current_user, get_optional_current_user
+from app.api.v1.deps import get_current_user, get_optional_current_user, get_tenant_subdomain
 from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.models.test import TestType
@@ -26,6 +26,7 @@ async def list_tests(
     is_free: Optional[bool] = Query(None, description="true = only free tests"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    subdomain: Optional[str] = Depends(get_tenant_subdomain),
     current_user: Optional[UserResponse] = Depends(get_optional_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
@@ -35,6 +36,17 @@ async def list_tests(
     Publicly accessible so unauthenticated candidates can discover tests.
     """
     service = TestService(db)
+    tenant_admin_id = None
+    if current_user and current_user.role == UserRole.ADMIN:
+        # Tenant Admin only sees their own tests in Admin Studio
+        tenant_admin_id = current_user.id
+    elif subdomain:
+        # Students / visitors on a tenant subdomain only see that tenant's tests
+        tenant_admin = await db.users.find_one({"role": "admin", "subdomain": subdomain.lower().strip()})
+        if tenant_admin:
+            tenant_admin_id = tenant_admin["_id"]
+    # Super Admin (and root public visitors without subdomain) sees all tests
+
     params = TestFilterParams(
         test_type=test_type,
         subject=subject,
@@ -43,6 +55,7 @@ async def list_tests(
         search=search,
         is_active=True,
         is_free=is_free,
+        admin_id=tenant_admin_id,
     )
     tests = await service.list_tests(params, skip=skip, limit=limit)
     return APIResponse(

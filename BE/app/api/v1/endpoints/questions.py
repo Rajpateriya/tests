@@ -51,7 +51,7 @@ async def list_questions(
         source=source,
     )
     if page is not None:
-        if current_user.role != UserRole.ADMIN:
+        if current_user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
             raise ForbiddenException("Administrator privileges required to browse the question bank")
         result = await service.list_page(params, page=page, page_size=page_size)
         return APIResponse(

@@ -12,6 +12,8 @@ async def init_db_indexes(db: AsyncIOMotorDatabase) -> None:
         await db.users.create_indexes([
             IndexModel([("email", ASCENDING)], unique=True, name="idx_users_email_unique"),
             IndexModel([("role", ASCENDING)], name="idx_users_role"),
+            IndexModel([("subdomain", ASCENDING)], sparse=True, name="idx_users_subdomain"),
+            IndexModel([("admin_id", ASCENDING), ("role", ASCENDING)], name="idx_users_admin_id_role"),
         ])
     except Exception as e:
         logger.warning(f"Could not create user indexes: {e}")
@@ -41,9 +43,19 @@ async def init_db_indexes(db: AsyncIOMotorDatabase) -> None:
         await db.tests.create_indexes([
             IndexModel([("test_type", ASCENDING), ("is_active", ASCENDING)], name="idx_tests_type_active"),
             IndexModel([("created_at", ASCENDING)], name="idx_tests_created_at"),
+            IndexModel([("admin_id", ASCENDING)], sparse=True, name="idx_tests_admin_id"),
         ])
     except Exception as e:
         logger.warning(f"Could not create test indexes: {e}")
+
+    # Courses collection indexes
+    try:
+        await db.courses.create_indexes([
+            IndexModel([("is_active", ASCENDING)], name="idx_courses_active"),
+            IndexModel([("admin_id", ASCENDING)], sparse=True, name="idx_courses_admin_id"),
+        ])
+    except Exception as e:
+        logger.warning(f"Could not create course indexes: {e}")
 
     # Attempts collection indexes
     try:

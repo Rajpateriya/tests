@@ -27,11 +27,11 @@ class PassService:
 
     # ── Admin Operations ─────────────────────────────────────────────────────
 
-    async def list_all_passes_admin(self) -> List[PassResponse]:
-        passes = await self.pass_repo.get_all_passes()
+    async def list_all_passes_admin(self, admin_id: Optional[str] = None) -> List[PassResponse]:
+        passes = await self.pass_repo.get_all_passes(admin_id=admin_id)
         return [await self._enrich_pass(p) for p in passes]
 
-    async def create_pass(self, req: PassCreateRequest) -> PassResponse:
+    async def create_pass(self, req: PassCreateRequest, admin_id: Optional[str] = None) -> PassResponse:
         pass_id = req.id or f"pass_{uuid.uuid4().hex[:8]}"
         base_price = float(req.base_price)
         max_coins = req.max_coins_discount
@@ -56,6 +56,7 @@ class PassService:
                 "All-India Percentile Tracking",
             ],
             "is_active": req.is_active,
+            "admin_id": admin_id,
         }
 
         created = await self.pass_repo.create_pass(pass_doc)

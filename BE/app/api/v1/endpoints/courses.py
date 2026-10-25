@@ -103,8 +103,17 @@ async def list_all_courses_admin(
     Without `skip`/`limit` this is every course; Admin Studio pages through it and searches all of them.
 
     Declared before `/{course_id}` so "admin" is not read as a course id."""
-    courses = await CourseService(db).list_all_for_admin(search=search, target_exam=target_exam, skip=skip, limit=limit)
+    courses = await CourseService(db).list_all_for_admin(search=search, target_exam=target_exam, skip=skip, limit=limit, admin_user=admin)
     return APIResponse(success=True, message=f"{len(courses)} courses", data=courses)
+
+
+async def _check_course_tenant_access(course_id: str, admin: UserResponse, db: AsyncIOMotorDatabase):
+    if admin.role == UserRole.ADMIN:
+        course = await db.courses.find_one({"_id": course_id})
+        if not course:
+            raise NotFoundException(f"Course '{course_id}' not found")
+        if course.get("created_by") != admin.id and course.get("admin_id") != admin.id:
+            raise ForbiddenException("You can only access or modify courses belonging to your organization")
 
 
 @router.get("/admin/{course_id}", response_model=APIResponse[CourseAdminOut])
@@ -116,6 +125,7 @@ async def get_course_admin(
     """Admin: one course in full (drafts and archived included), as opened from Admin Studio.
 
     Declared after `/admin/all` and before `/{course_id}`."""
+    await _check_course_tenant_access(course_id, admin, db)
     course = await CourseService(db).get_admin_course(course_id)
     return APIResponse(success=True, message="Course retrieved", data=course)
 
@@ -162,6 +172,7 @@ async def update_course(
 
     `test_ids` is the full list of generated tests tagged to the course. A built-in course keeps its
     own embedded quizzes; only the test-backed quizzes are replaced by this list."""
+    await _check_course_tenant_access(course_id, admin, db)
     course = await CourseService(db).update_course(course_id, req)
     return APIResponse(success=True, message="Course updated", data=course)
 
@@ -175,6 +186,7 @@ async def publish_course(
     """Admin: make a draft course visible to users (needs at least one tagged test).
 
     Only published courses appear in `GET /courses`, can be bought, and lock their tests."""
+    await _check_course_tenant_access(course_id, admin, db)
     course = await CourseService(db).update_course(course_id, CourseUpdateRequest(is_published=True))
     return APIResponse(success=True, message="Course published", data=course)
 
@@ -186,6 +198,7 @@ async def unpublish_course(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Admin: take a course back to draft. Users who already enrolled keep their enrollment."""
+    await _check_course_tenant_access(course_id, admin, db)
     course = await CourseService(db).update_course(course_id, CourseUpdateRequest(is_published=False))
     return APIResponse(success=True, message="Course unpublished", data=course)
 

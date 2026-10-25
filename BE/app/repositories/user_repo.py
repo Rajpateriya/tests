@@ -11,6 +11,24 @@ class UserRepository(BaseRepository):
     async def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         return await self.find_one({"email": email.lower().strip()})
 
+    async def get_by_subdomain(self, subdomain: str) -> Optional[Dict[str, Any]]:
+        return await self.find_one({"role": "admin", "subdomain": subdomain.lower().strip()})
+
+    async def get_tenant_admin(self, subdomain: str) -> Optional[Dict[str, Any]]:
+        return await self.find_one({"role": "admin", "subdomain": subdomain.lower().strip()})
+
+    async def set_user_tenant(
+        self, user_id: str, admin_id: Optional[str], subdomain: Optional[str]
+    ) -> Optional[Dict[str, Any]]:
+        update_fields: Dict[str, Any] = {"updated_at": datetime.now(timezone.utc)}
+        if admin_id is not None:
+            update_fields["admin_id"] = admin_id
+        if subdomain is not None:
+            update_fields["subdomain"] = subdomain
+        if len(update_fields) > 1:
+            await self.collection.update_one({"_id": user_id}, {"$set": update_fields})
+        return await self.get_by_id(user_id)
+
     async def update_profile(self, user_id: str, profile_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         update_set = {}
         for k, v in profile_data.items():
@@ -38,7 +56,6 @@ class UserRepository(BaseRepository):
             }
         )
         return await self.get_by_id(user_id)
-
 
     async def update_coins(self, user_id: str, delta: int) -> int:
         """Add or subtract coins, preventing negative balance."""
@@ -149,7 +166,6 @@ class UserRepository(BaseRepository):
         expires_at = user.get("reset_password_expires_at") or user.get("otp_expires_at")
         if not stored_code or not expires_at:
             return None
-        # Handle string or datetime for expires_at (mongomock vs real mongo)
         if isinstance(expires_at, str):
             try:
                 expires_at = datetime.fromisoformat(expires_at)
@@ -245,7 +261,16 @@ class UserRepository(BaseRepository):
     async def admin_update_user(self, user_id: str, update_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         now = datetime.now(timezone.utc)
         update_set: Dict[str, Any] = {"updated_at": now}
-        top_level_fields = {"email", "full_name", "role", "is_active", "hashed_password"}
+        top_level_fields = {
+            "email",
+            "full_name",
+            "role",
+            "is_active",
+            "hashed_password",
+            "admin_id",
+            "subdomain",
+            "organization_name",
+        }
         profile_fields = {
             "target_exams",
             "preferred_subjects",
@@ -266,6 +291,8 @@ class UserRepository(BaseRepository):
                     update_set[k] = v.lower().strip()
                 elif k == "role":
                     update_set[k] = v.value if hasattr(v, "value") else str(v)
+                elif k == "subdomain":
+                    update_set[k] = v.lower().strip()
                 else:
                     update_set[k] = v
             elif k in profile_fields:
@@ -279,7 +306,6 @@ class UserRepository(BaseRepository):
         record_dict = course_record.model_dump() if hasattr(course_record, "model_dump") else dict(course_record)
         course_id = record_dict.get("course_id")
         if course_id:
-            # Remove any existing enrollment for this course to avoid duplicates, then append
             await self.collection.update_one(
                 {"_id": user_id},
                 {"$pull": {"profile.enrolled_courses": {"course_id": course_id}}}
@@ -289,4 +315,3 @@ class UserRepository(BaseRepository):
             {"$push": {"profile.enrolled_courses": record_dict}}
         )
         return await self.get_by_id(user_id)
-

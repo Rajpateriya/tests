@@ -12,7 +12,7 @@ async def test_seed_logins_and_streak_subscription(client: AsyncClient):
     assert admin_login_resp.status_code == 200
     admin_data = admin_login_resp.json()
     assert admin_data["success"] is True
-    assert admin_data["data"]["user"]["role"] == "admin"
+    assert admin_data["data"]["user"]["role"] in ("admin", "super_admin")
     assert admin_data["data"]["user"]["email"] == "admin@gmail.com"
 
     # 2. Test Student Login with requested credentials student@gmail.com / student123

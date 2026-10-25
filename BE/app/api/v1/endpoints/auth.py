@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Body, Depends, status
 from fastapi.security import HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.api.v1.deps import get_current_user, security_scheme
+from app.api.v1.deps import get_current_user, get_tenant_subdomain, security_scheme
 from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.schemas.common import APIResponse
@@ -27,11 +27,12 @@ router = APIRouter(prefix="/auth", tags=["Authentication"], dependencies=[Depend
 @router.post("/register", response_model=APIResponse[RegisterInitiateResponse], status_code=status.HTTP_200_OK)
 async def register(
     req: UserRegisterRequest,
+    subdomain: Optional[str] = Depends(get_tenant_subdomain),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Initiate registration: validate input, temporarily stage registration, and send verification OTP."""
+    """Initiate registration: validate input, stage registration, and send verification OTP."""
     auth_service = AuthService(db)
-    res = await auth_service.register(req)
+    res = await auth_service.register(req, subdomain=subdomain)
     return APIResponse(
         success=True,
         message=res.message,
@@ -42,11 +43,12 @@ async def register(
 @router.post("/login", response_model=APIResponse[dict])
 async def login(
     req: UserLoginRequest,
+    subdomain: Optional[str] = Depends(get_tenant_subdomain),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Authenticate user with email and password, returning JWT access & refresh tokens."""
     auth_service = AuthService(db)
-    result = await auth_service.login(req)
+    result = await auth_service.login(req, subdomain=subdomain)
     return APIResponse(
         success=True,
         message="Login successful",
@@ -75,11 +77,12 @@ async def send_otp(
 @router.post("/verify-otp", response_model=APIResponse[UserResponse])
 async def verify_otp(
     req: VerifyOtpRequest,
+    subdomain: Optional[str] = Depends(get_tenant_subdomain),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Verify OTP and create the user in the database upon successful verification."""
     auth_service = AuthService(db)
-    user = await auth_service.verify_otp(req)
+    user = await auth_service.verify_otp(req, subdomain=subdomain)
     return APIResponse(
         success=True,
         message="OTP verified successfully. Your account has been created.",
@@ -151,8 +154,7 @@ async def logout(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Log out: blacklist the access token (and the refresh token, if sent), so neither
-    can be used again even though they have not expired yet."""
+    """Log out: blacklist the access token (and refresh token)."""
     auth_service = AuthService(db)
     await auth_service.logout(auth.credentials if auth else None, refresh_token)
     return APIResponse(success=True, message="Logged out", data={})
@@ -176,20 +178,10 @@ async def refresh_token(
 @router.post("/google", response_model=APIResponse[dict])
 async def google_oauth(
     credential: str = Body(..., embed=True),
+    subdomain: Optional[str] = Depends(get_tenant_subdomain),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Authenticate or register a user via Google Identity Services ID token.
-    
-    The frontend sends the `credential` JWT obtained from Google's OAuth popup.
-    We verify it against Google's public certs, extract the email + profile, then
-    either log in the existing user or create a new one (email-verified, no password).
-    Returns the same {tokens, user} shape as the regular /login endpoint.
-    
-    Prerequisites (one-time setup):
-      1. Create a Google Cloud project → APIs & Services → Credentials → OAuth 2.0 Client ID (Web app).
-      2. Add your domain (https://prepmagnet.in) to 'Authorised JavaScript origins'.
-      3. Copy the Client ID and set GOOGLE_OAUTH_CLIENT_ID in BE/.env and VITE_GOOGLE_CLIENT_ID in FE/.env
-    """
+    """Authenticate or register a user via Google Identity Services ID token."""
     from app.core.config import settings
 
     if not settings.GOOGLE_OAUTH_CLIENT_ID:
@@ -221,6 +213,7 @@ async def google_oauth(
     result = await auth_service.google_login_or_register(
         email=google_email,
         full_name=google_name,
+        subdomain=subdomain,
     )
     return APIResponse(
         success=True,

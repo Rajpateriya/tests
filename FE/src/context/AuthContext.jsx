@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
     if (cachedUser) {
       try {
         const u = JSON.parse(cachedUser);
-        return u.role === 'admin' ? 'admin' : (u.role || 'user');
+        return ['admin', 'super_admin'].includes(u.role) ? u.role : (u.role || 'user');
       } catch {
         return null;
       }
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const u = JSON.parse(cachedUser);
         // Administrators never have student passes
-        if (u.role === 'admin') {
+        if (['admin', 'super_admin'].includes(u.role)) {
           return { plan: 'NONE', status: 'INACTIVE' };
         }
       } catch {
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
 
   // Sync subscription to localStorage (only for non-admin accounts)
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (['admin', 'super_admin'].includes(user?.role)) {
       localStorage.removeItem('govexam_subscription');
     } else if (subscription && subscription.status === 'ACTIVE') {
       localStorage.setItem('govexam_subscription', JSON.stringify(subscription));
@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
           profile: { ...(prev?.profile || {}), ...(me.profile || {}) },
         }));
 
-        if (me.role === 'admin') {
+        if (['admin', 'super_admin'].includes(me.role)) {
           setSubscription({ plan: 'NONE', status: 'INACTIVE' });
           localStorage.removeItem('govexam_subscription');
         } else if (me.profile?.subscription_plan && me.profile?.subscription_status === 'ACTIVE') {
@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }) => {
       const res = await api.auth.login(email, password, rememberMe);
       const loggedUser = res.user;
       const accessToken = res.tokens?.access_token || 'demo-jwt-access-token';
-      const isAdminAccount = loggedUser.role === 'admin';
+      const isAdminAccount = ['admin', 'super_admin'].includes(loggedUser.role);
       const realRole = isAdminAccount ? 'admin' : (loggedUser.role || 'user');
       setBaseRole(realRole);
       localStorage.setItem('govexam_base_role', realRole);
@@ -193,7 +193,7 @@ export const AuthProvider = ({ children }) => {
       const res = await api.auth.googleLogin(credential);
       const loggedUser = res.user;
       const accessToken = res.tokens?.access_token;
-      const isAdminAccount = loggedUser.role === 'admin';
+      const isAdminAccount = ['admin', 'super_admin'].includes(loggedUser.role);
       const realRole = isAdminAccount ? 'admin' : (loggedUser.role || 'user');
       setBaseRole(realRole);
       localStorage.setItem('govexam_base_role', realRole);
@@ -328,7 +328,8 @@ export const AuthProvider = ({ children }) => {
     setSubscription(updated);
   };
 
-  const isRealAdmin = user?.role === 'admin';
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isRealAdmin = ['admin', 'super_admin'].includes(user?.role);
   const canSwitchRole = false;
   const isPreviewingAsStudent = false;
   const coinsBalance = user?.profile?.coins_balance ?? 0;
@@ -355,8 +356,9 @@ export const AuthProvider = ({ children }) => {
         coinsBalance,
         currentStreak,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin',
-        isStudent: user?.role !== 'admin',
+        isAdmin: ['admin', 'super_admin'].includes(user?.role),
+        isSuperAdmin,
+        isStudent: !['admin', 'super_admin'].includes(user?.role),
         canSwitchRole,
         isPreviewingAsStudent,
         isPremium: !isRealAdmin && subscription?.status === 'ACTIVE' && subscription?.plan !== 'FREE' && subscription?.plan !== 'NONE',

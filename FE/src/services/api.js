@@ -5,12 +5,32 @@
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
+export const getTenantSubdomain = () => {
+  if (typeof window === 'undefined') return null;
+  const hostname = window.location.hostname;
+  if (!hostname) return null;
+  const parts = hostname.split('.');
+  if (parts.length >= 2 && parts[parts.length - 1] === 'localhost') {
+    if (parts[0] !== 'localhost') return parts[0].toLowerCase();
+    return null;
+  }
+  if (parts.length >= 3) {
+    const sub = parts[0].toLowerCase();
+    if (sub !== 'www' && sub !== 'api' && sub !== 'app') {
+      return sub;
+    }
+  }
+  return null;
+};
+
 // Helper to get auth header
 const getAuthHeaders = () => {
   const token = localStorage.getItem('govexam_token');
+  const subdomain = getTenantSubdomain();
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(subdomain ? { 'X-Tenant-Subdomain': subdomain } : {}),
   };
 };
 
@@ -425,7 +445,7 @@ export const api = {
       return await request('/admin/health');
     },
 
-    getUsers: async ({ page = 1, page_size = 10, search = '', role = '', is_active = '' } = {}) => {
+    getUsers: async ({ page = 1, page_size = 10, search = '', role = '', is_active = '', tenant_admin_id = '' } = {}) => {
       const q = new URLSearchParams();
       if (page) q.append('page', page);
       if (page_size) q.append('page_size', page_size);
@@ -434,7 +454,39 @@ export const api = {
       if (is_active !== undefined && is_active !== null && is_active !== '') {
         q.append('is_active', is_active);
       }
+      if (tenant_admin_id) q.append('tenant_admin_id', tenant_admin_id);
       return await request(`/admin/users?${q.toString()}`);
+    },
+
+    createStudent: async (payload) => {
+      return await request('/admin/users/student', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    getTenants: async () => {
+      return await request('/admin/tenants');
+    },
+
+    createTenant: async (payload) => {
+      return await request('/admin/tenants', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    updateTenant: async (adminId, payload) => {
+      return await request(`/admin/tenants/${adminId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    deleteTenant: async (adminId) => {
+      return await request(`/admin/tenants/${adminId}`, {
+        method: 'DELETE',
+      });
     },
 
     getUser: async (userId) => {

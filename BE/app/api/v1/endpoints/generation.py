@@ -400,6 +400,8 @@ async def assemble_quizzes(
     """Admin: build `quizzes` ready-to-take tests from the question bank, each
     matching the blueprint exactly. Only complete quizzes are created; if the
     bank is short, `missing` lists the slots to fill via POST /generation/quiz."""
+    from app.models.user import UserRole
+    admin_id = admin.id if admin.role == UserRole.ADMIN else None
     result = await QuizAssemblyService(db).assemble(
         target_exam=req.target_exam,
         subject=req.subject,
@@ -414,6 +416,7 @@ async def assemble_quizzes(
         positive_marks=req.positive_marks,
         negative_marks=req.negative_marks,
         blueprint_name=req.blueprint_name,
+        admin_id=admin_id,
     )
     return APIResponse(
         success=True,
