@@ -50,8 +50,16 @@ class ExamEngineService:
 
             remaining_seconds = int((expiry_time - now).total_seconds())
             if remaining_seconds <= 0:
-                # Expired, let evaluation handle or return expired
-                logger.info(f"Existing attempt {existing_attempt['_id']} expired. Proceeding to auto-submit.")
+                logger.info(f"Existing attempt {existing_attempt['_id']} expired. Auto-submitting.")
+                try:
+                    from app.services.evaluation_service import EvaluationService
+                    await EvaluationService(self.db, self.redis).submit_and_evaluate(existing_attempt["_id"], user_id)
+                except Exception as e:
+                    logger.warning(f"Auto-submitting expired existing attempt failed: {e}")
+                    await self.attempt_repo.collection.update_one(
+                        {"_id": existing_attempt["_id"]},
+                        {"$set": {"status": AttemptStatus.COMPLETED.value, "completed_at": now}}
+                    )
             else:
                 logger.info(f"Resuming existing attempt {existing_attempt['_id']} for user {user_id}")
                 return AttemptStartResponse(
@@ -77,10 +85,27 @@ class ExamEngineService:
         # Check if user has an active test on ANOTHER test (prevent cheating / multi-test)
         other_active = await self.attempt_repo.get_any_active_attempt_for_user(user_id)
         if other_active:
-            raise ConflictException(
-                f"You already have an active test '{other_active.get('test_title')}' in progress. "
-                f"Please submit or finish it before starting another."
-            )
+            now = datetime.now(timezone.utc)
+            expiry_time = other_active["expiry_time"]
+            if expiry_time.tzinfo is None:
+                expiry_time = expiry_time.replace(tzinfo=timezone.utc)
+
+            if (expiry_time - now).total_seconds() <= 0:
+                logger.info(f"Previous attempt {other_active['_id']} on another test expired. Auto-submitting.")
+                try:
+                    from app.services.evaluation_service import EvaluationService
+                    await EvaluationService(self.db, self.redis).submit_and_evaluate(other_active["_id"], user_id)
+                except Exception as e:
+                    logger.warning(f"Auto-submitting expired other attempt failed: {e}")
+                    await self.attempt_repo.collection.update_one(
+                        {"_id": other_active["_id"]},
+                        {"$set": {"status": AttemptStatus.COMPLETED.value, "completed_at": now}}
+                    )
+            else:
+                raise ConflictException(
+                    f"You already have an active test '{other_active.get('test_title')}' in progress. "
+                    f"Please submit or finish it before starting another."
+                )
 
         # Retrieve test details
         test = await self.test_repo.get_by_id(test_id)
@@ -338,4 +363,82 @@ class ExamEngineService:
             },
         )
         return {"attempt_id": attempt_id, "status": "IN_PROGRESS", "remaining_seconds": remaining}
+
+    async def get_active_attempt_for_user(self, user_id: str) -> Optional[AttemptStartResponse]:
+        """
+        Check if user currently has an active test running.
+        If expired, automatically evaluates/completes it and returns None.
+        If alive, returns AttemptStartResponse so the client can resume seamlessly.
+        """
+        active = await self.attempt_repo.get_any_active_attempt_for_user(user_id)
+        if not active:
+            return None
+
+        now = datetime.now(timezone.utc)
+        expiry_time = active.get("expiry_time")
+        if expiry_time:
+            if expiry_time.tzinfo is None:
+                expiry_time = expiry_time.replace(tzinfo=timezone.utc)
+            remaining_seconds = int((expiry_time - now).total_seconds())
+            if remaining_seconds <= 0:
+                logger.info(f"Active attempt {active['_id']} expired. Auto-submitting.")
+                try:
+                    from app.services.evaluation_service import EvaluationService
+                    await EvaluationService(self.db, self.redis).submit_and_evaluate(active["_id"], user_id)
+                except Exception as e:
+                    logger.warning(f"Failed auto-submitting expired attempt {active['_id']}: {e}")
+                    await self.attempt_repo.collection.update_one(
+                        {"_id": active["_id"]},
+                        {"$set": {"status": AttemptStatus.COMPLETED.value, "completed_at": now}}
+                    )
+                return None
+        else:
+            remaining_seconds = int(active.get("duration_minutes", 60) * 60)
+            expiry_time = now + timedelta(seconds=remaining_seconds)
+
+        return AttemptStartResponse(
+            attempt_id=active["_id"],
+            test_id=active["test_id"],
+            test_title=active.get("test_title", ""),
+            duration_minutes=active.get("duration_minutes", 60),
+            remaining_seconds=remaining_seconds,
+            start_time=active["start_time"],
+            expiry_time=expiry_time,
+            status=AttemptStatus.IN_PROGRESS,
+            total_questions=len(active.get("palette_states", {})),
+        )
+
+    async def abandon_active_attempt(self, user_id: str) -> Dict[str, Any]:
+        """
+        End or submit the user's active attempt so they can freely take tests again.
+        """
+        active = await self.attempt_repo.get_any_active_attempt_for_user(user_id)
+        if not active:
+            return {"message": "No active test found", "abandoned": False}
+
+        now = datetime.now(timezone.utc)
+        try:
+            from app.services.evaluation_service import EvaluationService
+            await EvaluationService(self.db, self.redis).submit_and_evaluate(active["_id"], user_id)
+        except Exception as e:
+            logger.warning(f"Error submitting active attempt {active['_id']} on abandon: {e}")
+            await self.attempt_repo.collection.update_one(
+                {"_id": active["_id"]},
+                {"$set": {"status": AttemptStatus.ABANDONED.value, "completed_at": now}}
+            )
+
+        # Clean Redis
+        try:
+            redis_client = await self.redis
+            if redis_client:
+                await redis_client.delete(self._redis_attempt_key(active["_id"]))
+        except Exception:
+            pass
+
+        return {
+            "message": f"Test '{active.get('test_title')}' ended",
+            "abandoned": True,
+            "attempt_id": active["_id"],
+        }
+
 

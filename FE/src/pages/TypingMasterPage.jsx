@@ -597,36 +597,6 @@ export const TypingMasterPage = () => {
 
         {activeTab === 'test' && (
           <div className="space-y-5 w-full min-w-0">
-            {/* Exam Specification Bar & Dynamic Random Passage Trigger */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-white/90 dark:bg-charcoal-900/90 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs min-w-0">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-extrabold border border-amber-200 dark:border-amber-800 text-[11px] sm:text-xs shrink-0">
-                  🏆 20 Marks
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-extrabold border border-sky-200 dark:border-sky-800 text-[11px] sm:text-xs shrink-0">
-                  ⏱ 5 Minutes (300s)
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800 text-[11px] sm:text-xs shrink-0">
-                  📝 ~{selectedPassage?.word_count || 200} Words
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-extrabold border border-purple-200 dark:border-purple-800 text-[11px] sm:text-xs shrink-0">
-                  ⚡ Target {selectedPassage?.target_wpm || 35} WPM
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 font-mono text-[10px] sm:text-[11px] shrink-0">
-                  DB: typing_master_para
-                </span>
-              </div>
-
-              <button
-                type="button"
-                disabled={loadingPassage || sessionActive}
-                onClick={handleFetchRandomPassage}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-extrabold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer"
-              >
-                <span>{loadingPassage ? 'Fetching from DB...' : '🎲 Get Random Passage'}</span>
-              </button>
-            </div>
-
             {/* Passage picker */}
             <div className="flex items-stretch gap-2.5 sm:gap-3 overflow-x-auto pb-1 max-w-full w-full min-w-0 scrollbar-none">
               {passages.map((p) => {

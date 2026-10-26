@@ -66,32 +66,32 @@ export const FAQSection = ({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className={`relative rounded-2xl sm:rounded-3xl p-4 sm:p-7 md:p-8 bg-gradient-to-b from-slate-50/70 via-white to-white dark:from-charcoal-900/90 dark:via-charcoal-900/90 dark:to-charcoal-950/90 backdrop-blur-md border border-charcoal-200/90 dark:border-charcoal-800 shadow-card overflow-hidden w-full ${className}`}
+      className={`relative rounded-2xl sm:rounded-3xl p-4 sm:p-7 md:p-9 bg-gradient-to-b from-slate-50/70 via-white to-white dark:from-charcoal-900/90 dark:via-charcoal-900/90 dark:to-charcoal-950/90 backdrop-blur-md border border-charcoal-200/90 dark:border-charcoal-800 shadow-card overflow-hidden w-full ${className}`}
     >
       {/* Subtle Atmospheric Radial Glows */}
-      <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[480px] h-[220px] bg-gradient-to-b from-institutional-500/12 dark:from-institutional-500/15 to-transparent blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[480px] sm:w-[680px] md:w-[840px] h-[220px] bg-gradient-to-b from-institutional-500/12 dark:from-institutional-500/15 to-transparent blur-[100px] rounded-full pointer-events-none" />
 
       {/* Concise Header */}
-      <div className="text-center max-w-lg mx-auto space-y-1.5 relative z-10 mb-4 sm:mb-5">
+      <div className="text-center max-w-2xl sm:max-w-3xl mx-auto space-y-1.5 relative z-10 mb-5 sm:mb-6">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-institutional-50 dark:bg-institutional-950/70 text-institutional-700 dark:text-institutional-300 border border-institutional-200/70 dark:border-institutional-800/60 shadow-2xs">
           <HelpCircleIcon size={11} className="text-institutional-600 dark:text-institutional-400" />
           <span>{tag}</span>
         </div>
         <h2
           id={`${id}-heading`}
-          className="text-lg sm:text-2xl font-black tracking-tight text-charcoal-950 dark:text-white"
+          className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight text-charcoal-950 dark:text-white leading-tight"
         >
           {title}
         </h2>
         {subtitle && (
-          <p className="text-[11px] sm:text-xs text-charcoal-500 dark:text-charcoal-400 font-normal leading-relaxed">
+          <p className="text-[11px] sm:text-xs md:text-sm text-charcoal-500 dark:text-charcoal-400 font-normal leading-relaxed max-w-2xl mx-auto">
             {subtitle}
           </p>
         )}
       </div>
 
-      {/* Tight, Concise Accordion Stack */}
-      <div className="max-w-2xl sm:max-w-[720px] mx-auto space-y-2 sm:space-y-2.5 relative z-10">
+      {/* Spacious, Responsive Accordion Stack */}
+      <div className="w-full max-w-3xl lg:max-w-4xl mx-auto space-y-2 sm:space-y-2.5 relative z-10">
         {faqs.map((faq, idx) => {
           const isOpen = activeIdx === idx;
           const itemId = `${id}-item-${idx}`;
@@ -117,7 +117,7 @@ export const FAQSection = ({
                 aria-expanded={isOpen}
                 aria-controls={answerId}
                 onClick={() => setActiveIdx(isOpen ? null : idx)}
-                className="w-full py-2.5 px-3.5 sm:py-3 sm:px-4 text-left flex items-center justify-between gap-3 transition-colors cursor-pointer"
+                className="w-full py-2.5 px-3.5 sm:py-3.5 sm:px-4 text-left flex items-center justify-between gap-3 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 pl-0.5">
                   {/* Monospace Numbered Index */}
@@ -132,7 +132,7 @@ export const FAQSection = ({
                   </span>
 
                   <span
-                    className={`text-xs sm:text-[13px] leading-snug transition-colors ${
+                    className={`text-xs sm:text-[13px] md:text-sm leading-snug transition-colors ${
                       isOpen
                         ? 'text-institutional-900 dark:text-white font-bold'
                         : 'text-charcoal-800 dark:text-charcoal-100 group-hover:text-institutional-700 dark:group-hover:text-white font-semibold'

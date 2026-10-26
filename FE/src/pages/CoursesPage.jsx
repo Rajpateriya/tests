@@ -28,11 +28,11 @@ import {
 
 const COVER_GRID = {
   backgroundImage:
-    'linear-gradient(to right, rgba(255,255,255,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.18) 1px, transparent 1px)',
-  backgroundSize: '18px 18px',
+    'linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)',
+  backgroundSize: '16px 16px',
 };
 const COVER_GLOW = {
-  backgroundImage: 'radial-gradient(circle at 90% -20%, rgba(255,255,255,0.38), transparent 55%)',
+  backgroundImage: 'radial-gradient(circle at 85% 0%, rgba(37, 99, 235, 0.16), transparent 65%)',
 };
 
 export const CoursesPage = ({ onStartTest }) => {
@@ -382,16 +382,16 @@ export const CoursesPage = ({ onStartTest }) => {
                   className="group relative flex flex-col bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl shadow-subtle overflow-hidden hover:-translate-y-1 hover:shadow-card hover:border-institutional-300 dark:hover:border-institutional-700 transition-all duration-200"
                 >
                   {/* Cover strip */}
-                  <div className="relative h-12 sm:h-14 px-3 sm:px-4 flex items-center justify-between bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500 overflow-hidden">
-                    <div className="absolute inset-0" style={COVER_GRID} />
-                    <div className="absolute inset-0" style={COVER_GLOW} />
+                  <div className="relative h-12 sm:h-14 px-3 sm:px-4 flex items-center justify-between bg-gradient-to-r from-charcoal-900 via-charcoal-850 to-institutional-950 dark:from-charcoal-950 dark:via-charcoal-900 dark:to-institutional-950 border-b border-charcoal-200/80 dark:border-charcoal-800 overflow-hidden">
+                    <div className="absolute inset-0 pointer-events-none" style={COVER_GRID} />
+                    <div className="absolute inset-0 pointer-events-none" style={COVER_GLOW} />
 
                     <div className="relative flex items-center gap-1.5 min-w-0">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/15 text-white border border-white/25 backdrop-blur-sm truncate">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-institutional-500/15 text-institutional-200 border border-institutional-500/30 backdrop-blur-sm truncate shadow-2xs">
                         {course.target_exam}
                       </span>
                       {course.badge && (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-300/90 text-amber-950 truncate">
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 truncate shadow-2xs">
                           <SparklesIcon size={10} />
                           <span className="truncate">{course.badge}</span>
                         </span>
@@ -399,12 +399,12 @@ export const CoursesPage = ({ onStartTest }) => {
                     </div>
 
                     {isEnrolled ? (
-                      <span className="relative inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-400 text-emerald-950 shrink-0">
+                      <span className="relative inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 shadow-2xs">
                         <CheckCircleIcon size={12} />
                         Enrolled
                       </span>
                     ) : (
-                      <span className="relative text-[11px] font-black px-2 py-0.5 rounded-md bg-emerald-400 text-emerald-950 shrink-0">
+                      <span className="relative text-[11px] font-black px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 shadow-2xs">
                         -{course.discount_percent}%
                       </span>
                     )}

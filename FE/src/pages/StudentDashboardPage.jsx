@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
@@ -247,6 +248,28 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
     }, 120);
     return () => clearTimeout(timer);
   }, [activeTab, highlightTicketId, myTickets]);
+
+  // Lock background body scroll and handle Escape key when roadmap or course modals are open
+  useEffect(() => {
+    const isAnyModalOpen = isRoadmapModalOpen || Boolean(activeCourseModal);
+    if (!isAnyModalOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (isRoadmapModalOpen) setIsRoadmapModalOpen(false);
+        if (activeCourseModal) setActiveCourseModal(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isRoadmapModalOpen, activeCourseModal]);
 
   const fetchMyTickets = async () => {
     setMyTicketsLoading(true);
@@ -835,7 +858,7 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* LEFT 2 COLS: THE STAR COMPONENT — TODAY'S DAILY PRACTICE CHALLENGE */}
-            <div className="lg:col-span-2 bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-7 shadow-xs space-y-5">
+            <div id="daily-booster-challenge" className="lg:col-span-2 bg-white dark:bg-charcoal-900 border border-charcoal-200/80 dark:border-charcoal-800 rounded-3xl p-5 sm:p-7 shadow-xs space-y-5">
               {/* Challenge Header */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-charcoal-150 dark:border-charcoal-800">
                 <div>
@@ -1767,81 +1790,205 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
       })()}
 
       {/* =========================================================================
-          4. 30-DAY HABIT ROADMAP MODAL (Clean, Non-Intrusive Drawer / Modal)
+          4. 30-DAY HABIT ROADMAP MODAL (Portaled to document.body, Non-Scrollable 6x5 View)
           ========================================================================= */}
-      {isRoadmapModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/75 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-750 w-full max-w-4xl max-h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+      {isRoadmapModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-charcoal-950/80 backdrop-blur-md animate-fade-in"
+          onClick={() => setIsRoadmapModalOpen(false)}
+        >
+          <div
+            className="relative bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-750 w-full max-w-4xl max-h-[92vh] rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Ambient Decorative Shimmer Glow */}
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 sm:w-[500px] h-36 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-institutional-500/15 blur-3xl pointer-events-none rounded-full" />
+
             {/* Modal Header */}
-            <div className="p-5 border-b border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl">🔥</span>
+            <div className="p-4 sm:p-5 border-b border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between relative z-10 bg-white/80 dark:bg-charcoal-900/80 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 text-white flex items-center justify-center text-lg shadow-md shadow-amber-500/20 shrink-0">
+                  🔥
+                </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-charcoal-900 dark:text-white">
-                    30-Day Study Discipline Roadmap
-                  </h3>
-                  <p className="text-xs text-charcoal-500">
-                    Earn +{streakData?.daily_reward_coins ?? 5} coins daily and unlock milestone bonuses.
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-charcoal-950 dark:text-white tracking-tight">
+                      30-Day Study Discipline Roadmap
+                    </h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      Cycle Tracker
+                    </span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-charcoal-500 dark:text-charcoal-400 font-medium">
+                    Earn +{streakData?.daily_reward_coins ?? 5} coins daily and unlock milestone bonuses at Day 7, 15 & 30.
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={() => setIsRoadmapModalOpen(false)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-charcoal-400 hover:text-charcoal-700 dark:hover:text-white hover:bg-charcoal-100 dark:hover:bg-charcoal-800 cursor-pointer font-bold"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2.5">
+                <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-black">
+                  <FlameIcon size={13} className="text-amber-500" />
+                  <span>{streakDays}-Day Streak</span>
+                </div>
+
+                <button
+                  onClick={() => setIsRoadmapModalOpen(false)}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-charcoal-400 hover:text-charcoal-700 dark:hover:text-white hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition-colors cursor-pointer font-bold text-sm"
+                  aria-label="Close modal"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            {/* 30-Day Grid */}
-            <div className="p-6 overflow-y-auto space-y-4">
+            {/* Cycle Progress Tracker Ribbon */}
+            {(() => {
+              const cycleCompleted = streakData?.days_completed_in_cycle ?? Math.min(30, streakDays);
+              const cyclePct = Math.min(100, Math.round((cycleCompleted / 30) * 100));
+              return (
+                <div className="px-4 sm:px-6 py-2.5 bg-charcoal-50/70 dark:bg-charcoal-950/40 border-b border-charcoal-200/70 dark:border-charcoal-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs relative z-10">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-charcoal-800 dark:text-charcoal-200 text-[11px]">
+                      Discipline Progress:
+                    </span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-[11px]">
+                      {cycleCompleted}/30 Days
+                    </span>
+                    <div className="w-24 sm:w-36 h-2 bg-charcoal-200 dark:bg-charcoal-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${cyclePct}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-charcoal-400">
+                      ({cyclePct}%)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-charcoal-600 dark:text-charcoal-300">
+                    {nextMilestone ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span>Next Bonus:</span>
+                        <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                          Day {nextMilestone.day_number} ({nextMilestone.milestone_badge || 'Bonus'})
+                        </span>
+                        <span className="text-charcoal-400">• +{nextMilestone.coins_reward} 🪙</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                        <CheckCircleIcon size={12} />
+                        <span>All Milestones Achieved This Cycle!</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 30-Day Grid: 6 Columns x 5 Rows (All Visible in One Go Without Scroll) */}
+            <div className="p-3 sm:p-5 relative z-10">
               {timelineList.length > 0 ? (
-                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2.5">
+                <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
                   {timelineList.map((step) => {
                     const isDone = step.completed;
                     const isToday = step.is_current;
                     const isJackpot = step.is_milestone;
+                    const isBronze = step.day_number === 7;
+                    const isSilver = step.day_number === 15;
+                    const isGold = step.day_number === 30;
+
+                    let cardClasses = 'bg-charcoal-50/70 dark:bg-charcoal-850/50 border-charcoal-200/70 dark:border-charcoal-800 text-charcoal-500 dark:text-charcoal-400 hover:border-charcoal-300 dark:hover:border-charcoal-700';
+                    if (isDone) {
+                      cardClasses = 'bg-emerald-500/10 dark:bg-emerald-950/40 border-emerald-500/35 text-emerald-800 dark:text-emerald-300 shadow-2xs';
+                    } else if (isToday) {
+                      cardClasses = 'bg-gradient-to-b from-amber-500/20 to-orange-500/15 border-amber-500 ring-2 ring-amber-500/50 shadow-md shadow-amber-500/20 scale-[1.02] z-10';
+                    } else if (isGold) {
+                      cardClasses = 'bg-gradient-to-br from-amber-400/20 via-yellow-400/15 to-orange-500/15 border-amber-400/60 ring-1 ring-amber-400/30 text-amber-950 dark:text-amber-100 shadow-xs';
+                    } else if (isSilver) {
+                      cardClasses = 'bg-gradient-to-br from-slate-400/20 via-cyan-500/10 to-institutional-500/10 border-cyan-400/40 text-cyan-950 dark:text-cyan-200 shadow-2xs';
+                    } else if (isBronze) {
+                      cardClasses = 'bg-gradient-to-br from-amber-600/15 via-yellow-600/10 to-amber-700/5 border-amber-500/40 text-amber-900 dark:text-amber-200 shadow-2xs';
+                    }
 
                     return (
                       <div
                         key={step.day_number}
-                        className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all ${isDone
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                          : isToday
-                            ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/30 text-amber-950 dark:text-amber-200 scale-105 shadow-sm'
-                            : isJackpot
-                              ? 'bg-gradient-to-b from-amber-500/10 to-institutional-500/10 border-amber-400/40 text-charcoal-800 dark:text-charcoal-200'
-                              : 'bg-charcoal-50 dark:bg-charcoal-800/40 border-charcoal-200/60 dark:border-charcoal-800 text-charcoal-400'
-                          }`}
+                        className={`relative p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border flex flex-col justify-between transition-all select-none min-h-[52px] sm:min-h-[58px] ${cardClasses}`}
                       >
-                        <span className="text-[10px] font-bold uppercase">{step.label}</span>
-                        <div className="my-2">
+                        {/* Top Line: Day Label & Status Indicator */}
+                        <div className="flex items-center justify-between w-full">
+                          <span
+                            className={`text-[9px] sm:text-[10px] font-extrabold tracking-tight ${
+                              isDone
+                                ? 'text-emerald-700 dark:text-emerald-300'
+                                : isToday
+                                ? 'text-amber-900 dark:text-amber-200 font-black'
+                                : isJackpot
+                                ? 'text-amber-700 dark:text-amber-300 font-black'
+                                : 'text-charcoal-500 dark:text-charcoal-400'
+                            }`}
+                          >
+                            D{step.day_number}
+                          </span>
+
                           {isDone ? (
-                            <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">
+                            <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-black shadow-2xs">
                               ✓
-                            </div>
+                            </span>
                           ) : isToday ? (
-                            <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs animate-pulse">
+                            <span className="text-xs animate-bounce" title="Today's Target">
                               🔥
-                            </div>
-                          ) : isJackpot ? (
-                            <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs">
-                              🎁
-                            </div>
+                            </span>
+                          ) : isGold ? (
+                            <span className="text-xs" title="Grand Finale Milestone">
+                              👑
+                            </span>
+                          ) : isSilver ? (
+                            <span className="text-xs" title="Silver Milestone">
+                              🥈
+                            </span>
+                          ) : isBronze ? (
+                            <span className="text-xs" title="Bronze Milestone">
+                              🥉
+                            </span>
                           ) : (
-                            <div className="w-7 h-7 rounded-full bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-600 dark:text-charcoal-300 flex items-center justify-center font-mono text-[11px] font-bold">
-                              {step.day_number}
-                            </div>
+                            <span className="w-1.5 h-1.5 rounded-full bg-charcoal-300 dark:bg-charcoal-700" />
                           )}
                         </div>
-                        {step.milestone_title && (
-                          <span className="text-[9px] font-extrabold truncate max-w-full text-amber-700 dark:text-amber-300">
-                            {step.milestone_badge}
+
+                        {/* Bottom Line: Milestone Tag or Status + Coins */}
+                        <div className="flex items-center justify-between w-full mt-0.5 sm:mt-1 pt-0.5">
+                          {step.milestone_badge ? (
+                            <span
+                              className={`text-[7px] sm:text-[8px] font-black uppercase px-1 py-0.2 rounded tracking-wider truncate max-w-[46px] sm:max-w-none ${
+                                isGold
+                                  ? 'bg-amber-500 text-white shadow-2xs'
+                                  : isSilver
+                                  ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-cyan-500/40'
+                                  : 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40'
+                              }`}
+                            >
+                              {step.milestone_badge}
+                            </span>
+                          ) : (
+                            <span className="text-[7.5px] sm:text-[8.5px] font-semibold text-charcoal-400 dark:text-charcoal-500">
+                              {isDone ? 'Claimed' : isToday ? 'Active' : 'Locked'}
+                            </span>
+                          )}
+
+                          <span
+                            className={`text-[8.5px] sm:text-[9.5px] font-mono font-bold shrink-0 ${
+                              isDone
+                                ? 'text-emerald-700 dark:text-emerald-300'
+                                : isToday
+                                ? 'text-amber-900 dark:text-amber-200 font-extrabold'
+                                : isJackpot
+                                ? 'text-amber-700 dark:text-amber-300 font-extrabold'
+                                : 'text-charcoal-400 dark:text-charcoal-500'
+                            }`}
+                          >
+                            +{step.coins_reward}🪙
                           </span>
-                        )}
-                        <div className="text-[10px] font-mono font-bold mt-1">
-                          +{step.coins_reward} 🪙
                         </div>
                       </div>
                     );
@@ -1855,24 +2002,52 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-charcoal-200 dark:border-charcoal-800 flex justify-end bg-charcoal-50/50 dark:bg-charcoal-900/50">
-              <button
-                onClick={() => setIsRoadmapModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-charcoal-200 dark:bg-charcoal-750 text-charcoal-800 dark:text-charcoal-200 cursor-pointer"
-              >
-                Close Roadmap
-              </button>
+            <div className="px-4 sm:px-6 py-3 border-t border-charcoal-200 dark:border-charcoal-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 bg-charcoal-50/50 dark:bg-charcoal-900/50 relative z-10">
+              <div className="flex items-center gap-1.5 text-[11px] text-charcoal-500 dark:text-charcoal-400 text-center sm:text-left">
+                <SparklesIcon size={12} className="text-amber-500 shrink-0" />
+                <span>Complete 1 daily practice challenge or test attempt each day to keep your streak alive.</span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsRoadmapModalOpen(false)}
+                  className="px-4 py-1.5 text-xs font-bold rounded-xl bg-charcoal-100 hover:bg-charcoal-200 dark:bg-charcoal-800 dark:hover:bg-charcoal-750 text-charcoal-700 dark:text-charcoal-300 transition-colors cursor-pointer"
+                >
+                  Close Roadmap
+                </button>
+                {!isDailyCompleted && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRoadmapModalOpen(false);
+                      const el = document.getElementById('daily-booster-challenge');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    className="px-4 py-1.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm shadow-amber-500/20 transition-all cursor-pointer"
+                  >
+                    Solve Today's Challenge 🔥
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* =========================================================================
-          5. ENROLLED COURSE SUBJECT QUIZZES & EXPLANATIONS MODAL
+          5. ENROLLED COURSE SUBJECT QUIZZES & EXPLANATIONS MODAL (Portaled)
           ========================================================================= */}
-      {activeCourseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/75 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-750 w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+      {activeCourseModal && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-charcoal-950/80 backdrop-blur-md animate-fade-in"
+          onClick={() => setActiveCourseModal(null)}
+        >
+          <div
+            className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-750 w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="p-5 border-b border-charcoal-200 dark:border-charcoal-800 flex items-center justify-between bg-charcoal-50/50 dark:bg-charcoal-950/40">
               <div className="flex items-center gap-3">
@@ -2095,7 +2270,8 @@ export const StudentDashboardPage = ({ onSelectAttempt, onStartTest }) => {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

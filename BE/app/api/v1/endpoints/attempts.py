@@ -6,6 +6,7 @@ from app.core.rate_limiter import check_rate_limit
 from app.db.mongodb import get_db
 from app.schemas.attempt import (
     AttemptQuestionsResponse,
+    AttemptStartResponse,
     AttemptSubmitRequest,
     AttemptSyncRequest,
     AttemptSyncResponse,
@@ -17,6 +18,41 @@ from app.services.evaluation_service import EvaluationService
 from app.services.exam_engine_service import ExamEngineService
 
 router = APIRouter(prefix="/attempts", tags=["Exam Room Execution"], dependencies=[Depends(check_rate_limit)])
+
+
+@router.get("/active", response_model=APIResponse[Optional[AttemptStartResponse]])
+async def get_active_attempt(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Get user's current in-progress test attempt, if any.
+    Used by frontend to restore 'Resume Exam' button on page reload or reconnect.
+    """
+    engine_service = ExamEngineService(db)
+    active = await engine_service.get_active_attempt_for_user(current_user.id)
+    return APIResponse(
+        success=True,
+        message="Active attempt retrieved" if active else "No active attempt",
+        data=active,
+    )
+
+
+@router.post("/active/abandon", response_model=APIResponse[dict])
+async def abandon_active_attempt(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Abandon or finish the user's active attempt so they can start new tests without conflict.
+    """
+    engine_service = ExamEngineService(db)
+    result = await engine_service.abandon_active_attempt(current_user.id)
+    return APIResponse(
+        success=True,
+        message=result.get("message", "Active attempt ended"),
+        data=result,
+    )
 
 
 @router.get("/{attempt_id}/questions", response_model=APIResponse[AttemptQuestionsResponse])

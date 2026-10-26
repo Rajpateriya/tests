@@ -306,6 +306,18 @@ export const api = {
 
   // Attempts & Live Exam Room
   attempts: {
+    getActive: async () => {
+      try {
+        return await request('/attempts/active');
+      } catch {
+        return null;
+      }
+    },
+
+    abandonActive: async () => {
+      return await request('/attempts/active/abandon', { method: 'POST' });
+    },
+
     getQuestions: async (attemptId) => {
       return await request(`/attempts/${attemptId}/questions`);
     },

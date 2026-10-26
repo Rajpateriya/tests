@@ -83,6 +83,34 @@ function AppContent() {
   const [lastCompletedAttemptId, setLastCompletedAttemptId] = useState(null);
   const [authModalState, setAuthModalState] = useState({ isOpen: false, initialTab: 'login' });
 
+  // Check and restore active test attempt on load / user login
+  useEffect(() => {
+    let isMounted = true;
+    const fetchActiveAttempt = async () => {
+      if (!user) {
+        setActiveAttempt(null);
+        return;
+      }
+      try {
+        const active = await api.attempts.getActive();
+        if (isMounted && active) {
+          setActiveAttempt({
+            attempt_id: active.attempt_id,
+            test_id: active.test_id,
+            test_title: active.test_title,
+            duration_minutes: active.duration_minutes || 60,
+          });
+        }
+      } catch (err) {
+        console.warn('Could not check active attempt:', err);
+      }
+    };
+    fetchActiveAttempt();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
   // Scroll to top on route change when there is no hash
   useEffect(() => {
     if (!window.location.hash) {
@@ -176,9 +204,32 @@ function AppContent() {
       });
       navigate(ROUTES.exam);
     } catch (err) {
-      setStartError(err.message || 'Could not start this test.');
+      const msg = err.message || 'Could not start this test.';
+      setStartError(msg);
+      // Fetch active attempt details immediately so the candidate can resume or discard
+      api.attempts.getActive().then((active) => {
+        if (active) {
+          setActiveAttempt({
+            attempt_id: active.attempt_id,
+            test_id: active.test_id,
+            test_title: active.test_title,
+            duration_minutes: active.duration_minutes || 60,
+          });
+        }
+      }).catch(() => {});
     } finally {
       setStarting(false);
+    }
+  };
+
+  const handleAbandonActiveAttempt = async () => {
+    try {
+      await api.attempts.abandonActive();
+      setActiveAttempt(null);
+      setStartError('');
+    } catch (err) {
+      console.warn('Failed to abandon active test:', err);
+      setStartError('Could not abandon active test. Please try again.');
     }
   };
 
@@ -208,15 +259,52 @@ function AppContent() {
         </div>
       )}
 
-      {/* Start-test failure (shown instead of silently opening a demo exam) */}
+      {/* Start-test failure / Active attempt in-progress actionable banner */}
       {startError && (
-        <div className="fixed top-24 inset-x-0 z-50 flex justify-center px-4" role="alert">
-          <div className="max-w-lg w-full flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-lg">
-            <span className="flex-1">
-              <strong className="block">Could not start the test</strong>
-              {startError}
-            </span>
-            <button type="button" className="font-bold cursor-pointer" onClick={() => setStartError('')} aria-label="Dismiss">✕</button>
+        <div className="fixed top-20 sm:top-24 inset-x-0 z-50 flex justify-center px-4 animate-fade-in" role="alert">
+          <div className="max-w-xl w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 rounded-2xl border border-amber-300 dark:border-amber-800 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-md px-4 sm:px-5 py-3.5 text-sm text-charcoal-900 dark:text-charcoal-100 shadow-2xl">
+            <div className="flex items-start gap-3 min-w-0">
+              <span className="text-xl shrink-0 mt-0.5">⚠️</span>
+              <div className="min-w-0">
+                <strong className="block font-black text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  Active Examination Notice
+                </strong>
+                <p className="text-xs text-charcoal-700 dark:text-charcoal-300 mt-0.5 leading-relaxed">
+                  {startError}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              {activeAttempt && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStartError('');
+                    navigate(ROUTES.exam);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-institutional-600 hover:bg-institutional-700 text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors"
+                >
+                  <span>Resume Now</span>
+                  <span>→</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleAbandonActiveAttempt}
+                className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-colors"
+                title="Submit / End active test so you can start a new one"
+              >
+                End Active Test
+              </button>
+              <button
+                type="button"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-charcoal-400 hover:text-charcoal-700 dark:hover:text-charcoal-200 hover:bg-charcoal-100 dark:hover:bg-charcoal-800 cursor-pointer font-bold text-xs"
+                onClick={() => setStartError('')}
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         </div>
       )}

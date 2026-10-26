@@ -453,7 +453,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
           <div className="pt-4 sm:pt-8 grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 max-w-3xl mx-auto border-t border-charcoal-200/60 dark:border-charcoal-800/80 p-2.5 sm:p-0 rounded-2xl bg-charcoal-50/50 sm:bg-transparent dark:bg-charcoal-850/40 sm:dark:bg-transparent">
             <div className="space-y-0.5">
               <div className="text-lg sm:text-2xl font-extrabold font-mono text-charcoal-900 dark:text-charcoal-100">
-                48,500+
+                10,000+
               </div>
               <div className="text-[10px] sm:text-xs text-charcoal-500 font-medium">Aspirants Evaluated</div>
             </div>
@@ -877,11 +877,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
 
               <div className="p-3 sm:p-4 rounded-xl bg-charcoal-50 dark:bg-charcoal-850 border border-charcoal-200 dark:border-charcoal-800 text-center space-y-0.5 sm:space-y-1 flex flex-col justify-center">
                 <span className="text-[10px] sm:text-xs text-charcoal-500 font-semibold">Projected AIR</span>
-                <div className={`font-extrabold font-mono text-institutional-600 dark:text-institutional-400 leading-tight ${
-                  predictorResult.rank.length > 12
-                    ? 'text-base sm:text-xl lg:text-2xl'
-                    : 'text-xl sm:text-3xl'
-                }`}>
+                <div className={`font-extrabold font-mono text-institutional-600 dark:text-institutional-400 leading-tight ${predictorResult.rank.length > 12
+                  ? 'text-base sm:text-xl lg:text-2xl'
+                  : 'text-xl sm:text-3xl'
+                  }`}>
                   {predictorResult.rank}
                 </div>
               </div>
@@ -949,11 +948,10 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                     <button
                       key={cat.id}
                       onClick={() => setSelectedCourseExam(cat.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                        selectedCourseExam === cat.id
-                          ? 'bg-institutional-600 text-white shadow-sm'
-                          : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
-                      }`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedCourseExam === cat.id
+                        ? 'bg-institutional-600 text-white shadow-sm'
+                        : 'bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white'
+                        }`}
                     >
                       {cat.label}
                     </button>
@@ -961,67 +959,67 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                 </div>
               )}
               {coursesLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 animate-pulse">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-64 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl sm:rounded-2xl" />
-                ))}
-              </div>
-            ) : courses.length === 0 ? (
-              <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-8 sm:p-12 text-center space-y-3">
-                <BookOpenIcon size={36} className="text-charcoal-400 mx-auto" />
-                <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">No courses published yet</h3>
-              </div>
-            ) : (
-              <div
-                className="max-h-[580px] sm:max-h-[660px] xl:max-h-[720px] overflow-y-auto pr-1 sm:pr-2 overscroll-contain"
-                style={{ scrollbarGutter: 'stable' }}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 pt-1 pb-2 px-1">
-                  {courses.map((course) => (
-                  <article
-                    key={course.id}
-                    className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
-                          {course.target_exam}
-                        </span>
-                        <span className="text-xs font-black px-2 py-0.5 rounded bg-emerald-500 text-white">{course.discount_percent}% OFF</span>
-                      </div>
-                      <h3 className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
-                        {course.title}
-                      </h3>
-                      <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-2.5 sm:mb-4 leading-relaxed font-normal">
-                        {course.description}
-                      </p>
-                      <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-3 sm:mb-5">
-                        {(course.subjects || []).slice(0, 3).map((sub, i) => (
-                          <span key={i} className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
-                            {sub}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="pt-3 sm:pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
-                      <div className="flex items-baseline gap-1.5 font-mono">
-                        <span className="text-base sm:text-lg font-black text-charcoal-900 dark:text-white">₹{course.discounted_price}</span>
-                        <span className="text-xs text-charcoal-400 line-through">₹{course.original_price}</span>
-                      </div>
-                      <button
-                        onClick={() => navigate(ROUTES.courses)}
-                        className="inline-flex items-center gap-1 px-3 sm:px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm cursor-pointer"
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 animate-pulse">
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="h-64 bg-charcoal-200/60 dark:bg-charcoal-800/60 rounded-xl sm:rounded-2xl" />
+                  ))}
+                </div>
+              ) : courses.length === 0 ? (
+                <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl p-8 sm:p-12 text-center space-y-3">
+                  <BookOpenIcon size={36} className="text-charcoal-400 mx-auto" />
+                  <h3 className="text-base font-bold text-charcoal-800 dark:text-charcoal-200">No courses published yet</h3>
+                </div>
+              ) : (
+                <div
+                  className="max-h-[580px] sm:max-h-[660px] xl:max-h-[720px] overflow-y-auto pr-1 sm:pr-2 overscroll-contain"
+                  style={{ scrollbarGutter: 'stable' }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 pt-1 pb-2 px-1">
+                    {courses.map((course) => (
+                      <article
+                        key={course.id}
+                        className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
                       >
-                        <span>View Course</span>
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              </div>
-            )}
-          </>
-        ) : (
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
+                              {course.target_exam}
+                            </span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded bg-emerald-500 text-white">{course.discount_percent}% OFF</span>
+                          </div>
+                          <h3 className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                            {course.title}
+                          </h3>
+                          <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-2.5 sm:mb-4 leading-relaxed font-normal">
+                            {course.description}
+                          </p>
+                          <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-3 sm:mb-5">
+                            {(course.subjects || []).slice(0, 3).map((sub, i) => (
+                              <span key={i} className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
+                                {sub}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="pt-3 sm:pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
+                          <div className="flex items-baseline gap-1.5 font-mono">
+                            <span className="text-base sm:text-lg font-black text-charcoal-900 dark:text-white">₹{course.discounted_price}</span>
+                            <span className="text-xs text-charcoal-400 line-through">₹{course.original_price}</span>
+                          </div>
+                          <button
+                            onClick={() => navigate(ROUTES.courses)}
+                            className="inline-flex items-center gap-1 px-3 sm:px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm cursor-pointer"
+                          >
+                            <span>View Course</span>
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
             <>
               {/* Search & Subject Bar */}
               <div className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl p-2.5 sm:p-4 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
@@ -1100,74 +1098,74 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 pt-1 pb-2 px-1">
                     {filteredTests.map((test) => (
-                    <article
-                      key={test.id}
-                      className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
-                    >
-                      <div>
-                        {/* Header: Type Pill & Difficulty */}
-                        <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 border border-charcoal-200 dark:border-charcoal-700">
-                            {test.test_type === 'FULL' ? 'Full Mock' : test.test_type === 'SUBJECT' ? 'Subject Mock' : 'Topic Drill'}
-                          </span>
-                          {getDifficultyBadge(test.difficulty)}
-                        </div>
-
-                        {/* Title */}
-                        <h3 className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
-                          {test.title}
-                        </h3>
-
-                        {/* Description */}
-                        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-2 sm:mb-4 leading-relaxed font-normal">
-                          {test.description || 'Full PrepMagnet CBT test simulation with negative marking and instant scorecard.'}
-                        </p>
-
-                        {/* Subject Tags */}
-                        <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-3 sm:mb-5">
-                          <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
-                            {test.subject || 'Full Syllabus'}
-                          </span>
-                          {test.topic && (
-                            <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
-                              {test.topic}
+                      <article
+                        key={test.id}
+                        className="bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-subtle hover:border-charcoal-350 dark:hover:border-charcoal-700 hover:-translate-y-1 hover:shadow-card transition-all duration-200 flex flex-col justify-between group"
+                      >
+                        <div>
+                          {/* Header: Type Pill & Difficulty */}
+                          <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-400 border border-charcoal-200 dark:border-charcoal-700">
+                              {test.test_type === 'FULL' ? 'Full Mock' : test.test_type === 'SUBJECT' ? 'Subject Mock' : 'Topic Drill'}
                             </span>
-                          )}
-                        </div>
-                      </div>
+                            {getDifficultyBadge(test.difficulty)}
+                          </div>
 
-                      {/* Card Footer: Metadata + Actions */}
-                      <div className="pt-3 sm:pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
-                        <div className="flex items-center gap-2 sm:gap-2.5 text-xs text-charcoal-500 font-mono">
-                          <span className="flex items-center gap-1 font-semibold">
-                            <ClockIcon size={12} className="text-charcoal-400" />
-                            {test.duration_minutes}m
-                          </span>
-                          <span>•</span>
-                          <span>{test.total_questions || 25} Qs</span>
+                          {/* Title */}
+                          <h3 className="text-sm sm:text-base font-bold text-charcoal-900 dark:text-charcoal-100 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-institutional-600 dark:group-hover:text-institutional-400 transition-colors">
+                            {test.title}
+                          </h3>
+
+                          {/* Description */}
+                          <p className="text-xs text-charcoal-500 dark:text-charcoal-400 line-clamp-2 mb-2 sm:mb-4 leading-relaxed font-normal">
+                            {test.description || 'Full PrepMagnet CBT test simulation with negative marking and instant scorecard.'}
+                          </p>
+
+                          {/* Subject Tags */}
+                          <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-3 sm:mb-5">
+                            <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-institutional-50 dark:bg-institutional-950/40 text-institutional-700 dark:text-institutional-300 border border-institutional-200/60 dark:border-institutional-800/40">
+                              {test.subject || 'Full Syllabus'}
+                            </span>
+                            {test.topic && (
+                              <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border border-charcoal-200 dark:border-charcoal-700">
+                                {test.topic}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleTestCardClick(test)}
-                            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors cursor-pointer"
-                          >
-                            Rules
-                          </button>
-                          <button
-                            onClick={() => handleTestCardClick(test)}
-                            className="inline-flex items-center gap-1 px-3 sm:px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm cursor-pointer"
-                          >
-                            <span>Start</span>
-                            <PlayIcon size={10} />
-                          </button>
+                        {/* Card Footer: Metadata + Actions */}
+                        <div className="pt-3 sm:pt-4 border-t border-charcoal-150 dark:border-charcoal-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2 sm:gap-2.5 text-xs text-charcoal-500 font-mono">
+                            <span className="flex items-center gap-1 font-semibold">
+                              <ClockIcon size={12} className="text-charcoal-400" />
+                              {test.duration_minutes}m
+                            </span>
+                            <span>•</span>
+                            <span>{test.total_questions || 25} Qs</span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleTestCardClick(test)}
+                              className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-charcoal-300 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition-colors cursor-pointer"
+                            >
+                              Rules
+                            </button>
+                            <button
+                              onClick={() => handleTestCardClick(test)}
+                              className="inline-flex items-center gap-1 px-3 sm:px-3.5 py-1.5 text-xs font-bold text-white bg-institutional-600 hover:bg-institutional-700 rounded-lg transition-colors shadow-sm cursor-pointer"
+                            >
+                              <span>Start</span>
+                              <PlayIcon size={10} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             </>
           )}
         </section>
@@ -1187,7 +1185,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
               <span>Why PrepMagnet?</span>
             </div>
 
-            <h2 
+            <h2
               className="font-extrabold tracking-tight text-charcoal-950 dark:text-white leading-tight whitespace-nowrap text-center max-w-full"
               style={{ fontSize: 'clamp(11.5px, 3.55vw, 36px)' }}
             >
@@ -1502,7 +1500,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                 </div>
                 <div>
                   <div className="text-xs font-bold text-charcoal-900 dark:text-charcoal-100">Raj Pateriya</div>
-                  <div className="text-[11px] text-charcoal-400">ASO in Ministry of External Affairs</div>
+                  <div className="text-[11px] text-charcoal-400">Assistant Audit Officer</div>
                 </div>
               </div>
             </div>

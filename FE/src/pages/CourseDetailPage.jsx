@@ -33,11 +33,11 @@ const splitQuizzes = (quizzes = []) => ({
 
 const COVER_GRID = {
   backgroundImage:
-    'linear-gradient(to right, rgba(255,255,255,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.18) 1px, transparent 1px)',
-  backgroundSize: '18px 18px',
+    'linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)',
+  backgroundSize: '16px 16px',
 };
 const COVER_GLOW = {
-  backgroundImage: 'radial-gradient(circle at 90% -20%, rgba(255,255,255,0.38), transparent 55%)',
+  backgroundImage: 'radial-gradient(circle at 85% 0%, rgba(37, 99, 235, 0.16), transparent 65%)',
 };
 
 const Backdrop = () => null;
@@ -236,16 +236,16 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
         <div className="w-full min-w-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-5 sm:gap-6">
           {/* Course header */}
           <section className="w-full min-w-0 lg:col-start-1 lg:row-start-1 bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 rounded-2xl shadow-subtle overflow-hidden">
-            <div className="relative min-h-[3.5rem] py-2.5 px-3.5 sm:px-5 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-r from-institutional-800 via-institutional-600 to-sky-500 overflow-hidden">
+            <div className="relative min-h-[3.5rem] py-2.5 px-3.5 sm:px-5 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-r from-charcoal-900 via-charcoal-850 to-institutional-950 dark:from-charcoal-950 dark:via-charcoal-900 dark:to-institutional-950 border-b border-charcoal-200/80 dark:border-charcoal-800 overflow-hidden">
               <div className="absolute inset-0 pointer-events-none" style={COVER_GRID} />
               <div className="absolute inset-0 pointer-events-none" style={COVER_GLOW} />
 
               <div className="relative flex items-center flex-wrap gap-1.5 min-w-0">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/15 text-white border border-white/25 backdrop-blur-sm max-w-[200px] truncate">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-institutional-500/15 text-institutional-200 border border-institutional-500/30 backdrop-blur-sm max-w-[200px] truncate shadow-2xs">
                   {course.target_exam}
                 </span>
                 {course.badge && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-300/90 text-amber-950 max-w-[160px] truncate">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 max-w-[160px] truncate shadow-2xs">
                     <SparklesIcon size={10} className="shrink-0" />
                     <span className="truncate">{course.badge}</span>
                   </span>
@@ -253,7 +253,7 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
               </div>
 
               {isEnrolled && (
-                <span className="relative inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-400 text-emerald-950 max-w-full truncate shrink-0">
+                <span className="relative inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 max-w-full truncate shrink-0 shadow-2xs">
                   <CheckCircleIcon size={12} className="shrink-0" />
                   <span className="truncate">{course.access_source === 'PASS' ? `Included in ${course.pass_title || 'Active Pass'}` : 'Enrolled'}</span>
                 </span>
@@ -551,19 +551,21 @@ export const CourseDetailPage = ({ courseId, onBackToCourses, onStartTest, backL
               </div>
             )}
           </section>
+        </div>
 
-          {/* Dynamic Course Detail FAQ Section */}
-          {course && (
+        {/* Dynamic Course Detail FAQ Section (Full-width matching Home/Courses page) */}
+        {course && (
+          <div className="w-full pt-4 sm:pt-6">
             <FAQSection
               id="course-detail-faq"
               title={`Questions about ${course.title || 'this course'}?`}
               subtitle={`Here are answers to the most commonly asked ones regarding this test series and ${course.target_exam || 'this examination'}.`}
               tag="Course FAQ"
               faqs={getCourseDetailFaqs(course)}
-              className="mt-8 sm:mt-12"
+              className="w-full"
             />
-          )}
-        </div>
+          </div>
+        )}
       </main>
 
       {/* Quiz preview modal (answers + explanation) */}
