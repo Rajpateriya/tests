@@ -1936,7 +1936,7 @@ export const TestDiscoveryPage = ({ onStartTest, activeAttempt, onOpenAuthModal 
                     <div>
                       <h3 className="font-extrabold text-base sm:text-lg text-charcoal-900 dark:text-charcoal-100 flex items-center gap-2">
                         <MessageSquareIcon size={18} className="text-institutional-600" />
-                        <span>Submit Academic Inquiry or Grievance</span>
+                        <span>Submit Academic Inquiry</span>
                       </h3>
                       <p className="text-xs text-charcoal-500 dark:text-charcoal-400 mt-0.5">
                         Fill out the details below for prioritized support from our educational panel.
